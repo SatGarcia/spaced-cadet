@@ -2,13 +2,16 @@ import os
 import logging, logging.handlers
 
 from flask import Flask
-from sqlalchemy.orm import sessionmaker
+from flask_sqlalchemy import SQLAlchemy
+
 
 #import rq
 #from redis import Redis
 
-from . import db
+#from . import db
 #from . import admin
+
+db = SQLAlchemy()
 
 
 def create_app(test_config=None):
@@ -36,12 +39,11 @@ def create_app(test_config=None):
     # ensure that the instance folder exists (creating if necessary)
     os.makedirs(app.instance_path, exist_ok=True)
 
-    db_engine = db.init_db(app)
-    app.Session = sessionmaker(db_engine)
+    db.init_app(app)
 
     #app.register_blueprint(admin.admin, url_prefix="/admin")
     #app.register_blueprint(user_views.user_views)
 
-    db.init_app(app)
-
     return app
+
+from app import db_models

@@ -2,7 +2,8 @@ import os
 import logging
 
 SECRET_KEY = 'dev'
-DATABASE_URI = 'sqlite:///:memory:'
+SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+SQLALCHEMY_TRACK_MODIFICATIONS = False
 DATABASE_VERBOSE = False
 REDIS_URL = 'redis://'
 SERVER_NAME = 'localhost:5000'
