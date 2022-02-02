@@ -10,6 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 #from . import db
 #from . import admin
+#from . import user_views
 
 db = SQLAlchemy()
 
@@ -41,8 +42,11 @@ def create_app(test_config=None):
 
     db.init_app(app)
 
-    #app.register_blueprint(admin.admin, url_prefix="/admin")
-    #app.register_blueprint(user_views.user_views)
+    with app.app_context():
+        db.create_all()
+
+    from app.user_views import user_views as uv
+    app.register_blueprint(uv)
 
     return app
 
