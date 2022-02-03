@@ -7,7 +7,7 @@
 		<p>Were you correct?
 			<form method="POST" action="{{ url_for('user_views.self_review') }}">
 				{{ form.csrf_token }}
-				{{ form.question_id }}
+				{{ form.attempt_id }}
 				{{ form.yes(class_="btn btn-success") }}
 				{{ form.no(class_="btn btn-danger") }}
 			</form>

@@ -6,7 +6,9 @@ from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField
 )
 from wtforms.validators import DataRequired
-from  sqlalchemy.sql.expression import func
+from sqlalchemy.sql.expression import func
+
+from app import db
 
 user_views = Blueprint('user_views', __name__)
 
@@ -20,10 +22,18 @@ def self_review():
     one or not. """
     form = SelfReviewForm(request.form)
     if form.validate_on_submit():
+
+        # update the outcome of the attempt in the database
+        attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
+
         if form.yes.data:
             flash("Nice work!", "success")
+            attempt.correct = True
         else:
             flash("You'll get it next time!", "danger")
+            attempt.correct = False
+
+        db.session.commit()
 
         return redirect(url_for('.test'))
 
@@ -39,8 +49,18 @@ def test():
     form = AnswerForm(question_id=question.id)
     if form.validate_on_submit():
 
+
         original_question_id = form.question_id.data
-        review_form = SelfReviewForm(question_id=original_question_id)
+
+        # add the attempt to the database (leaving the outcome undefined for
+        # now)
+        attempt = Attempt(response=form.answer.data,
+                          question_id=original_question_id)
+        db.session.add(attempt)
+        db.session.commit()
+
+        # create the self review_form
+        review_form = SelfReviewForm(attempt_id=attempt.id)
         original_question = Question.query.filter_by(id=original_question_id).first()
 
         return render_template("self_verify.html",
@@ -56,7 +76,8 @@ def test():
                            term=question.prompt)
 
 class SelfReviewForm(FlaskForm):
-    question_id = HiddenField("qid")
+    #question_id = HiddenField("qid")
+    attempt_id = HiddenField("Attempt ID")
     yes = SubmitField("Yes")
     no = SubmitField("No")
 
@@ -65,4 +86,4 @@ class AnswerForm(FlaskForm):
     answer = TextAreaField('answer', validators=[DataRequired()])
     submit = SubmitField("Submit")
 
-from app.db_models import Question
+from app.db_models import Question, Attempt
