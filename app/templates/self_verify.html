@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+        <h2>{{ term }}</h2>
+		<p>Your Answer: {{ answer }}</p>
+		<p>Correct Definition: {{ definition }}</p>
+		<p>Were you correct?
+			<form method="POST" action="{{ url_for('user_views.self_review') }}">
+				{{ form.csrf_token }}
+				{{ form.question_id }}
+				{{ form.yes(class_="btn btn-success") }}
+				{{ form.no(class_="btn btn-danger") }}
+			</form>
+		</p>
+    </div>
+{% endblock %}

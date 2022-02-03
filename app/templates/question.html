@@ -3,6 +3,16 @@
     <div class="container pt-3">
         <h2>{{ term }}</h2>
 
+		<form method="POST" action="">
+			{{ form.csrf_token }}
+			{{ form.question_id }}
+			<strong>Definition:</strong>
+			<br/>{{ form.answer() }}
+			<br/>{{ form.submit(class_="btn btn-primary") }}
+		</form>
+
+		<!--
         <strong>Definition:</strong> {{ definition }}
+		-->
     </div>
 {% endblock %}
