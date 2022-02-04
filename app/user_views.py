@@ -7,6 +7,7 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired
 from sqlalchemy.sql.expression import func
+from datetime import date, timedelta
 
 from app import db
 
@@ -25,10 +26,13 @@ def self_review():
 
         # update the outcome of the attempt in the database
         attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
+        q = attempt.question
 
         if form.yes.data:
             flash("Nice work!", "success")
             attempt.correct = True
+
+            q.next_attempt = date.today() + timedelta(days=1)
         else:
             flash("You'll get it next time!", "danger")
             attempt.correct = False
@@ -44,7 +48,11 @@ def self_review():
 @user_views.route('/test', methods=['GET', 'POST'])
 def test():
     """ Presents a random question to the user. """
-    question = Question.query.order_by(func.random()).first()
+    question = Question.query.filter(Question.next_attempt <= date.today()).order_by(func.random()).first()
+
+    if not question:
+        # No questions need to be tested so display a completed page.
+        return render_template("completed.html", page_title="Cadet: Complete")
 
     form = AnswerForm(question_id=question.id)
     if form.validate_on_submit():
