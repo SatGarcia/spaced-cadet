@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+        <h2>Rate Your Performance</h2>
+        Your answer was correct. How difficult was it for you?
+
+        <form method="POST" action="{{ url_for('user_views.difficulty') }}">
+            {{ form.csrf_token }}
+            {{ form.question_id }}
+            {{ form.difficulty }}
+            <br/>{{ form.submit(class_="btn btn-primary") }}
+        </form>
+    </div>
+{% endblock %}

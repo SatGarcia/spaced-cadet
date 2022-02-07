@@ -3,7 +3,7 @@ from flask import (
 )
 from flask_wtf import FlaskForm
 from wtforms import (
-    StringField, SubmitField, TextAreaField, HiddenField
+    StringField, SubmitField, TextAreaField, HiddenField, SelectField
 )
 from wtforms.validators import DataRequired
 from sqlalchemy.sql.expression import func
@@ -17,6 +17,29 @@ user_views = Blueprint('user_views', __name__)
 def root():
     return render_template("home.html")
 
+@user_views.route('/difficulty', methods=['POST'])
+def difficulty():
+    """ Route to handle self-reported difficulty of a problem that the user
+    got correct. """
+
+    form = DifficultyForm(request.form)
+    if form.validate_on_submit():
+        # get the question and update it's interval and e_factor
+        q = Question.query.filter_by(id=form.question_id.data).first()
+        quality = form.difficulty.data
+
+        q.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
+        q.interval = 6 if q.interval == 1 else int(q.interval * q.e_factor)
+
+        # next attempt will be interval days from today
+        q.next_attempt = date.today() + timedelta(days=q.interval)
+
+        db.session.commit()
+
+    flash("Nice work!", "success")
+    return redirect(url_for('.test'))
+
+
 @user_views.route('/review', methods=['POST'])
 def self_review():
     """ User will self-verify whether the answer they submitted is the correct
@@ -29,13 +52,21 @@ def self_review():
         q = attempt.question
 
         if form.yes.data:
-            flash("Nice work!", "success")
             attempt.correct = True
+            difficulty_form = DifficultyForm(question_id=q.id)
+            return render_template("difficulty.html",
+                                   page_title="Cadet Test: Rating",
+                                   form=difficulty_form)
 
-            q.next_attempt = date.today() + timedelta(days=1)
-        else:
-            flash("You'll get it next time!", "danger")
-            attempt.correct = False
+        # they missed it so reset interval to 1 and update the e_factor
+        flash("No worries. We'll test you on this question again tomorrow.", "danger")
+        attempt.correct = False
+
+        quality = 2  # they made an attempt but were wrong so set difficulty to 2
+        q.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
+
+        q.interval = 1
+        q.next_attempt = date.today() + timedelta(days=q.interval)
 
         db.session.commit()
 
@@ -83,14 +114,23 @@ def test():
                            form=form,
                            term=question.prompt)
 
+class DifficultyForm(FlaskForm):
+    """ Form to report the difficulty they had in answering a question. """
+    question_id = HiddenField("Question ID")
+    difficulty = SelectField('Difficulty',
+                             choices=[(5, "Easy: The info was easy to recall"),
+                                      (4, 'Medium: I had to take a moment to recall something'),
+                                      (3, 'Hard: I barely recalled the info I needed.')],
+                             coerce=int)
+    submit = SubmitField("Submit")
+
 class SelfReviewForm(FlaskForm):
-    #question_id = HiddenField("qid")
     attempt_id = HiddenField("Attempt ID")
     yes = SubmitField("Yes")
     no = SubmitField("No")
 
 class AnswerForm(FlaskForm):
-    question_id = HiddenField("qid")
+    question_id = HiddenField("Question ID")
     answer = TextAreaField('answer', validators=[DataRequired()])
     submit = SubmitField("Submit")
 
