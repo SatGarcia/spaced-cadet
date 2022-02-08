@@ -12,13 +12,6 @@ enrollments = db.Table(
               primary_key=True)
 )
 
-# association table for sources associated with a section
-source_materials = db.Table(
-    'source_materials',
-    db.Column('section_id', db.Integer, db.ForeignKey('section.id')),
-    db.Column('source_id', db.Integer, db.ForeignKey('source.id'))
-)
-
 # association table for objectives associated with an assessment
 assigned_objectives = db.Table(
     'assigned_objectives',
@@ -33,18 +26,13 @@ source_objectives = db.Table(
     db.Column('objective_id', db.Integer, db.ForeignKey('objective.id'))
 )
 
-# association table for questions associated with a learning objective
-associated_questions = db.Table(
-    'associated_questions',
-    db.Column('objective_id', db.Integer, db.ForeignKey('objective.id')),
-    db.Column('question_id', db.Integer, db.ForeignKey('question.id'))
-)
-
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     prompt = db.Column(db.String, nullable=False)
     answer = db.Column(db.String, nullable=False)
+    section_id = db.Column(db.Integer, db.ForeignKey('section.id'))
+    objective_id = db.Column(db.Integer, db.ForeignKey('objective.id'))
 
     students = db.relationship('Attempt', backref='question', lazy='dynamic')
 
@@ -63,7 +51,7 @@ class Attempt(db.Model):
     #student = db.relationship('Student', backref='questions', lazy='dynamic')
 
     time = db.Column(db.DateTime, default=datetime.utcnow)
-    response = db.Column(db.String, nullable=False)
+    response = db.Column(db.String, nullable=False)  # TODO: make no reesponse an option
     correct = db.Column(db.Boolean)
 
     # entries for SM-2 Algorithm
@@ -88,16 +76,13 @@ class Section(db.Model):
                                backref=db.backref('sections', lazy='dynamic'),
                                lazy='dynamic')
 
-    sources = db.relationship('Source',
-                               secondary=source_materials,
-                               primaryjoin=('source_materials.c.section_id == Section.id'),
-                               secondaryjoin=('source_materials.c.source_id == Source.id'),
-                               backref=db.backref('sections', lazy='dynamic'),
-                               lazy='dynamic')
-
     assessments = db.relationship('Assessment',
                                     foreign_keys='Assessment.section_id',
-                                    backref='assessment', lazy='dynamic')
+                                    backref='section', lazy='dynamic')
+
+    questions = db.relationship('Question',
+                                foreign_keys='Question.section_id',
+                                backref='section', lazy='dynamic')
 
     def __repr__(self):
         return f"<Section {self.id}: {self.course} - Section #{self.section_num}>"
@@ -121,11 +106,8 @@ class Objective(db.Model):
     description = db.Column(db.String(200), index=True, unique=True)
 
     questions = db.relationship('Question',
-                                 secondary=associated_questions,
-                                 primaryjoin=('associated_questions.c.objective_id == Objective.id'),
-                                 secondaryjoin=('associated_questions.c.question_id == Question.id'),
-                                 backref=db.backref('objectives', lazy='dynamic'),
-                                 lazy='dynamic')
+                                foreign_keys='Question.objective_id',
+                                backref='objective', lazy='dynamic')
 
     def __repr__(self):
         return f"<Objective {self.id}: {self.description}>"

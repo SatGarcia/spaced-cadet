@@ -55,6 +55,7 @@ def create_app(test_config=None):
         section.students.append(student)
         db.session.commit()
 
+        """
         source = db_models.Source(description="Textbook Section 3.5")
         db.session.add(source)
         section.sources.append(source)
@@ -62,11 +63,12 @@ def create_app(test_config=None):
         assessment = db_models.Assessment(description="Quiz 1")
         db.session.add(assessment)
         section.assessments.append(assessment)
+        """
 
         lo = db_models.Objective(description="Use basic programming terminology")
         db.session.add(lo)
-        source.objectives.append(lo)
-        assessment.objectives.append(lo)
+        #source.objectives.append(lo)
+        #assessment.objectives.append(lo)
         db.session.commit()
 
         q1 = db_models.Question(prompt="vegan", answer="A cool person")
@@ -78,7 +80,13 @@ def create_app(test_config=None):
         lo.questions.append(q1)
         lo.questions.append(q2)
         lo.questions.append(q3)
+        section.questions.append(q1)
+        section.questions.append(q2)
+        section.questions.append(q3)
         db.session.commit()
+
+        for q in db_models.Question.query:
+            print(repr(q))
 
 
     from app.user_views import user_views as uv
