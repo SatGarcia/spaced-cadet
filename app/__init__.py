@@ -43,7 +43,43 @@ def create_app(test_config=None):
     db.init_app(app)
 
     with app.app_context():
+        db.drop_all() # clear out table (testing only FIXME)
         db.create_all()
+
+        # set up some example entries in the database for testing
+        section = db_models.Section(course="COMP110", number=3)
+        db.session.add(section)
+        student = db_models.Student(username="sat", email="sat@sandeigeo.edu",
+                                    first_name="Sat", last_name="Garcia")
+        db.session.add(student)
+        section.students.append(student)
+        db.session.commit()
+
+        source = db_models.Source(description="Textbook Section 3.5")
+        db.session.add(source)
+        section.sources.append(source)
+
+        assessment = db_models.Assessment(description="Quiz 1")
+        db.session.add(assessment)
+        section.assessments.append(assessment)
+
+        lo = db_models.Objective(description="Use basic programming terminology")
+        db.session.add(lo)
+        source.objectives.append(lo)
+        assessment.objectives.append(lo)
+        db.session.commit()
+
+        q1 = db_models.Question(prompt="vegan", answer="A cool person")
+        q2 = db_models.Question(prompt="cat", answer="Cute furrball")
+        q3 = db_models.Question(prompt="olives", answer="Nasty stuff")
+        db.session.add(q1)
+        db.session.add(q2)
+        db.session.add(q3)
+        lo.questions.append(q1)
+        lo.questions.append(q2)
+        lo.questions.append(q3)
+        db.session.commit()
+
 
     from app.user_views import user_views as uv
     app.register_blueprint(uv)
