@@ -6,8 +6,7 @@ from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField
 )
 from wtforms.validators import DataRequired
-from sqlalchemy.sql.expression import func
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 from app import db
 
@@ -25,14 +24,15 @@ def difficulty():
     form = DifficultyForm(request.form)
     if form.validate_on_submit():
         # get the question and update it's interval and e_factor
-        q = Question.query.filter_by(id=form.question_id.data).first()
+        a = Attempt.query.filter_by(id=form.attempt_id.data).first()
+        # TODO: check that query returned something (50X error otherwise)
         quality = form.difficulty.data
 
-        q.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
-        q.interval = 6 if q.interval == 1 else int(q.interval * q.e_factor)
+        a.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
+        a.interval = 6 if a.interval == 1 else int(a.interval * a.e_factor)
 
         # next attempt will be interval days from today
-        q.next_attempt = date.today() + timedelta(days=q.interval)
+        a.next_attempt = date.today() + timedelta(days=a.interval)
 
         db.session.commit()
 
@@ -53,7 +53,8 @@ def self_review():
 
         if form.yes.data:
             attempt.correct = True
-            difficulty_form = DifficultyForm(question_id=q.id)
+            db.session.commit()
+            difficulty_form = DifficultyForm(attempt_id=form.attempt_id.data)
             return render_template("difficulty.html",
                                    page_title="Cadet Test: Rating",
                                    form=difficulty_form)
@@ -63,10 +64,11 @@ def self_review():
         attempt.correct = False
 
         quality = 2  # they made an attempt but were wrong so set difficulty to 2
-        q.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
+        attempt.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
 
-        q.interval = 1
-        q.next_attempt = date.today() + timedelta(days=q.interval)
+        # missed question should be repeated again tomorrow
+        attempt.interval = 1
+        attempt.next_attempt = date.today() + timedelta(days=attempt.interval)
 
         db.session.commit()
 
@@ -76,10 +78,42 @@ def self_review():
     # never happen!
     return "BAD STUFF"
 
+
 @user_views.route('/test', methods=['GET', 'POST'])
 def test():
     """ Presents a random question to the user. """
-    question = Question.query.filter(Question.next_attempt <= date.today()).order_by(func.random()).first()
+    curr_user = Student.query.filter_by(username='sat').first()
+
+    # get all the questions from section's that this student is enrolled in
+    possible_questions = Question.query.join(
+        enrollments, (enrollments.c.section_id == Question.section_id)).filter(
+            enrollments.c.student_id == curr_user.id)
+
+    # find questions that haven't been attempted yet, as these will be part of
+    # the pool of questions we can ask them
+    unattempted_questions = possible_questions.filter(~ Question.attempts.any(Attempt.student_id == curr_user.id))
+
+    # Find questions whose next attempt is before today, as these will also be
+    # part of the pool of questions to ask
+    latest_next_attempts = db.session.query(
+        Attempt.question_id, Attempt.next_attempt, db.func.max(Attempt.next_attempt).label('latest_next_attempt_time')
+    ).group_by(Attempt.question_id).subquery()
+
+    #target_time = date.today() + timedelta(days=2)
+    target_time = datetime.utcnow()
+    ready_questions = Question.query.join(
+        latest_next_attempts, db.and_(Question.id == latest_next_attempts.c.question_id,
+                                      latest_next_attempts.c.latest_next_attempt_time <= target_time)
+    ).union(unattempted_questions)
+
+    """
+    print("Ready Questions:")
+    for q in ready_questions:
+        print("\t", q)
+    """
+
+    # randomly pick one of the ready questions
+    question = ready_questions.order_by(db.func.random()).first()
 
     if not question:
         # No questions need to be tested so display a completed page.
@@ -91,10 +125,22 @@ def test():
 
         original_question_id = form.question_id.data
 
+        # check for a previous attempt
+        previous_attempt = Attempt.query.filter(Attempt.student_id == curr_user.id,
+                                                Attempt.question_id == original_question_id).order_by(
+                                                    Attempt.time.desc()).first()
+
         # add the attempt to the database (leaving the outcome undefined for
         # now)
         attempt = Attempt(response=form.answer.data,
-                          question_id=original_question_id)
+                          question_id=original_question_id,
+                          student_id=curr_user.id)
+
+        # if there was a previous attempt, copy over e_factor and interval
+        if previous_attempt:
+            attempt.e_factor = previous_attempt.e_factor
+            attempt.interval = previous_attempt.interval
+
         db.session.add(attempt)
         db.session.commit()
 
@@ -114,9 +160,10 @@ def test():
                            form=form,
                            term=question.prompt)
 
+
 class DifficultyForm(FlaskForm):
     """ Form to report the difficulty they had in answering a question. """
-    question_id = HiddenField("Question ID")
+    attempt_id = HiddenField("Attempt ID")
     difficulty = SelectField('Difficulty',
                              choices=[(5, "Easy: The info was easy to recall"),
                                       (4, 'Medium: I had to take a moment to recall something'),
@@ -134,4 +181,4 @@ class AnswerForm(FlaskForm):
     answer = TextAreaField('answer', validators=[DataRequired()])
     submit = SubmitField("Submit")
 
-from app.db_models import Question, Attempt
+from app.db_models import Question, Attempt, Student, enrollments

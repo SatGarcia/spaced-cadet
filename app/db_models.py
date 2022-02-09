@@ -34,7 +34,7 @@ class Question(db.Model):
     section_id = db.Column(db.Integer, db.ForeignKey('section.id'))
     objective_id = db.Column(db.Integer, db.ForeignKey('objective.id'))
 
-    students = db.relationship('Attempt', backref='question', lazy='dynamic')
+    attempts = db.relationship('Attempt', backref='question', lazy='dynamic')
 
     def __repr__(self):
         return f"<Question {self.id}: {self.prompt}>"
@@ -42,10 +42,8 @@ class Question(db.Model):
 
 class Attempt(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    question_id = db.Column(db.Integer, db.ForeignKey('question.id'),
-                            primary_key=True)
-    student_id = db.Column(db.Integer, db.ForeignKey('student.id'),
-                           primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'))
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'))
 
     #question = db.relationship('Question', backref='students', lazy='dynamic')
     #student = db.relationship('Student', backref='questions', lazy='dynamic')
@@ -95,7 +93,7 @@ class Student(db.Model):
     first_name = db.Column(db.String(64), index=True, nullable=False)
     last_name = db.Column(db.String(64), index=True, nullable=False)
 
-    questions = db.relationship('Attempt', backref='student', lazy='dynamic')
+    attempts = db.relationship('Attempt', backref='student', lazy='dynamic')
 
     def __repr__(self):
         return f"<Student {self.id}: {self.last_name}, {self.first_name} ({self.username})>"
