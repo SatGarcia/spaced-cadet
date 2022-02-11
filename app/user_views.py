@@ -27,14 +27,8 @@ def difficulty():
         # get the question and update it's interval and e_factor
         a = Attempt.query.filter_by(id=form.attempt_id.data).first()
         # TODO: check that query returned something (50X error otherwise)
-        quality = form.difficulty.data
 
-        a.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
-        a.interval = 6 if a.interval == 1 else int(a.interval * a.e_factor)
-
-        # next attempt will be interval days from today
-        a.next_attempt = date.today() + timedelta(days=a.interval)
-
+        sm2_update(a, form.difficulty.data) # update sm2 based on reported difficulty
         db.session.commit()
 
     flash("Nice work!", "success")
@@ -47,12 +41,11 @@ def self_review():
     one or not. """
     form = SelfReviewForm(request.form)
     if form.validate_on_submit():
-
         # update the outcome of the attempt in the database
         attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
-        q = attempt.question
 
         if form.yes.data:
+            # user reported they got it correct so show them difficulty rating form
             attempt.correct = True
             db.session.commit()
             difficulty_form = DifficultyForm(attempt_id=form.attempt_id.data)
@@ -60,20 +53,14 @@ def self_review():
                                    page_title="Cadet Test: Rating",
                                    form=difficulty_form)
 
-        # they missed it so reset interval to 1 and update the e_factor
-        flash("No worries. We'll test you on this question again tomorrow.", "danger")
-        attempt.correct = False
+        else:
+            # user reported they were wrong
+            attempt.correct = False
+            sm2_update(attempt, 2) # they made an attempt but were wrong so set difficulty to 2
+            db.session.commit()
 
-        quality = 2  # they made an attempt but were wrong so set difficulty to 2
-        attempt.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
-
-        # missed question should be repeated again tomorrow
-        attempt.interval = 1
-        attempt.next_attempt = date.today() + timedelta(days=attempt.interval)
-
-        db.session.commit()
-
-        return redirect(url_for('.test'))
+            flash("No worries. We'll test you on this question again tomorrow.", "danger")
+            return redirect(url_for('.test'))
 
     # FIXME: should render the self_verify template again... but really should
     # never happen!
@@ -85,6 +72,24 @@ def get_last_attempt(user_id, question_id):
                                 Attempt.question_id == question_id).order_by(
                                     Attempt.time.desc()).first()
 
+def sm2_update(attempt, quality):
+    """ Updates the attempt's e_factor and interval based on the quality of
+    their most recent answer. """
+
+    attempt.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
+
+    if quality < 3:
+        # missed question should be repeated again tomorrow
+        attempt.interval = 1
+
+    else:
+        # They got the correct answer, so interval increases
+        attempt.interval = 6 if attempt.interval == 1 else int(attempt.interval * attempt.e_factor)
+
+    # next attempt will be interval days from today
+    attempt.next_attempt = date.today() + timedelta(days=attempt.interval)
+
+
 @user_views.route('/test/multiple-choice', methods=['POST'])
 def test_multiple_choice():
     # FIXME: code duplication in this function
@@ -94,12 +99,9 @@ def test_multiple_choice():
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
     form.response.choices = [(option.id, option.text) for option in original_question.options]
+    form.response.choices.append((-1, "I Don't Know"))
 
     if form.validate_on_submit():
-        # get the select answer
-        answer_id = form.response.data
-        selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
-
         # grab the last attempt (before creating a new attempt which will be
         # the new "last" attempt
         previous_attempt = get_last_attempt(curr_user.id, original_question_id)
@@ -108,18 +110,24 @@ def test_multiple_choice():
         attempt = SelectionAttempt(question_id=original_question_id,
                                    student_id=curr_user.id)
 
-        #selected_answer.attempts.append(attempt)
-        attempt.response = selected_answer
+        # Get the selected answer.
+        answer_id = form.response.data
+        selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
 
         # if there was a previous attempt, copy over e_factor and interval
         if previous_attempt:
             attempt.e_factor = previous_attempt.e_factor
             attempt.interval = previous_attempt.interval
 
+        if selected_answer:
+            # no selected answer means they didn't have a response (i.e. "I
+            # Don't Know" was their answer)
+            attempt.response = selected_answer
+
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
 
-        if selected_answer.correct:
+        if selected_answer and selected_answer.correct:
             # if correct, send them off to the self rating form
             attempt.correct = True
             db.session.commit()
@@ -128,19 +136,18 @@ def test_multiple_choice():
                                    page_title="Cadet Test: Rating",
                                    form=difficulty_form)
 
-        attempt.correct = False
+        else:
+            attempt.correct = False
 
-        quality = 2  # they made an attempt but were wrong so set difficulty to 2
-        attempt.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
+            if selected_answer:
+                sm2_update(attempt, 2)  # they made an attempt but were wrong so set response quality to 2
+            else:
+                sm2_update(attempt, 1)  # no attempt ("I Don't Know"), so set response quality to 1
 
-        # missed question should be repeated again tomorrow
-        attempt.interval = 1
-        attempt.next_attempt = date.today() + timedelta(days=attempt.interval)
+            db.session.commit()
 
-        db.session.commit()
-
-        flash("INCORRECT. No worries. We'll test you on this question again tomorrow.", "danger")
-        return redirect(url_for('.test'))
+            flash("INCORRECT. No worries. We'll test you on this question again tomorrow.", "danger")
+            return redirect(url_for('.test'))
 
     return "FAIL"
 
@@ -170,7 +177,15 @@ def test_definition():
             attempt.interval = previous_attempt.interval
 
         db.session.add(attempt)
-        db.session.commit()
+        db.session.commit() # TRICKY: need to commit to get default e_factor and interval
+
+        if form.no_answer.data:
+            # No response from user ("I Don't Know"), which is response
+            # quality 1 in SM-2
+            sm2_update(attempt, 1)
+            db.session.commit()
+            flash("INCORRECT. No worries. We'll test you on this question again tomorrow.", "danger")
+            return redirect(url_for('.test'))
 
         # create the self review_form
         review_form = SelfReviewForm(attempt_id=attempt.id)
@@ -237,6 +252,7 @@ def test():
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(question_id=question.id)
         form.response.choices = [(option.id, option.text) for option in question.options]
+        form.response.choices.append((-1, "I Don't Know"))
 
         return render_template("test_multiple_choice.html",
                                page_title="Cadet Test",
@@ -244,6 +260,22 @@ def test():
                                prompt=question.prompt)
     else:
         return "UNSUPPORTED QUESTION TYPE"
+
+
+class DataRequiredIf(InputRequired):
+    # a validator which makes a field required if another field is set and has
+    # a truthy value
+
+    def __init__(self, other_field_name, *args, **kwargs):
+        self.other_field_name = other_field_name
+        super(DataRequiredIf, self).__init__(*args, **kwargs)
+
+    def __call__(self, form, field):
+        other_field = form._fields.get(self.other_field_name)
+        if other_field is None:
+            raise Exception('no field named "%s" in form' % self.other_field_name)
+        if bool(other_field.data):
+            super(DataRequiredIf, self).__call__(form, field)
 
 
 class DifficultyForm(FlaskForm):
@@ -256,20 +288,25 @@ class DifficultyForm(FlaskForm):
                              coerce=int)
     submit = SubmitField("Submit")
 
+
 class SelfReviewForm(FlaskForm):
     attempt_id = HiddenField("Attempt ID")
     yes = SubmitField("Yes")
     no = SubmitField("No")
 
+
 class DefinitionForm(FlaskForm):
     question_id = HiddenField("Question ID")
-    answer = TextAreaField('answer', validators=[DataRequired()])
+    answer = TextAreaField('answer', validators=[DataRequiredIf('submit')])
+    no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
+
 
 class MultipleChoiceForm(FlaskForm):
     question_id = HiddenField("Question ID")
     response = RadioField('answer', validators=[InputRequired()], coerce=int)
     submit = SubmitField("Submit")
+
 
 from app.db_models import (
     Question, Attempt, Student, enrollments, QuestionType, AnswerOption,

@@ -8,8 +8,8 @@ class QuestionType(enum.Enum):
     GENERIC = 0
     DEFINITION = 1
     MULTIPLE_CHOICE = 2
-    SHORT_ANSWER = 3
-    MULTIPLE_ANSWER = 4
+    #SHORT_ANSWER = 3
+    #MULTIPLE_ANSWER = 4
 
 class ResponseType(enum.Enum):
     GENERIC = 0
