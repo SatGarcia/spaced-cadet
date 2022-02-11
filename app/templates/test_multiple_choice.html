@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+        <h3>Multiple Choice (Select One)</h3>
+
+        <p>{{ prompt }}</p>
+
+		<form method="POST" action="{{ url_for('user_views.test_multiple_choice') }}">
+			{{ form.csrf_token }}
+			{{ form.question_id }}
+            <ul class="list-unstyled">
+            {% for subfield in form.response %}
+                <li>
+                    {{ subfield }}
+                    {{ subfield.label }}
+                </li>
+            {% endfor %}
+			<br/>{{ form.submit(class_="btn btn-primary") }}
+		</form>
+    </div>
+{% endblock %}

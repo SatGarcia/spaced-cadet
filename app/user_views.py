@@ -3,9 +3,10 @@ from flask import (
 )
 from flask_wtf import FlaskForm
 from wtforms import (
-    StringField, SubmitField, TextAreaField, HiddenField, SelectField
+    StringField, SubmitField, TextAreaField, HiddenField, SelectField,
+    RadioField
 )
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, InputRequired
 from datetime import date, timedelta, datetime
 
 from app import db
@@ -79,6 +80,71 @@ def self_review():
     return "BAD STUFF"
 
 
+@user_views.route('/test/multiple-choice', methods=['POST'])
+def test_multiple_choice():
+    curr_user = Student.query.filter_by(username='sat').first()
+
+    form = MultipleChoiceForm(request.form)
+    original_question_id = form.question_id.data
+    original_question = Question.query.filter_by(id=original_question_id).first()
+    form.response.choices = [(option.id, option.text) for option in original_question.options]
+
+    if form.validate_on_submit():
+        # get the selected answer and check if it was correct
+        answer_id = form.response.data
+        selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
+        if selected_answer.correct:
+            flash("CORRECT! Nice work!", "success")
+        else:
+            flash("INCORRECT. No worries. We'll test you on this question again tomorrow.", "danger")
+
+        return redirect(url_for('.test'))
+
+    return "FAIL"
+
+@user_views.route('/test/definition', methods=['POST'])
+def test_definition():
+    curr_user = Student.query.filter_by(username='sat').first()
+
+    form = DefinitionForm(request.form)
+    original_question_id = form.question_id.data
+    original_question = Question.query.filter_by(id=original_question_id).first()
+
+    if form.validate_on_submit():
+        # check for a previous attempt
+        previous_attempt = Attempt.query.filter(Attempt.student_id == curr_user.id,
+                                                Attempt.question_id == original_question_id).order_by(
+                                                    Attempt.time.desc()).first()
+
+        # add the attempt to the database (leaving the outcome undefined for
+        # now)
+        attempt = Attempt(response=form.answer.data,
+                          question_id=original_question_id,
+                          student_id=curr_user.id)
+
+        # if there was a previous attempt, copy over e_factor and interval
+        if previous_attempt:
+            attempt.e_factor = previous_attempt.e_factor
+            attempt.interval = previous_attempt.interval
+
+        db.session.add(attempt)
+        db.session.commit()
+
+        # create the self review_form
+        review_form = SelfReviewForm(attempt_id=attempt.id)
+
+        return render_template("self_verify.html",
+                               page_title="Cadet Test: Self Verification",
+                               form=review_form,
+                               term=original_question.prompt,
+                               answer=form.answer.data,
+                               definition=original_question.answer)
+
+    return render_template("test_definition.html",
+                           page_title="Cadet Test",
+                           form=form,
+                           term=original_question.prompt)
+
 @user_views.route('/test', methods=['GET', 'POST'])
 def test():
     """ Presents a random question to the user. """
@@ -119,46 +185,23 @@ def test():
         # No questions need to be tested so display a completed page.
         return render_template("completed.html", page_title="Cadet: Complete")
 
-    form = AnswerForm(question_id=question.id)
-    if form.validate_on_submit():
+    if question.type == QuestionType.DEFINITION:
+        form = DefinitionForm(question_id=question.id)
+        return render_template("test_definition.html",
+                               page_title="Cadet Test",
+                               form=form,
+                               term=question.prompt)
 
+    elif question.type == QuestionType.MULTIPLE_CHOICE:
+        form = MultipleChoiceForm(question_id=question.id)
+        form.response.choices = [(option.id, option.text) for option in question.options]
 
-        original_question_id = form.question_id.data
-
-        # check for a previous attempt
-        previous_attempt = Attempt.query.filter(Attempt.student_id == curr_user.id,
-                                                Attempt.question_id == original_question_id).order_by(
-                                                    Attempt.time.desc()).first()
-
-        # add the attempt to the database (leaving the outcome undefined for
-        # now)
-        attempt = Attempt(response=form.answer.data,
-                          question_id=original_question_id,
-                          student_id=curr_user.id)
-
-        # if there was a previous attempt, copy over e_factor and interval
-        if previous_attempt:
-            attempt.e_factor = previous_attempt.e_factor
-            attempt.interval = previous_attempt.interval
-
-        db.session.add(attempt)
-        db.session.commit()
-
-        # create the self review_form
-        review_form = SelfReviewForm(attempt_id=attempt.id)
-        original_question = Question.query.filter_by(id=original_question_id).first()
-
-        return render_template("self_verify.html",
-                               page_title="Cadet Test: Self Verification",
-                               form=review_form,
-                               term=original_question.prompt,
-                               answer=form.answer.data,
-                               definition=original_question.answer)
-
-    return render_template("question.html",
-                           page_title="Cadet Test",
-                           form=form,
-                           term=question.prompt)
+        return render_template("test_multiple_choice.html",
+                               page_title="Cadet Test",
+                               form=form,
+                               prompt=question.prompt)
+    else:
+        return "UNSUPPORTED QUESTION TYPE"
 
 
 class DifficultyForm(FlaskForm):
@@ -176,9 +219,16 @@ class SelfReviewForm(FlaskForm):
     yes = SubmitField("Yes")
     no = SubmitField("No")
 
-class AnswerForm(FlaskForm):
+class DefinitionForm(FlaskForm):
     question_id = HiddenField("Question ID")
     answer = TextAreaField('answer', validators=[DataRequired()])
     submit = SubmitField("Submit")
 
-from app.db_models import Question, Attempt, Student, enrollments
+class MultipleChoiceForm(FlaskForm):
+    question_id = HiddenField("Question ID")
+    response = RadioField('answer', validators=[InputRequired()], coerce=int)
+    submit = SubmitField("Submit")
+
+from app.db_models import (
+    Question, Attempt, Student, enrollments, QuestionType, AnswerOption
+)

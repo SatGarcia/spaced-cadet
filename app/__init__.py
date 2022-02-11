@@ -71,12 +71,23 @@ def create_app(test_config=None):
         #assessment.objectives.append(lo)
         db.session.commit()
 
-        q1 = db_models.Question(prompt="vegan", answer="A cool person")
-        q2 = db_models.Question(prompt="cat", answer="Cute furrball")
-        q3 = db_models.Question(prompt="olives", answer="Nasty stuff")
+        q1 = db_models.DefinitionQuestion(prompt="vegan",
+                                answer="A cool person")
+        q2 = db_models.DefinitionQuestion(prompt="cat",
+                                answer="Cute furrball")
+
+        q3 = db_models.MultipleChoiceQuestion(prompt="Why is less code better?")
+        o1 = db_models.AnswerOption(text="Fewer lines to have bugs in.",
+                                    correct=True)
+        o2 = db_models.AnswerOption(text="Because Dr. Sat said so.")
+        o3 = db_models.AnswerOption(text="Allows more laziness.")
+
         db.session.add(q1)
         db.session.add(q2)
         db.session.add(q3)
+        q3.options.append(o1)
+        q3.options.append(o2)
+        q3.options.append(o3)
         lo.questions.append(q1)
         lo.questions.append(q2)
         lo.questions.append(q3)

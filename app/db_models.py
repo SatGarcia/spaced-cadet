@@ -1,7 +1,15 @@
 #from flask_login import UserMixin
 from datetime import datetime
+import enum
 
 from app import db
+
+class QuestionType(enum.Enum):
+    GENERIC = 0
+    DEFINITION = 1
+    MULTIPLE_CHOICE = 2
+    SHORT_ANSWER = 3
+    MULTIPLE_ANSWER = 4
 
 # association table for students enrolled in a section
 enrollments = db.Table(
@@ -29,15 +37,52 @@ source_objectives = db.Table(
 
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.Enum(QuestionType), nullable=False)
+
     prompt = db.Column(db.String, nullable=False)
-    answer = db.Column(db.String, nullable=False)
+
     section_id = db.Column(db.Integer, db.ForeignKey('section.id'))
     objective_id = db.Column(db.Integer, db.ForeignKey('objective.id'))
 
     attempts = db.relationship('Attempt', backref='question', lazy='dynamic')
 
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.GENERIC,
+        'polymorphic_on': type
+    }
+
     def __repr__(self):
-        return f"<Question {self.id}: {self.prompt}>"
+        return f"<Question {self.id}: ({self.type}) {self.prompt}>"
+
+
+class DefinitionQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+
+    answer = db.Column(db.String, nullable=False)
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.DEFINITION,
+    }
+
+
+class MultipleChoiceQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+
+    options = db.relationship('AnswerOption',
+                                foreign_keys='AnswerOption.question_id',
+                                backref='question', lazy='dynamic')
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.MULTIPLE_CHOICE,
+    }
+
+
+class AnswerOption(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'))
+
+    text = db.Column(db.String, nullable=False)
+    correct = db.Column(db.Boolean, default=False, nullable=False)
 
 
 class Attempt(db.Model):
