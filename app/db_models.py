@@ -11,6 +11,11 @@ class QuestionType(enum.Enum):
     SHORT_ANSWER = 3
     MULTIPLE_ANSWER = 4
 
+class ResponseType(enum.Enum):
+    GENERIC = 0
+    TEXT = 1
+    SELECTION = 2
+
 # association table for students enrolled in a section
 enrollments = db.Table(
     'enrollments',
@@ -84,17 +89,19 @@ class AnswerOption(db.Model):
     text = db.Column(db.String, nullable=False)
     correct = db.Column(db.Boolean, default=False, nullable=False)
 
+    attempts = db.relationship('SelectionAttempt',
+                                    foreign_keys='SelectionAttempt.option_id',
+                                    backref='response', lazy='dynamic')
+
 
 class Attempt(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.Enum(ResponseType), nullable=False)
+
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'))
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'))
 
-    #question = db.relationship('Question', backref='students', lazy='dynamic')
-    #student = db.relationship('Student', backref='questions', lazy='dynamic')
-
     time = db.Column(db.DateTime, default=datetime.utcnow)
-    response = db.Column(db.String, nullable=False)  # TODO: make no reesponse an option
     correct = db.Column(db.Boolean)
 
     # entries for SM-2 Algorithm
@@ -102,9 +109,32 @@ class Attempt(db.Model):
     e_factor = db.Column(db.Float, default=2.5, nullable=False)
     interval = db.Column(db.Integer, default=1, nullable=False)
 
+    __mapper_args__ = {
+        'polymorphic_identity': ResponseType.GENERIC,
+        'polymorphic_on': type
+    }
 
     def __repr__(self):
         return f"<Attempt {self.id}: Question {self.question.id} by Student {self.student.id} at {self.time}>"
+
+
+class TextAttempt(Attempt):
+    id = db.Column(db.Integer, db.ForeignKey('attempt.id'), primary_key=True)
+
+    response = db.Column(db.String, nullable=False)  # TODO: make no reesponse an option
+
+    __mapper_args__ = {
+        'polymorphic_identity': ResponseType.TEXT,
+    }
+
+
+class SelectionAttempt(Attempt):
+    id = db.Column(db.Integer, db.ForeignKey('attempt.id'), primary_key=True)
+    option_id = db.Column(db.Integer, db.ForeignKey('answer_option.id'))
+
+    __mapper_args__ = {
+        'polymorphic_identity': ResponseType.SELECTION,
+    }
 
 
 class Section(db.Model):

@@ -80,8 +80,14 @@ def self_review():
     return "BAD STUFF"
 
 
+def get_last_attempt(user_id, question_id):
+    return Attempt.query.filter(Attempt.student_id == user_id,
+                                Attempt.question_id == question_id).order_by(
+                                    Attempt.time.desc()).first()
+
 @user_views.route('/test/multiple-choice', methods=['POST'])
 def test_multiple_choice():
+    # FIXME: code duplication in this function
     curr_user = Student.query.filter_by(username='sat').first()
 
     form = MultipleChoiceForm(request.form)
@@ -90,14 +96,50 @@ def test_multiple_choice():
     form.response.choices = [(option.id, option.text) for option in original_question.options]
 
     if form.validate_on_submit():
-        # get the selected answer and check if it was correct
+        # get the select answer
         answer_id = form.response.data
         selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
-        if selected_answer.correct:
-            flash("CORRECT! Nice work!", "success")
-        else:
-            flash("INCORRECT. No worries. We'll test you on this question again tomorrow.", "danger")
 
+        # grab the last attempt (before creating a new attempt which will be
+        # the new "last" attempt
+        previous_attempt = get_last_attempt(curr_user.id, original_question_id)
+
+        # add the attempt to the database
+        attempt = SelectionAttempt(question_id=original_question_id,
+                                   student_id=curr_user.id)
+
+        #selected_answer.attempts.append(attempt)
+        attempt.response = selected_answer
+
+        # if there was a previous attempt, copy over e_factor and interval
+        if previous_attempt:
+            attempt.e_factor = previous_attempt.e_factor
+            attempt.interval = previous_attempt.interval
+
+        db.session.add(attempt)
+        db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
+
+        if selected_answer.correct:
+            # if correct, send them off to the self rating form
+            attempt.correct = True
+            db.session.commit()
+            difficulty_form = DifficultyForm(attempt_id=attempt.id)
+            return render_template("difficulty.html",
+                                   page_title="Cadet Test: Rating",
+                                   form=difficulty_form)
+
+        attempt.correct = False
+
+        quality = 2  # they made an attempt but were wrong so set difficulty to 2
+        attempt.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
+
+        # missed question should be repeated again tomorrow
+        attempt.interval = 1
+        attempt.next_attempt = date.today() + timedelta(days=attempt.interval)
+
+        db.session.commit()
+
+        flash("INCORRECT. No worries. We'll test you on this question again tomorrow.", "danger")
         return redirect(url_for('.test'))
 
     return "FAIL"
@@ -118,9 +160,9 @@ def test_definition():
 
         # add the attempt to the database (leaving the outcome undefined for
         # now)
-        attempt = Attempt(response=form.answer.data,
-                          question_id=original_question_id,
-                          student_id=curr_user.id)
+        attempt = TextAttempt(response=form.answer.data,
+                              question_id=original_question_id,
+                              student_id=curr_user.id)
 
         # if there was a previous attempt, copy over e_factor and interval
         if previous_attempt:
@@ -230,5 +272,6 @@ class MultipleChoiceForm(FlaskForm):
     submit = SubmitField("Submit")
 
 from app.db_models import (
-    Question, Attempt, Student, enrollments, QuestionType, AnswerOption
+    Question, Attempt, Student, enrollments, QuestionType, AnswerOption,
+    TextAttempt, SelectionAttempt
 )
