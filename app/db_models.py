@@ -60,6 +60,19 @@ class Question(db.Model):
         return f"<Question {self.id}: ({self.type}) {self.prompt}>"
 
 
+    def create(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def update(self):
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        # FIXME: Do we need to manually delete options in MC questions?
+        db.session.commit()
+
+
 class DefinitionQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
 
