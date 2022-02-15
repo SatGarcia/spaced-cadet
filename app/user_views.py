@@ -116,7 +116,7 @@ def test_multiple_choice():
     form = MultipleChoiceForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
-    form.response.choices = [(option.id, option.text) for option in original_question.options]
+    form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
     form.response.choices.append((-1, "I Don't Know"))
 
     if form.validate_on_submit():
@@ -274,7 +274,7 @@ def test():
 
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(question_id=question.id)
-        form.response.choices = [(option.id, option.text) for option in question.options]
+        form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
         form.response.choices.append((-1, "I Don't Know"))
 
         prompt_html = markdown_to_html(question.prompt)
