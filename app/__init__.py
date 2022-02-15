@@ -4,16 +4,7 @@ import logging, logging.handlers
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
-
-#import rq
-#from redis import Redis
-
-#from . import db
-#from . import admin
-#from . import user_views
-
 db = SQLAlchemy()
-
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -71,12 +62,22 @@ def create_app(test_config=None):
         #assessment.objectives.append(lo)
         db.session.commit()
 
-        q1 = db_models.DefinitionQuestion(prompt="vegan",
-                                answer="A cool person")
+        q1 = db_models.DefinitionQuestion(prompt="v**egan**",
+                                answer="A _cool_ person")
         q2 = db_models.DefinitionQuestion(prompt="cat",
                                 answer="Cute furrball")
 
-        q3 = db_models.MultipleChoiceQuestion(prompt="Why is less code better?")
+        q3 = db_models.MultipleChoiceQuestion(prompt=\
+"""
+Why is **less** code better?
+
+```python
+for i in range(10):
+    print(i)
+```
+
+$$\\frac{x}{y^{3*z}}$$
+""")
         o1 = db_models.AnswerOption(text="Fewer lines to have bugs in.",
                                     correct=True)
         o2 = db_models.AnswerOption(text="Because Dr. Sat said so.")
@@ -98,7 +99,6 @@ def create_app(test_config=None):
 
         for q in db_models.Question.query:
             print(repr(q))
-
 
     from app.user_views import user_views as uv
     app.register_blueprint(uv)

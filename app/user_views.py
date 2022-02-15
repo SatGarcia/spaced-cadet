@@ -1,5 +1,5 @@
 from flask import (
-    Blueprint, render_template, url_for, redirect, flash, request
+    Blueprint, render_template, url_for, redirect, flash, request, Markup
 )
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -7,11 +7,29 @@ from wtforms import (
     RadioField
 )
 from wtforms.validators import DataRequired, InputRequired
+import markdown
 from datetime import date, timedelta, datetime
 
 from app import db
 
 user_views = Blueprint('user_views', __name__)
+
+def markdown_to_html(markdown_text, code_linenums=True):
+    """ Convert markdown text to html. """
+    html = markdown.markdown(markdown_text,
+                             extensions=['fenced_code',
+                                         'codehilite',
+                                         'pymdownx.arithmatex'],
+
+                             extension_configs = {
+                                 "pymdownx.arithmatex": {
+                                     "generic": True
+                                 },
+                                 "codehilite": {
+                                     "linenums": code_linenums
+                                 }
+                             })
+    return html
 
 @user_views.route('/')
 def root():
@@ -158,6 +176,7 @@ def test_definition():
     form = DefinitionForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
+    term_html = markdown_to_html(original_question.prompt)
 
     if form.validate_on_submit():
         # check for a previous attempt
@@ -190,17 +209,19 @@ def test_definition():
         # create the self review_form
         review_form = SelfReviewForm(attempt_id=attempt.id)
 
+        definition_html = markdown_to_html(original_question.answer)
+
         return render_template("self_verify.html",
                                page_title="Cadet Test: Self Verification",
                                form=review_form,
-                               term=original_question.prompt,
+                               term=Markup(term_html),
                                answer=form.answer.data,
-                               definition=original_question.answer)
+                               definition=Markup(definition_html))
 
     return render_template("test_definition.html",
                            page_title="Cadet Test",
                            form=form,
-                           term=original_question.prompt)
+                           term=Markup(term_html))
 
 @user_views.route('/test', methods=['GET', 'POST'])
 def test():
@@ -240,24 +261,28 @@ def test():
 
     if not question:
         # No questions need to be tested so display a completed page.
-        return render_template("completed.html", page_title="Cadet: Complete")
+        return render_template("completed.html",
+                               page_title="Cadet: Complete")
 
     if question.type == QuestionType.DEFINITION:
         form = DefinitionForm(question_id=question.id)
+        term_html = markdown_to_html(question.prompt)
         return render_template("test_definition.html",
                                page_title="Cadet Test",
                                form=form,
-                               term=question.prompt)
+                               term=Markup(term_html))
 
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(question_id=question.id)
         form.response.choices = [(option.id, option.text) for option in question.options]
         form.response.choices.append((-1, "I Don't Know"))
 
+        prompt_html = markdown_to_html(question.prompt)
+
         return render_template("test_multiple_choice.html",
                                page_title="Cadet Test",
                                form=form,
-                               prompt=question.prompt)
+                               prompt=Markup(prompt_html))
     else:
         return "UNSUPPORTED QUESTION TYPE"
 
