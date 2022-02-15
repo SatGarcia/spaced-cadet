@@ -69,6 +69,14 @@ class DefinitionQuestion(Question):
         'polymorphic_identity': QuestionType.DEFINITION,
     }
 
+    def format(self):
+        q = {}
+        q['id'] = self.id
+        q['type'] = 'definition'
+        q['prompt'] = self.prompt
+        q['answer'] = self.answer
+        return q
+
 
 class MultipleChoiceQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
@@ -81,6 +89,14 @@ class MultipleChoiceQuestion(Question):
         'polymorphic_identity': QuestionType.MULTIPLE_CHOICE,
     }
 
+    def format(self):
+        q = {}
+        q['id'] = self.id
+        q['type'] = 'multiple-choice'
+        q['prompt'] = self.prompt
+        q['options'] = [o.format() for o in self.options]
+        return q
+
 
 class AnswerOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -92,6 +108,13 @@ class AnswerOption(db.Model):
     attempts = db.relationship('SelectionAttempt',
                                     foreign_keys='SelectionAttempt.option_id',
                                     backref='response', lazy='dynamic')
+
+    def format(self):
+        ao = {}
+        ao['id'] = self.id
+        ao['text'] = self.text
+        ao['correct'] = self.correct
+        return ao
 
 
 class Attempt(db.Model):

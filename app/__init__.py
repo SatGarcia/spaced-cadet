@@ -103,6 +103,9 @@ $$\\frac{x}{y^{3*z}}$$
     from app.user_views import user_views as uv
     app.register_blueprint(uv)
 
+    from app.api import api
+    app.register_blueprint(api, url_prefix='/api')
+
     return app
 
 from app import db_models
