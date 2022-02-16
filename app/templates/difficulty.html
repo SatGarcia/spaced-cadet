@@ -1,14 +1,22 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
-        <h2>Rate Your Performance</h2>
+        <h3>Rate Your Performance</h3>
         Your answer was correct. How difficult was it for you?
 
         <form method="POST" action="{{ url_for('user_views.difficulty') }}">
             {{ form.csrf_token }}
             {{ form.attempt_id }}
-            {{ form.difficulty }}
-            <br/>{{ form.submit(class_="btn btn-primary") }}
+            <ul class="list-unstyled px-1 pt-2">
+                {% for option in form.difficulty %}
+                    <li>
+                        {{ option }}
+                        {{ option.label }}
+                    </li>
+                {% endfor %}
+            </ul>
+
+            {{ form.submit(class_="btn btn-primary btn-sm") }}
         </form>
     </div>
 {% endblock %}
