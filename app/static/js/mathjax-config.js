@@ -10,3 +10,9 @@ window.MathJax = {
     processHtmlClass: "arithmatex"
   }
 }; 
+
+MathJax = {
+  chtml: {
+    displayAlign: 'left'
+  }
+};

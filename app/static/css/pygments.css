@@ -73,3 +73,4 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 .codehilite .vm { color: #996633 } /* Name.Variable.Magic */
 .codehilite .il { color: #0000DD; font-weight: bold } /* Literal.Number.Integer.Long */
 td.code { border-left:2px solid gray; padding-left: 7px}
+div.arithmatex { padding-left: 20px }
