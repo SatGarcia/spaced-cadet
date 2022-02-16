@@ -1,16 +1,34 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
-        <h2>{{ term }}</h2>
-		<p>Your Answer: {{ answer }}</p>
-		<p>Correct Definition: {{ definition }}</p>
-		<p>Were you correct?
+        <h4><i class="bi-check2-circle"></i><span class="px-2">Self-Check</span></h4>
+        <div class="container">
+            Define: <span class="fs-3 fw-bold">{{ term }}</span>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Your Answer</th>
+                        <th scope="col">Correct Answer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ answer }}</td>
+                        <td>{{ definition }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+		<div class="container fs-5">
 			<form method="POST" action="{{ url_for('user_views.self_review') }}">
 				{{ form.csrf_token }}
 				{{ form.attempt_id }}
-				{{ form.yes(class_="btn btn-success") }}
+                Was your answer correct?
+				{{ form.yes(class_="btn btn-primary") }}
 				{{ form.no(class_="btn btn-danger") }}
 			</form>
-		</p>
+		</div>
     </div>
 {% endblock %}
