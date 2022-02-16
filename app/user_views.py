@@ -7,6 +7,8 @@ from wtforms import (
     RadioField
 )
 from wtforms.validators import DataRequired, InputRequired
+from flask_login import current_user, login_required
+
 import markdown
 from datetime import date, timedelta, datetime
 
@@ -111,7 +113,6 @@ def sm2_update(attempt, quality):
 @user_views.route('/test/multiple-choice', methods=['POST'])
 def test_multiple_choice():
     # FIXME: code duplication in this function
-    curr_user = Student.query.filter_by(username='sat').first()
 
     form = MultipleChoiceForm(request.form)
     original_question_id = form.question_id.data
@@ -122,11 +123,11 @@ def test_multiple_choice():
     if form.validate_on_submit():
         # grab the last attempt (before creating a new attempt which will be
         # the new "last" attempt
-        previous_attempt = get_last_attempt(curr_user.id, original_question_id)
+        previous_attempt = get_last_attempt(current_user.id, original_question_id)
 
         # add the attempt to the database
         attempt = SelectionAttempt(question_id=original_question_id,
-                                   student_id=curr_user.id)
+                                   student_id=current_user.id)
 
         # Get the selected answer.
         answer_id = form.response.data
@@ -171,8 +172,6 @@ def test_multiple_choice():
 
 @user_views.route('/test/definition', methods=['POST'])
 def test_definition():
-    curr_user = Student.query.filter_by(username='sat').first()
-
     form = DefinitionForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
@@ -180,7 +179,7 @@ def test_definition():
 
     if form.validate_on_submit():
         # check for a previous attempt
-        previous_attempt = Attempt.query.filter(Attempt.student_id == curr_user.id,
+        previous_attempt = Attempt.query.filter(Attempt.student_id == current_user.id,
                                                 Attempt.question_id == original_question_id).order_by(
                                                     Attempt.time.desc()).first()
 
@@ -188,7 +187,7 @@ def test_definition():
         # now)
         attempt = TextAttempt(response=form.answer.data,
                               question_id=original_question_id,
-                              student_id=curr_user.id)
+                              student_id=current_user.id)
 
         # if there was a previous attempt, copy over e_factor and interval
         if previous_attempt:
@@ -224,18 +223,18 @@ def test_definition():
                            term=Markup(term_html))
 
 @user_views.route('/test', methods=['GET', 'POST'])
+@login_required
 def test():
     """ Presents a random question to the user. """
-    curr_user = Student.query.filter_by(username='sat').first()
 
     # get all the questions from section's that this student is enrolled in
     possible_questions = Question.query.join(
         enrollments, (enrollments.c.section_id == Question.section_id)).filter(
-            enrollments.c.student_id == curr_user.id)
+            enrollments.c.student_id == current_user.id)
 
     # find questions that haven't been attempted yet, as these will be part of
     # the pool of questions we can ask them
-    unattempted_questions = possible_questions.filter(~ Question.attempts.any(Attempt.student_id == curr_user.id))
+    unattempted_questions = possible_questions.filter(~ Question.attempts.any(Attempt.student_id == current_user.id))
 
     # Find questions whose next attempt is before today, as these will also be
     # part of the pool of questions to ask

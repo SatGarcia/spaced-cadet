@@ -106,6 +106,12 @@ $$\\frac{x}{y^{3*z}}$$
     from app.api import api
     app.register_blueprint(api, url_prefix='/api')
 
+    from app.auth import auth
+    app.register_blueprint(auth, url_prefix="/auth")
+
+    from app.auth import init_app as init_auth
+    init_auth(app)
+
     return app
 
 from app import db_models

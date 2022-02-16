@@ -1,4 +1,4 @@
-#from flask_login import UserMixin
+from flask_login import UserMixin
 from datetime import datetime
 import enum
 
@@ -197,7 +197,7 @@ class Section(db.Model):
         return f"<Section {self.id}: {self.course} - Section #{self.section_num}>"
 
 
-class Student(db.Model):
+class Student(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
@@ -208,6 +208,10 @@ class Student(db.Model):
 
     def __repr__(self):
         return f"<Student {self.id}: {self.last_name}, {self.first_name} ({self.username})>"
+
+    # The following functions are used for login
+    def get_id(self):
+        return self.id
 
 
 class Objective(db.Model):
