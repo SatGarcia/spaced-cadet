@@ -1,18 +1,22 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
-        <h3>Define: {{ term }}</h3>
+        <div class="container">
+            Define: <span class="fs-3 fw-bold">{{ term }}</span>
+        </div>
 
-		<form method="POST" action="{{ url_for('user_views.test_definition') }}">
-			{{ form.csrf_token }}
-			{{ form.question_id }}
+        <div class="container">
+            <form method="POST" action="{{ url_for('user_views.test_definition') }}">
+                {{ form.csrf_token }}
+                {{ form.question_id }}
 
-			<strong>Your Definition:</strong>
+                {{ form.answer(required=False) }}
 
-			<br/>{{ form.answer(required=False) }}
-
-            <br/>{{ form.no_answer(class_="btn btn-danger") }}
-            {{ form.submit(class_="btn btn-primary") }}
-		</form>
+                <p class="pt-2">
+                    {{ form.no_answer(class_="btn btn-outline-danger btn-sm") }}
+                    {{ form.submit(class_="btn btn-primary btn-sm") }}
+                </p>
+            </form>
+        </div>
     </div>
 {% endblock %}
