@@ -16,12 +16,12 @@ class ResponseType(enum.Enum):
     TEXT = 1
     SELECTION = 2
 
-# association table for students enrolled in a section
+# association table for users enrolled in a section
 enrollments = db.Table(
     'enrollments',
     db.Column('section_id', db.Integer, db.ForeignKey('section.id'),
               primary_key=True),
-    db.Column('student_id', db.Integer, db.ForeignKey('student.id'),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'),
               primary_key=True)
 )
 
@@ -135,7 +135,7 @@ class Attempt(db.Model):
     type = db.Column(db.Enum(ResponseType), nullable=False)
 
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'))
-    student_id = db.Column(db.Integer, db.ForeignKey('student.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     time = db.Column(db.DateTime, default=datetime.utcnow)
     correct = db.Column(db.Boolean)
@@ -151,7 +151,7 @@ class Attempt(db.Model):
     }
 
     def __repr__(self):
-        return f"<Attempt {self.id}: Question {self.question.id} by Student {self.student.id} at {self.time}>"
+        return f"<Attempt {self.id}: Question {self.question.id} by User {self.user.id} at {self.time}>"
 
 
 class TextAttempt(Attempt):
@@ -178,10 +178,10 @@ class Section(db.Model):
     course = db.Column(db.String(64), index=True)
     number = db.Column(db.Integer, index=True)
 
-    students = db.relationship('Student',
+    users = db.relationship('User',
                                secondary=enrollments,
                                primaryjoin=('enrollments.c.section_id == Section.id'),
-                               secondaryjoin=('enrollments.c.student_id == Student.id'),
+                               secondaryjoin=('enrollments.c.user_id == User.id'),
                                backref=db.backref('sections', lazy='dynamic'),
                                lazy='dynamic')
 
@@ -197,17 +197,17 @@ class Section(db.Model):
         return f"<Section {self.id}: {self.course} - Section #{self.section_num}>"
 
 
-class Student(UserMixin, db.Model):
+class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     first_name = db.Column(db.String(64), index=True, nullable=False)
     last_name = db.Column(db.String(64), index=True, nullable=False)
 
-    attempts = db.relationship('Attempt', backref='student', lazy='dynamic')
+    attempts = db.relationship('Attempt', backref='user', lazy='dynamic')
 
     def __repr__(self):
-        return f"<Student {self.id}: {self.last_name}, {self.first_name} ({self.username})>"
+        return f"<User {self.id}: {self.last_name}, {self.first_name} ({self.username})>"
 
     # The following functions are used for login
     def get_id(self):

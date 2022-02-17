@@ -89,7 +89,7 @@ def self_review():
 
 
 def get_last_attempt(user_id, question_id):
-    return Attempt.query.filter(Attempt.student_id == user_id,
+    return Attempt.query.filter(Attempt.user_id == user_id,
                                 Attempt.question_id == question_id).order_by(
                                     Attempt.time.desc()).first()
 
@@ -129,7 +129,7 @@ def test_multiple_choice():
 
         # add the attempt to the database
         attempt = SelectionAttempt(question_id=original_question_id,
-                                   student_id=current_user.id)
+                                   user_id=current_user.id)
 
         # Get the selected answer.
         answer_id = form.response.data
@@ -192,7 +192,7 @@ def test_definition():
 
     if form.validate_on_submit():
         # check for a previous attempt
-        previous_attempt = Attempt.query.filter(Attempt.student_id == current_user.id,
+        previous_attempt = Attempt.query.filter(Attempt.user_id == current_user.id,
                                                 Attempt.question_id == original_question_id).order_by(
                                                     Attempt.time.desc()).first()
 
@@ -200,7 +200,7 @@ def test_definition():
         # now)
         attempt = TextAttempt(response=form.answer.data,
                               question_id=original_question_id,
-                              student_id=current_user.id)
+                              user_id=current_user.id)
 
         # if there was a previous attempt, copy over e_factor and interval
         if previous_attempt:
@@ -244,14 +244,14 @@ def test_definition():
 def test():
     """ Presents a random question to the user. """
 
-    # get all the questions from section's that this student is enrolled in
+    # get all the questions from section's that this user is enrolled in
     possible_questions = Question.query.join(
         enrollments, (enrollments.c.section_id == Question.section_id)).filter(
-            enrollments.c.student_id == current_user.id)
+            enrollments.c.user_id == current_user.id)
 
     # find questions that haven't been attempted yet, as these will be part of
     # the pool of questions we can ask them
-    unattempted_questions = possible_questions.filter(~ Question.attempts.any(Attempt.student_id == current_user.id))
+    unattempted_questions = possible_questions.filter(~ Question.attempts.any(Attempt.user_id == current_user.id))
 
     # Find questions whose next attempt is before today, as these will also be
     # part of the pool of questions to ask
@@ -350,6 +350,6 @@ class MultipleChoiceForm(FlaskForm):
 
 
 from app.db_models import (
-    Question, Attempt, Student, enrollments, QuestionType, AnswerOption,
+    Question, Attempt, enrollments, QuestionType, AnswerOption,
     TextAttempt, SelectionAttempt
 )
