@@ -204,6 +204,9 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(64), index=True, nullable=False)
     last_name = db.Column(db.String(64), index=True, nullable=False)
 
+    admin = db.Column(db.Boolean, default=False, nullable=False)
+    instructor = db.Column(db.Boolean, default=False, nullable=False)
+
     attempts = db.relationship('Attempt', backref='user', lazy='dynamic')
 
     def __repr__(self):
