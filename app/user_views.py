@@ -38,6 +38,7 @@ def root():
     return render_template("home.html")
 
 @user_views.route('/difficulty', methods=['POST'])
+@login_required
 def difficulty():
     """ Route to handle self-reported difficulty of a problem that the user
     got correct. """
@@ -55,6 +56,7 @@ def difficulty():
 
 
 @user_views.route('/review', methods=['POST'])
+@login_required
 def self_review():
     """ User will self-verify whether the answer they submitted is the correct
     one or not. """
@@ -110,6 +112,7 @@ def sm2_update(attempt, quality):
 
 
 @user_views.route('/test/multiple-choice', methods=['POST'])
+@login_required
 def test_multiple_choice():
     # FIXME: code duplication in this function
 
@@ -178,6 +181,7 @@ def test_multiple_choice():
     return "FAIL"
 
 @user_views.route('/test/definition', methods=['POST'])
+@login_required
 def test_definition():
     form = DefinitionForm(request.form)
     original_question_id = form.question_id.data
