@@ -1,4 +1,5 @@
 from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import enum
 
@@ -204,6 +205,8 @@ class User(UserMixin, db.Model):
     first_name = db.Column(db.String(64), index=True, nullable=False)
     last_name = db.Column(db.String(64), index=True, nullable=False)
 
+    password_hash = db.Column(db.String, nullable=False)
+
     admin = db.Column(db.Boolean, default=False, nullable=False)
     instructor = db.Column(db.Boolean, default=False, nullable=False)
 
@@ -215,6 +218,12 @@ class User(UserMixin, db.Model):
     # The following functions are used for login
     def get_id(self):
         return self.id
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 
 class Objective(db.Model):
