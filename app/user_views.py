@@ -51,7 +51,6 @@ def difficulty():
         sm2_update(a, form.difficulty.data) # update sm2 based on reported difficulty
         db.session.commit()
 
-    flash("Nice work!", "success")
     return redirect(url_for('.test'))
 
 
@@ -79,7 +78,7 @@ def self_review():
             sm2_update(attempt, 2) # they made an attempt but were wrong so set difficulty to 2
             db.session.commit()
 
-            flash("No worries. We'll test you on this question again tomorrow.", "danger")
+            flash("Keep your chin up, cadet. We'll test you on that question again tomorrow.", "danger")
             return redirect(url_for('.test'))
 
     # FIXME: should render the self_verify template again... but really should
