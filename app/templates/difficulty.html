@@ -1,8 +1,13 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
-        <h3>Rate Your Performance</h3>
-        Your answer was correct. How difficult was it for you?
+        <h4>
+            <i class="bi-clipboard-check"  style="color: green"></i>
+            <span class="px-2">Review Your Performance</span>
+        </h4>
+
+        Nice work, cadet! How difficult was it for you to recall the info
+        needed to answer this question?
 
         <form method="POST" action="{{ url_for('user_views.difficulty') }}">
             {{ form.csrf_token }}
