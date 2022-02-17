@@ -165,8 +165,16 @@ def test_multiple_choice():
 
             db.session.commit()
 
-            flash("INCORRECT. No worries. We'll test you on this question again tomorrow.", "danger")
-            return redirect(url_for('.test'))
+            # show the user a page where they can view the correct answer
+            prompt_html = markdown_to_html(original_question.prompt)
+
+            correct_option = original_question.options.filter_by(correct=True).first()
+            answer_html = markdown_to_html(correct_option.text)
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   prompt=Markup(prompt_html),
+                                   answer=Markup(answer_html))
 
     return "FAIL"
 
@@ -175,7 +183,9 @@ def test_definition():
     form = DefinitionForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
+
     term_html = markdown_to_html(original_question.prompt)
+    definition_html = markdown_to_html(original_question.answer)
 
     if form.validate_on_submit():
         # check for a previous attempt
@@ -202,13 +212,17 @@ def test_definition():
             # quality 1 in SM-2
             sm2_update(attempt, 1)
             db.session.commit()
-            flash("INCORRECT. No worries. We'll test you on this question again tomorrow.", "danger")
-            return redirect(url_for('.test'))
+
+            prompt_html = f'Define: <span class="fs-3 fw-bold">{term_html}</span>'
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   prompt=Markup(prompt_html),
+                                   answer=Markup(definition_html))
 
         # create the self review_form
         review_form = SelfReviewForm(attempt_id=attempt.id)
 
-        definition_html = markdown_to_html(original_question.answer)
 
         return render_template("self_verify.html",
                                page_title="Cadet Test: Self Verification",
@@ -305,7 +319,7 @@ class DataRequiredIf(InputRequired):
 class DifficultyForm(FlaskForm):
     """ Form to report the difficulty they had in answering a question. """
     attempt_id = HiddenField("Attempt ID")
-    difficulty = SelectField('Difficulty',
+    difficulty = RadioField('Difficulty',
                              choices=[(5, "Easy: The info was easy to recall"),
                                       (4, 'Medium: I had to take a moment to recall something'),
                                       (3, 'Hard: I barely recalled the info I needed.')],
