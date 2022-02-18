@@ -14,9 +14,9 @@
             {{ form.attempt_id }}
             <ul class="list-unstyled px-1 pt-2">
                 {% for option in form.difficulty %}
-                    <li>
-                        {{ option }}
-                        {{ option.label }}
+                    <li class="pt-1">
+                        {{ option(class_="form-check-input") }}
+                        {{ option.label(class_="form-check-label") }}
                     </li>
                 {% endfor %}
             </ul>
