@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
 {% block body %}
     <div class="container pt-3">
         {{ prompt }}
@@ -6,11 +8,11 @@
 		<form method="POST" action="{{ url_for('user_views.test_multiple_choice') }}">
 			{{ form.csrf_token }}
 			{{ form.question_id }}
-            <ul class="list-unstyled px-1">
+            <ul class="list-unstyled">
                 {% for subfield in form.response %}
                     <li>
-                        {{ subfield }}
-                        {{ subfield.label }}
+                        {{ subfield(class_="form-check-input") }}
+                        {{ subfield.label(class_="form-check-label") }}
                     </li>
                 {% endfor %}
             </ul>
