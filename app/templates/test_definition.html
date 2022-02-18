@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
 {% block body %}
     <div class="container pt-3">
         <div class="container">
@@ -10,7 +12,7 @@
                 {{ form.csrf_token }}
                 {{ form.question_id }}
 
-                {{ form.answer(required=False) }}
+                {{ form.answer(class_="form-control", placeholder="Enter your definition", required=False) }}
 
                 <p class="pt-2">
                     {{ form.no_answer(class_="btn btn-outline-danger btn-sm") }}
