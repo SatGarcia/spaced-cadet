@@ -7,10 +7,9 @@ from app import db
 
 class QuestionType(enum.Enum):
     GENERIC = 0
-    DEFINITION = 1
+    SHORT_ANSWER = 1
     MULTIPLE_CHOICE = 2
-    #SHORT_ANSWER = 3
-    #MULTIPLE_ANSWER = 4
+    #MULTIPLE_ANSWER = 3
 
 class ResponseType(enum.Enum):
     GENERIC = 0
@@ -74,19 +73,19 @@ class Question(db.Model):
         db.session.commit()
 
 
-class DefinitionQuestion(Question):
+class ShortAnswerQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
 
     answer = db.Column(db.String, nullable=False)
 
     __mapper_args__ = {
-        'polymorphic_identity': QuestionType.DEFINITION,
+        'polymorphic_identity': QuestionType.SHORT_ANSWER,
     }
 
     def format(self):
         q = {}
         q['id'] = self.id
-        q['type'] = 'definition'
+        q['type'] = 'short-answer'
         q['prompt'] = self.prompt
         q['answer'] = self.answer
         return q

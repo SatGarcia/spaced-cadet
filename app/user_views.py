@@ -180,15 +180,15 @@ def test_multiple_choice():
 
     return "FAIL"
 
-@user_views.route('/test/definition', methods=['POST'])
+@user_views.route('/test/short-answer', methods=['POST'])
 @login_required
-def test_definition():
-    form = DefinitionForm(request.form)
+def test_short_answer():
+    form = ShortAnswerForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
 
-    term_html = markdown_to_html(original_question.prompt)
-    definition_html = markdown_to_html(original_question.answer)
+    prompt_html = markdown_to_html(original_question.prompt)
+    answer_html = markdown_to_html(original_question.answer)
 
     if form.validate_on_submit():
         # check for a previous attempt
@@ -198,7 +198,7 @@ def test_definition():
 
         # add the attempt to the database (leaving the outcome undefined for
         # now)
-        attempt = TextAttempt(response=form.answer.data,
+        attempt = TextAttempt(response=form.response.data,
                               question_id=original_question_id,
                               user_id=current_user.id)
 
@@ -216,12 +216,10 @@ def test_definition():
             sm2_update(attempt, 1)
             db.session.commit()
 
-            prompt_html = f'Define: <span class="fs-3 fw-bold">{term_html}</span>'
-
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
                                    prompt=Markup(prompt_html),
-                                   answer=Markup(definition_html))
+                                   answer=Markup(answer_html))
 
         # create the self review_form
         review_form = SelfReviewForm(attempt_id=attempt.id)
@@ -230,14 +228,15 @@ def test_definition():
         return render_template("self_verify.html",
                                page_title="Cadet Test: Self Verification",
                                form=review_form,
-                               term=Markup(term_html),
-                               answer=form.answer.data,
-                               definition=Markup(definition_html))
+                               prompt=Markup(prompt_html),
+                               response=form.response.data,
+                               correct_answer=Markup(answer_html))
 
-    return render_template("test_definition.html",
+    return render_template("test_short_answer.html",
                            page_title="Cadet Test",
                            form=form,
-                           term=Markup(term_html))
+                           prompt=Markup(prompt_html))
+
 
 @user_views.route('/test', methods=['GET', 'POST'])
 @login_required
@@ -280,13 +279,13 @@ def test():
         return render_template("completed.html",
                                page_title="Cadet: Complete")
 
-    if question.type == QuestionType.DEFINITION:
-        form = DefinitionForm(question_id=question.id)
-        term_html = markdown_to_html(question.prompt)
-        return render_template("test_definition.html",
+    if question.type == QuestionType.SHORT_ANSWER:
+        form = ShortAnswerForm(question_id=question.id)
+        prompt_html = markdown_to_html(question.prompt)
+        return render_template("test_short_answer.html",
                                page_title="Cadet Test",
                                form=form,
-                               term=Markup(term_html))
+                               prompt=Markup(prompt_html))
 
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(question_id=question.id)
@@ -336,9 +335,9 @@ class SelfReviewForm(FlaskForm):
     no = SubmitField("No")
 
 
-class DefinitionForm(FlaskForm):
+class ShortAnswerForm(FlaskForm):
     question_id = HiddenField("Question ID")
-    answer = TextAreaField('answer', validators=[DataRequiredIf('submit')])
+    response = TextAreaField('answer', validators=[DataRequiredIf('submit')])
     no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 

@@ -4,15 +4,15 @@
 {% block body %}
     <div class="container pt-3">
         <div class="container">
-            Define: <span class="fs-3 fw-bold">{{ term }}</span>
+            {{ prompt }}
         </div>
 
         <div class="container">
-            <form method="POST" action="{{ url_for('user_views.test_definition') }}">
+            <form method="POST" action="{{ url_for('user_views.test_short_answer') }}">
                 {{ form.csrf_token }}
                 {{ form.question_id }}
 
-                {{ form.answer(class_="form-control", placeholder="Enter your definition", required=False) }}
+                {{ form.response(class_="form-control", placeholder="Enter your answer", required=False) }}
 
                 <p class="pt-2">
                     {{ form.no_answer(class_="btn btn-outline-danger btn-sm") }}

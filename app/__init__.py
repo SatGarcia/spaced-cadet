@@ -64,22 +64,12 @@ def create_app(test_config=None):
         #assessment.objectives.append(lo)
         db.session.commit()
 
-        q1 = db_models.DefinitionQuestion(prompt="v**egan**",
+        q1 = db_models.ShortAnswerQuestion(prompt="Define: **vegan**",
                                 answer="A _cool_ person")
-        q2 = db_models.DefinitionQuestion(prompt="cat",
+        q2 = db_models.ShortAnswerQuestion(prompt="Define: **cat**",
                                 answer="Cute furrball")
 
-        q3 = db_models.MultipleChoiceQuestion(prompt=\
-"""
-Why is **less** code better?
-
-```python
-for i in range(10):
-    print(i)
-```
-
-$$\\frac{x}{y^{3*z}}$$
-""")
+        q3 = db_models.MultipleChoiceQuestion(prompt="Why is **less** code better?")
         o1 = db_models.AnswerOption(text="Fewer lines to have bugs in.",
                                     correct=True)
         o2 = db_models.AnswerOption(text="Because Dr. Sat said so.")

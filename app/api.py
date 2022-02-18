@@ -48,14 +48,14 @@ def create_question(section_num):
     # allow them to specify text for learning objecive and have it also
     # create a new learning objective?
 
-    if request.json['type'] == 'definition':
+    if request.json['type'] == 'short-answer':
         # must have an answer field (string)
         if ('answer' not in request.json) or type(request.json['answer']) != str:
             abort(400)
 
-        new_q = DefinitionQuestion(type=QuestionType.DEFINITION,
-                                   prompt=request.json['prompt'],
-                                   answer=request.json['answer'])
+        new_q = ShortAnswerQuestion(type=QuestionType.SHORT_ANSWER,
+                                    prompt=request.json['prompt'],
+                                    answer=request.json['answer'])
 
         new_q.section = section
         new_q.create()
@@ -94,6 +94,6 @@ def create_question(section_num):
     abort(400)
 
 from app.db_models import (
-    QuestionType, AnswerOption, Section, DefinitionQuestion,
+    QuestionType, AnswerOption, Section, ShortAnswerQuestion,
     MultipleChoiceQuestion
 )
