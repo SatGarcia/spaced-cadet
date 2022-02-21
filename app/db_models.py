@@ -9,7 +9,7 @@ class QuestionType(enum.Enum):
     GENERIC = 0
     SHORT_ANSWER = 1
     MULTIPLE_CHOICE = 2
-    #MULTIPLE_ANSWER = 3
+    CODE_JUMBLE = 3
 
 class ResponseType(enum.Enum):
     GENERIC = 0
@@ -128,6 +128,49 @@ class AnswerOption(db.Model):
         ao['text'] = self.text
         ao['correct'] = self.correct
         return ao
+
+
+class CodeJumbleQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+
+    blocks = db.relationship('JumbleBlock',
+                                foreign_keys='JumbleBlock.question_id',
+                                backref='question', lazy='dynamic')
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.CODE_JUMBLE,
+    }
+
+    def format(self):
+        q = {}
+        q['id'] = self.id
+        q['type'] = 'code-jumble'
+        q['prompt'] = self.prompt
+        q['options'] = [b.format() for b in self.blocks]
+        return q
+
+
+class JumbleBlock(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'))
+
+    code = db.Column(db.String, nullable=False)
+    correct_index = db.Column(db.Integer, nullable=False)
+    correct_indent = db.Column(db.Integer, nullable=False)
+
+    """
+    attempts = db.relationship('SelectionAttempt',
+                                    foreign_keys='SelectionAttempt.option_id',
+                                    backref='response', lazy='dynamic')
+    """
+
+    def format(self):
+        jb = {}
+        jb['id'] = self.id
+        jb['code'] = self.code
+        jb['correct_index'] = self.correct_index
+        jb['correct_indent'] = self.correct_indent
+        return jb
 
 
 class Attempt(db.Model):

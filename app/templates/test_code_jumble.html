@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+    <div class="container pt-3">
+        {{ prompt }}
+
+		<form method="POST" action="{{ url_for('user_views.test_code_jumble') }}">
+			{{ form.csrf_token }}
+			{{ form.question_id }}
+			{{ form.response }}
+
+            <strong>Correct Code:</strong>
+            <ul id="jumbley" class="list-unstyled jumble">
+                {% for block in code_blocks %}
+                    <li> {{ block }} </li>
+                {% endfor %}
+            </ul>
+
+            <strong>Trash:</strong>
+            <ul id="jumble-trash" class="list-unstyled jumble">
+                <li>Drag unnecessary / incorrect code blocks here.</li>
+            </ul>
+
+			{{ form.submit(class_="btn btn-primary btn-sm") }}
+		</form>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/code-jumble.js') }}"></script>
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            initialize_jumble(document.getElementById("jumbley"), document.getElementById("jumble-trash"));
+        });
+    </script>
+{% endblock %}

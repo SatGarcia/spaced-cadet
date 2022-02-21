@@ -238,6 +238,11 @@ def test_short_answer():
                            prompt=Markup(prompt_html))
 
 
+@user_views.route('/test/code-jumble', methods=['POST'])
+@login_required
+def test_code_jumble():
+    return "FIXME"
+
 @user_views.route('/test', methods=['GET', 'POST'])
 @login_required
 def test():
@@ -298,6 +303,17 @@ def test():
                                page_title="Cadet Test",
                                form=form,
                                prompt=Markup(prompt_html))
+
+    elif question.type == QuestionType.CODE_JUMBLE:
+        form = CodeJumbleForm(question_id=question.id, response="")
+        prompt_html = markdown_to_html(question.prompt)
+        code_blocks = [Markup(markdown_to_html(b.code)) for b in question.blocks]
+
+        return render_template("test_code_jumble.html",
+                               page_title="Cadet Test",
+                               form=form,
+                               prompt=Markup(prompt_html),
+                               code_blocks=code_blocks)
     else:
         return "UNSUPPORTED QUESTION TYPE"
 
@@ -339,6 +355,11 @@ class ShortAnswerForm(FlaskForm):
     question_id = HiddenField("Question ID")
     response = TextAreaField('answer', validators=[DataRequiredIf('submit')])
     no_answer = SubmitField("I Don't Know")
+    submit = SubmitField("Submit")
+
+class CodeJumbleForm(FlaskForm):
+    question_id = HiddenField("Question ID")
+    response = HiddenField("Ordered Code")
     submit = SubmitField("Submit")
 
 

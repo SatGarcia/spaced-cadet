@@ -1,0 +1,4 @@
+*.sqlite
+*.swp
+
+.DS_STORE
