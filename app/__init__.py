@@ -76,8 +76,9 @@ def create_app(test_config=None):
         o3 = db_models.AnswerOption(text="Allows more laziness.")
 
         q4 = db_models.CodeJumbleQuestion(prompt="Write code to set x to 5 and print it.")
-        b1 = db_models.JumbleBlock(code="print(x)", correct_index=1, correct_indent=0)
-        b2 = db_models.JumbleBlock(code="x = 5", correct_index=0, correct_indent=0)
+        b1 = db_models.JumbleBlock(code="`print(x)`", correct_index=1, correct_indent=0)
+        b2 = db_models.JumbleBlock(code="`x = 5`", correct_index=0, correct_indent=0)
+        b3 = db_models.JumbleBlock(code="`print(y)`", correct_index=-1, correct_indent=0)
 
         db.session.add(q1)
         db.session.add(q2)
@@ -88,6 +89,7 @@ def create_app(test_config=None):
         q3.options.append(o3)
         q4.blocks.append(b1)
         q4.blocks.append(b2)
+        q4.blocks.append(b3)
         lo.questions.append(q1)
         lo.questions.append(q2)
         lo.questions.append(q3)
