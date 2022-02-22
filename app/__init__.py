@@ -75,15 +75,28 @@ def create_app(test_config=None):
         o2 = db_models.AnswerOption(text="Because Dr. Sat said so.")
         o3 = db_models.AnswerOption(text="Allows more laziness.")
 
-        q4 = db_models.CodeJumbleQuestion(prompt="Write code to set x to 5 and print it.")
-        b1 = db_models.JumbleBlock(code="`print(x)`", correct_index=1, correct_indent=0)
-        b2 = db_models.JumbleBlock(code="`x = 5`", correct_index=0, correct_indent=0)
-        b3 = db_models.JumbleBlock(code="`print(y)`", correct_index=-1, correct_indent=0)
+        q4 = db_models.CodeJumbleQuestion(prompt="Write a `for` loop that prints the numbers from 1 to 10.",
+                                          language="python")
+        b1 = db_models.JumbleBlock(code="# display a value\nprint(i)", correct_index=1, correct_indent=1)
+        b2 = db_models.JumbleBlock(code="x = 5", correct_index=-1, correct_indent=0)
+        b3 = db_models.JumbleBlock(code="for i in range(1, 11)", correct_index=0, correct_indent=0)
+
+        q5 = db_models.ShortAnswerQuestion(prompt=\
+"""
+Describe what line 2 does in the following code.
+
+```python
+x = 7
+y = x
+```
+""",
+                                           answer="It creates a new variable that refers to the same value as x.")
 
         db.session.add(q1)
         db.session.add(q2)
         db.session.add(q3)
         db.session.add(q4)
+        db.session.add(q5)
         q3.options.append(o1)
         q3.options.append(o2)
         q3.options.append(o3)
@@ -94,10 +107,12 @@ def create_app(test_config=None):
         lo.questions.append(q2)
         lo.questions.append(q3)
         lo.questions.append(q4)
+        lo.questions.append(q5)
         section.questions.append(q1)
         section.questions.append(q2)
         section.questions.append(q3)
         section.questions.append(q4)
+        section.questions.append(q5)
         db.session.commit()
 
         for q in db_models.Question.query:

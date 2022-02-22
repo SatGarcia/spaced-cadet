@@ -5,23 +5,22 @@
     <div class="container pt-3">
         {{ prompt }}
 
+        <strong>Correct Code:</strong>
+        <ul id="jumbley" class="list-unstyled jumble">
+            {% for (block_id, block) in code_blocks %}
+                <li block-id="{{ block_id }}" indent-level="0"> {{ block }} </li>
+            {% endfor %}
+        </ul>
+
+        <strong>Trash:</strong>
+        <ul id="jumble-trash" class="list-unstyled jumble">
+            <li>Drag unnecessary / incorrect code blocks here.</li>
+        </ul>
+
 		<form method="POST" action="{{ url_for('user_views.test_code_jumble') }}">
 			{{ form.csrf_token }}
 			{{ form.question_id }}
 			{{ form.response }}
-
-            <strong>Correct Code:</strong>
-            <ul id="jumbley" class="list-unstyled jumble">
-                {% for (block_id, block) in code_blocks %}
-                    <li block-id="{{ block_id }}" indent-level="0"> {{ block }} </li>
-                {% endfor %}
-            </ul>
-
-            <strong>Trash:</strong>
-            <ul id="jumble-trash" class="list-unstyled jumble">
-                <li>Drag unnecessary / incorrect code blocks here.</li>
-            </ul>
-
 			{{ form.submit(class_="btn btn-primary btn-sm") }}
 		</form>
     </div>

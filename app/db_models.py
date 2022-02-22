@@ -5,6 +5,7 @@ import enum
 
 from app import db
 
+
 class QuestionType(enum.Enum):
     GENERIC = 0
     SHORT_ANSWER = 1
@@ -133,6 +134,7 @@ class AnswerOption(db.Model):
 class CodeJumbleQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
 
+    language = db.Column(db.String(20))
     blocks = db.relationship('JumbleBlock',
                                 foreign_keys='JumbleBlock.question_id',
                                 backref='question', lazy='dynamic')
@@ -174,6 +176,12 @@ class JumbleBlock(db.Model):
                                     foreign_keys='SelectionAttempt.option_id',
                                     backref='response', lazy='dynamic')
     """
+
+    def html(self):
+        """ Get HTML to display this block's code. """
+        language_str = "" if not self.question.language else self.question.language
+        code_str = f"```{language_str}\n{self.code}\n```\n"
+        return markdown_to_html(code_str, code_linenums=False)
 
     def format(self):
         jb = {}
@@ -323,3 +331,4 @@ class Assessment(db.Model):
     def __repr__(self):
         return f"<Assessment {self.id}: {self.description} at {str(self.time)}>"
 
+from app.user_views import markdown_to_html

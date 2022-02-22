@@ -1,8 +1,10 @@
-pre { line-height: 125%; }
+pre { line-height: 1.25; }
+
 td.linenos .normal { color: slategray; background-color: transparent; padding-left: 5px; padding-right: 5px; }
 span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
 td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
 span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+
 .codehilite .hll { background-color: #ffffcc }
 .codehilite { background: #ffffff; }
 .codehilite .c { color: #888888 } /* Comment */
@@ -77,11 +79,16 @@ td.code { border-left:2px solid gray; padding-left: 7px}
 div.arithmatex { padding-left: 20px }
 
 
+.jumble p, .jumble pre {
+	display: inline;
+}
+
 .jumble li {
-  margin: 10px;
-  padding-left: 15px;
-  border: 1px solid #dfdfdf;
-  background: #f5f5f5;
+	margin: 10px;
+	padding-left: 15px;
+	padding-bottom: 0px;
+	border: 1px solid #dfdfdf;
+	line-height: 1.25;
 }
 
 .jumble li.hint {

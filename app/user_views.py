@@ -295,12 +295,12 @@ def test_code_jumble():
             # show the user a page where they can view the correct answer
             prompt_html = markdown_to_html(question.prompt)
 
-            answer_html = "<ul class=\"list-unstyled\">"
+            answer_html = "<ul class=\"list-unstyled jumble\">"
             for block in question.blocks.filter(JumbleBlock.correct_index >= 0).order_by(
                     JumbleBlock.correct_index):
-                block_html = markdown_to_html(block.code)
-                indent_amount = block.correct_indent * 20
-                answer_html += f"<li><span style=\"padding-left: {indent_amount}px;\">{block_html}</span></li>"
+                block_html = block.html()
+                indent_amount = (block.correct_indent * 20) + 15
+                answer_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
 
             answer_html += "</ul>"
 
@@ -375,7 +375,7 @@ def test():
     elif question.type == QuestionType.CODE_JUMBLE:
         form = CodeJumbleForm(question_id=question.id, response="")
         prompt_html = markdown_to_html(question.prompt)
-        code_blocks = [(b.id, Markup(markdown_to_html(b.code))) for b in question.blocks]
+        code_blocks = [(b.id, Markup(b.html())) for b in question.blocks]
 
         return render_template("test_code_jumble.html",
                                page_title="Cadet Test",
