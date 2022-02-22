@@ -141,6 +141,17 @@ class CodeJumbleQuestion(Question):
         'polymorphic_identity': QuestionType.CODE_JUMBLE,
     }
 
+    def get_correct_response(self):
+        """ Returns a list of (id, indent) tuples in the order they should
+        appear in the correct response. """
+        correct_response = []
+
+        for block in self.blocks.filter(JumbleBlock.correct_index >= 0).order_by(
+                    JumbleBlock.correct_index):
+            correct_response.append((block.id, block.correct_indent))
+
+        return correct_response
+
     def format(self):
         q = {}
         q['id'] = self.id

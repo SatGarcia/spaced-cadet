@@ -9,7 +9,7 @@ from wtforms import (
 from wtforms.validators import DataRequired, InputRequired
 from flask_login import current_user, login_required
 
-import markdown
+import ast, markdown
 from datetime import date, timedelta, datetime
 
 from app import db
@@ -241,7 +241,71 @@ def test_short_answer():
 @user_views.route('/test/code-jumble', methods=['POST'])
 @login_required
 def test_code_jumble():
-    return "FIXME"
+    form = CodeJumbleForm(request.form)
+    question_id = form.question_id.data
+    question = Question.query.filter_by(id=question_id).first()
+
+    if form.validate_on_submit():
+        # grab the last attempt (before creating a new attempt which will be
+        # the new "last" attempt
+        previous_attempt = get_last_attempt(current_user.id, question_id)
+
+        # add the attempt to the database
+        attempt = TextAttempt(question_id=question_id,
+                              user_id=current_user.id)
+
+        # Get the selected answer.
+        response_str = form.response.data
+        attempt.response = response_str
+
+
+        # if there was a previous attempt, copy over e_factor and interval
+        if previous_attempt:
+            attempt.e_factor = previous_attempt.e_factor
+            attempt.interval = previous_attempt.interval
+
+        # TODO: allow a "don't know" response
+
+        db.session.add(attempt)
+        db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
+
+        user_response = ast.literal_eval(response_str) # FIXME: wrap this in try/catch
+        correct_response = question.get_correct_response()
+
+        if correct_response == user_response:
+            # if correct, send them off to the self rating form
+            attempt.correct = True
+            db.session.commit()
+            difficulty_form = DifficultyForm(attempt_id=attempt.id)
+            return render_template("difficulty.html",
+                                   page_title="Cadet Test: Rating",
+                                   form=difficulty_form)
+
+        else:
+            attempt.correct = False
+
+            sm2_update(attempt, 2)  # they made an attempt but were wrong so set response quality to 2
+            # TODO: make "Don't know" a response and make that SM2 difficulty 1
+
+            db.session.commit()
+
+            flash("Better luck next time!", "danger")
+            return redirect(url_for('.test'))
+
+            """
+            # show the user a page where they can view the correct answer
+            prompt_html = markdown_to_html(question.prompt)
+
+            correct_option = original_question.options.filter_by(correct=True).first()
+            answer_html = markdown_to_html(correct_option.text)
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   prompt=Markup(prompt_html),
+                                   answer=Markup(answer_html))
+            """
+
+    return "FAIL"
 
 @user_views.route('/test', methods=['GET', 'POST'])
 @login_required
