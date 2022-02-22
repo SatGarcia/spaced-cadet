@@ -1,6 +1,28 @@
+function update_response() {
+	let jumble_list = document.getElementById("jumbley");
+	let ordered_items = jumble_list.getElementsByTagName("li");
+
+
+	// build the response string based on the order of the items in the
+	// jumbley list
+	let response_str = "[";
+
+	for (let item of ordered_items) {
+		let block_id = item.getAttribute("block-id");
+		let indent_level = item.getAttribute("indent-level");
+		let item_str = `(${block_id}, ${indent_level}), `;
+		response_str = response_str + item_str;
+	}
+
+	response_str = response_str + "]";
+
+	// update value of response form field
+	response_field = document.getElementById("response");
+	response_field.value = response_str;
+	console.log("response: " + response_str);
+}
+
 function initialize_jumble (used_blocks, trashed_blocks) {
-	//used_blocks.classList.add("jumble");
-	//trashed_blocks.classList.add("jumble");
 	let used_items = used_blocks.getElementsByTagName("li");
 	let trashed_items = trashed_blocks.getElementsByTagName("li");
 	let arr1 = Array.from(used_items)
@@ -34,6 +56,8 @@ function initialize_jumble (used_blocks, trashed_blocks) {
 				padding_amount = (item.getAttribute("indent-level") * 20) + 15;
 
 				item.style.paddingLeft = padding_amount + "px";
+
+				update_response();
 			};
 		}
 
@@ -113,6 +137,8 @@ function initialize_jumble (used_blocks, trashed_blocks) {
 						item.parentNode.insertBefore(selected, item);
 					}
 				}
+
+				update_response();
 			}
 		};
 	}

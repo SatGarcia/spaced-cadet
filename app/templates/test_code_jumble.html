@@ -12,8 +12,8 @@
 
             <strong>Correct Code:</strong>
             <ul id="jumbley" class="list-unstyled jumble">
-                {% for block in code_blocks %}
-                    <li> {{ block }} </li>
+                {% for (block_id, block) in code_blocks %}
+                    <li block-id="{{ block_id }}" indent-level="0"> {{ block }} </li>
                 {% endfor %}
             </ul>
 

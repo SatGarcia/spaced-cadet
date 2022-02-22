@@ -307,7 +307,7 @@ def test():
     elif question.type == QuestionType.CODE_JUMBLE:
         form = CodeJumbleForm(question_id=question.id, response="")
         prompt_html = markdown_to_html(question.prompt)
-        code_blocks = [Markup(markdown_to_html(b.code)) for b in question.blocks]
+        code_blocks = [(b.id, Markup(markdown_to_html(b.code))) for b in question.blocks]
 
         return render_template("test_code_jumble.html",
                                page_title="Cadet Test",
