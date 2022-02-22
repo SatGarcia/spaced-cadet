@@ -289,21 +289,25 @@ def test_code_jumble():
 
             db.session.commit()
 
-            flash("Better luck next time!", "danger")
-            return redirect(url_for('.test'))
+            #flash("Better luck next time!", "danger")
+            #return redirect(url_for('.test'))
 
-            """
             # show the user a page where they can view the correct answer
             prompt_html = markdown_to_html(question.prompt)
 
-            correct_option = original_question.options.filter_by(correct=True).first()
-            answer_html = markdown_to_html(correct_option.text)
+            answer_html = "<ul class=\"list-unstyled\">"
+            for block in question.blocks.filter(JumbleBlock.correct_index >= 0).order_by(
+                    JumbleBlock.correct_index):
+                block_html = markdown_to_html(block.code)
+                indent_amount = block.correct_indent * 20
+                answer_html += f"<li><span style=\"padding-left: {indent_amount}px;\">{block_html}</span></li>"
+
+            answer_html += "</ul>"
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
-            """
 
     return "FAIL"
 
@@ -435,5 +439,5 @@ class MultipleChoiceForm(FlaskForm):
 
 from app.db_models import (
     Question, Attempt, enrollments, QuestionType, AnswerOption,
-    TextAttempt, SelectionAttempt
+    TextAttempt, SelectionAttempt, JumbleBlock
 )
