@@ -1,5 +1,6 @@
 from flask import (
-    Blueprint, render_template, url_for, redirect, flash, request, Markup
+    Blueprint, render_template, url_for, redirect, flash, request, Markup,
+    abort
 )
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -238,6 +239,20 @@ def test_short_answer():
                            prompt=Markup(prompt_html))
 
 
+def get_answer_html(jumble_question):
+    """ Returns HTML for the answer to the given jumble question. """
+
+    answer_html = "<ul class=\"list-unstyled jumble\">"
+    for block in jumble_question.blocks.filter(JumbleBlock.correct_index >= 0).order_by(
+            JumbleBlock.correct_index):
+        block_html = block.html()
+        indent_amount = (block.correct_indent * 20) + 15
+        answer_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
+
+    answer_html += "</ul>"
+
+    return answer_html
+
 @user_views.route('/test/code-jumble', methods=['POST'])
 @login_required
 def test_code_jumble():
@@ -269,7 +284,27 @@ def test_code_jumble():
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
 
-        user_response = ast.literal_eval(response_str) # FIXME: wrap this in try/catch
+        if form.no_answer.data:
+            # No response from user ("I Don't Know"), which is response
+            # quality 1 in SM-2
+            sm2_update(attempt, 1)
+            db.session.commit()
+
+            prompt_html = markdown_to_html(question.prompt)
+            answer_html = get_answer_html(question)
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   prompt=Markup(prompt_html),
+                                   answer=Markup(answer_html))
+
+
+        try:
+            user_response = ast.literal_eval(response_str) # FIXME: wrap this in try/catch
+        except:
+            # if we couldn't parse the response, we're in trouble
+            abort(500)
+
         correct_response = question.get_correct_response()
 
         if correct_response == user_response:
@@ -295,6 +330,8 @@ def test_code_jumble():
             # show the user a page where they can view the correct answer
             prompt_html = markdown_to_html(question.prompt)
 
+            answer_html = get_answer_html(question)
+            """
             answer_html = "<ul class=\"list-unstyled jumble\">"
             for block in question.blocks.filter(JumbleBlock.correct_index >= 0).order_by(
                     JumbleBlock.correct_index):
@@ -303,6 +340,7 @@ def test_code_jumble():
                 answer_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
 
             answer_html += "</ul>"
+            """
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
@@ -428,6 +466,7 @@ class ShortAnswerForm(FlaskForm):
 class CodeJumbleForm(FlaskForm):
     question_id = HiddenField("Question ID")
     response = HiddenField("Ordered Code")
+    no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 
 

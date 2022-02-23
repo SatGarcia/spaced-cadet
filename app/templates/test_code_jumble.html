@@ -7,15 +7,15 @@
 
         <div class="row">
             <div class="col-md-6">
-                <strong>Correctly Ordered/Indented Code:</strong>
+                <strong>Your Answer:</strong>
                 <ul id="jumbley" class="list-unstyled jumble">
                     {% for (block_id, block) in code_blocks %}
                         <li block-id="{{ block_id }}" indent-level="0">
                             <span class="row align-items-center">
                                 <span class="col-auto">
-                                    <i class="bi-arrow-left" style="font-size: 0.9em" onclick="change_indent({{block_id}}, -1)"></i>
-                                    <br/>
                                     <i class="bi-arrow-right" style="font-size: 0.9em" onclick="change_indent({{block_id}}, 1);"></i>
+                                    <br/>
+                                    <i class="bi-arrow-left" style="font-size: 0.9em" onclick="change_indent({{block_id}}, -1)"></i>
                                 </span>
                                 <span class="col-auto jumble-block">
                                     {{ block }}
@@ -29,7 +29,7 @@
             <div class="col-md-6">
                  <i class="bi-trash"></i>
 
-                 <strong>Trash:</strong>
+                 <strong>Unused Code:</strong>
                  <ul id="jumble-trash" class="list-unstyled jumble">
                      <li>Drag unnecessary / incorrect code blocks here.</li>
                  </ul>
@@ -39,7 +39,8 @@
 		<form method="POST" action="{{ url_for('user_views.test_code_jumble') }}">
 			{{ form.csrf_token }}
 			{{ form.question_id }}
-			{{ form.response }}
+            {{ form.response }}
+            {{ form.no_answer(class_="btn btn-outline-danger btn-sm") }}
 			{{ form.submit(class_="btn btn-primary btn-sm") }}
 		</form>
     </div>
@@ -48,6 +49,7 @@
     <script>
         window.addEventListener("DOMContentLoaded", () => {
             initialize_jumble(document.getElementById("jumbley"), document.getElementById("jumble-trash"));
+            update_response();
         });
     </script>
 {% endblock %}

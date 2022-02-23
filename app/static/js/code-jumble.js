@@ -40,7 +40,6 @@ function update_response() {
 	// update value of response form field
 	response_field = document.getElementById("response");
 	response_field.value = response_str;
-	console.log("response: " + response_str);
 }
 
 function initialize_jumble (used_blocks, trashed_blocks) {
@@ -56,31 +55,11 @@ function initialize_jumble (used_blocks, trashed_blocks) {
 	let selected = null;
 
 	for (let item of items) {
-		//console.log(item);
-		//console.log(item.childElementCount);
-
 		item.setAttribute("indent-level", 0);
 
 		if (item.parentNode == used_blocks) {
 			// list 1 items will be draggable and indentable
 			item.draggable = true;
-
-			/*
-			item.onclick = () => {
-				//console.log("old indent: " + item.getAttribute("indent-level"));
-				let old_indent = parseInt(item.getAttribute("indent-level"));
-				let new_indent = (old_indent + 1) % 5;
-				item.setAttribute("indent-level", new_indent);
-
-				// FIXME: 15 should be based on initial amount of padding
-				//padding_amount = (item.getAttribute("indent-level") * 20) + 15;
-				padding_amount = (new_indent * 20) + 15;
-
-				item.style.paddingLeft = padding_amount + "px";
-
-				update_response();
-			};
-			*/
 		}
 
 		// (B2) DRAG START - YELLOW HIGHLIGHT DROPZONES
@@ -121,9 +100,6 @@ function initialize_jumble (used_blocks, trashed_blocks) {
 				// before this item
 				if (item.parentNode != selected.parentNode) {
 					item.parentNode.insertBefore(selected, item);
-					
-					//console.log(used_items);
-					//console.log(trashed_items);
 				}
 				else {
 					// they are in the same list, so where to insert depends
@@ -143,14 +119,12 @@ function initialize_jumble (used_blocks, trashed_blocks) {
 					// Look for the current and new position for the item
 					for (let it = 0; it < list_items.length; it++) {
 						if (selected == list_items[it]) {
-							//console.log("found selected at " + it);
 							current_position = it;
 						}
 						if (item == list_items[it]) {
 							new_position = it;
 						}
 					}
-					//console.log("moving from " + current_position + " to " + new_position);
 
 					if (current_position < new_position) {
 						item.parentNode.insertBefore(selected, item.nextSibling);
