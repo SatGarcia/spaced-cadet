@@ -83,20 +83,30 @@ div.arithmatex { padding-left: 20px }
 	display: inline;
 }
 
+.jumble .codehilite pre {
+	border: 1px solid steelblue;
+	border-radius: 7px;
+	padding: 5px 10px;
+	background: rgb(248,248,248);
+	display: block;
+	max-width: 400px;
+}
+
 .jumble li {
 	margin: 10px;
 	padding-left: 15px;
 	padding-bottom: 0px;
-	border: 1px solid #dfdfdf;
+	border-left: 1px solid #dfdfdf;
 	line-height: 1.25;
 }
 
 .jumble li.hint {
-  border: 1px solid #ffc49a;
-  background: #feffb4;
-}
-.jumble li.active {
-  border: 1px solid #ffa5a5;
-  background: #ffe7e7;
+	border-left: 4px solid darksalmon;
 }
 
+/*
+.jumble li.active {
+	border: 1px solid orange;
+	background: orange;
+}
+*/
