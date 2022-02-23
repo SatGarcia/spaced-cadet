@@ -10,7 +10,18 @@
                 <strong>Correctly Ordered/Indented Code:</strong>
                 <ul id="jumbley" class="list-unstyled jumble">
                     {% for (block_id, block) in code_blocks %}
-                        <li block-id="{{ block_id }}" indent-level="0"> {{ block }} </li>
+                        <li block-id="{{ block_id }}" indent-level="0">
+                            <span class="row align-items-center">
+                                <span class="col-auto">
+                                    <i class="bi-arrow-left" style="font-size: 0.9em" onclick="change_indent({{block_id}}, -1)"></i>
+                                    <br/>
+                                    <i class="bi-arrow-right" style="font-size: 0.9em" onclick="change_indent({{block_id}}, 1);"></i>
+                                </span>
+                                <span class="col-auto jumble-block">
+                                    {{ block }}
+                                </span>
+                            </span>
+                        </li>
                     {% endfor %}
                 </ul>
             </div>

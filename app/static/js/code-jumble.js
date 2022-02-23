@@ -1,10 +1,31 @@
+function change_indent(block_id, amount) {
+	let block_li = document.querySelector(`[block-id="${block_id}"]`);
+	console.log(block_li);
+
+	let old_indent = parseInt(block_li.getAttribute("indent-level"));
+	let new_indent = old_indent + amount;
+	console.log("new_indent: " + new_indent);
+
+	// max indent is 4 so don't do anything if we are at that level
+	if (new_indent >= 0 && new_indent <= 4) {
+		block_li.setAttribute("indent-level", new_indent);
+
+		// FIXME: 15 should be based on initial amount of padding
+		padding_amount = (new_indent * 20) + 15;
+
+		block_li.style.paddingLeft = padding_amount + "px";
+
+		update_response();
+	}
+}
+
 function update_response() {
 	let jumble_list = document.getElementById("jumbley");
 	let ordered_items = jumble_list.getElementsByTagName("li");
 
 
-	// build the response string based on the order of the items in the
-	// jumbley list
+	// Build the response string based on the order of the items in the
+	// jumbley list.
 	let response_str = "[";
 
 	for (let item of ordered_items) {
@@ -44,21 +65,22 @@ function initialize_jumble (used_blocks, trashed_blocks) {
 			// list 1 items will be draggable and indentable
 			item.draggable = true;
 
+			/*
 			item.onclick = () => {
-				if (item.getAttribute("indent-level") == 0) {
-					item.setAttribute("indent-level", 1);
-				}
-				else {
-					item.setAttribute("indent-level", 0);
-				}
+				//console.log("old indent: " + item.getAttribute("indent-level"));
+				let old_indent = parseInt(item.getAttribute("indent-level"));
+				let new_indent = (old_indent + 1) % 5;
+				item.setAttribute("indent-level", new_indent);
 
 				// FIXME: 15 should be based on initial amount of padding
-				padding_amount = (item.getAttribute("indent-level") * 20) + 15;
+				//padding_amount = (item.getAttribute("indent-level") * 20) + 15;
+				padding_amount = (new_indent * 20) + 15;
 
 				item.style.paddingLeft = padding_amount + "px";
 
 				update_response();
 			};
+			*/
 		}
 
 		// (B2) DRAG START - YELLOW HIGHLIGHT DROPZONES
