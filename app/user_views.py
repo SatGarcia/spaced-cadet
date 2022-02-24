@@ -12,6 +12,7 @@ from flask_login import current_user, login_required
 
 import ast, markdown
 from datetime import date, timedelta, datetime
+from math import ceil
 
 from app import db
 
@@ -98,15 +99,21 @@ def sm2_update(attempt, quality):
     """ Updates the attempt's e_factor and interval based on the quality of
     their most recent answer. """
 
-    attempt.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
 
     if quality < 3:
-        # missed question should be repeated again tomorrow
+        # The question wasn't answered incorrectly. Keep the same e_factor as
+        # before and set the interval to 1 (i.e. like learning from new)
         attempt.interval = 1
 
     else:
+        attempt.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
+
+        # set a floor for the e_factor
+        if attempt.e_factor < 1.3:
+            attempt.e_factor = 1.3
+
         # They got the correct answer, so interval increases
-        attempt.interval = 6 if attempt.interval == 1 else int(attempt.interval * attempt.e_factor)
+        attempt.interval = 6 if attempt.interval == 1 else ceil(attempt.interval * attempt.e_factor)
 
     # next attempt will be interval days from today
     attempt.next_attempt = date.today() + timedelta(days=attempt.interval)
