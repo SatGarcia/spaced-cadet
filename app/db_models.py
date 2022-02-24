@@ -206,6 +206,7 @@ class Attempt(db.Model):
     next_attempt = db.Column(db.Date, default=datetime.today, nullable=False)
     e_factor = db.Column(db.Float, default=2.5, nullable=False)
     interval = db.Column(db.Integer, default=1, nullable=False)
+    quality = db.Column(db.Integer, default=-1, nullable=False)
 
     __mapper_args__ = {
         'polymorphic_identity': ResponseType.GENERIC,

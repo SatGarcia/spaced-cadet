@@ -99,6 +99,8 @@ def sm2_update(attempt, quality):
     """ Updates the attempt's e_factor and interval based on the quality of
     their most recent answer. """
 
+    print("Setting quality to", quality)
+    attempt.quality = quality
 
     if quality < 3:
         # The question wasn't answered incorrectly. Keep the same e_factor as
@@ -327,8 +329,6 @@ def test_code_jumble():
             attempt.correct = False
 
             sm2_update(attempt, 2)  # they made an attempt but were wrong so set response quality to 2
-            # TODO: make "Don't know" a response and make that SM2 difficulty 1
-
             db.session.commit()
 
             # show the user a page where they can view the correct answer
@@ -359,6 +359,8 @@ def test():
 
     # Find questions whose next attempt is before today, as these will also be
     # part of the pool of questions to ask
+
+    # FIXME: The following query will get attempts for ALL users, not just the current one!
     latest_next_attempts = db.session.query(
         Attempt.question_id, Attempt.next_attempt, db.func.max(Attempt.next_attempt).label('latest_next_attempt_time')
     ).group_by(Attempt.question_id).subquery()
@@ -378,10 +380,31 @@ def test():
     # randomly pick one of the ready questions
     question = ready_questions.order_by(db.func.random()).first()
 
+    first_time = True
+
     if not question:
-        # No questions need to be tested so display a completed page.
-        return render_template("completed.html",
-                               page_title="Cadet: Complete")
+        # There weren't any "new" questions (i.e. those the user hasn't
+        # already attempted today). Look for questions that they attempted
+        # today but whose quality was 3 or less.
+
+        today = datetime.combine(date.today(), datetime.min.time())
+        attempted_today = possible_questions.filter(Question.attempts.any(Attempt.time >= today))
+        needs_reps = attempted_today.filter(~ Question.attempts.any(Attempt.quality > 3))
+
+        """
+        print("Questions That Need MORE Reps:")
+        for q in needs_reps:
+            print("\t", q)
+        """
+
+        question = needs_reps.order_by(db.func.random()).first()
+        first_time = False
+
+        if not question:
+            # No questions that need more reps today so display a "congrats"
+            # page for the user.
+            return render_template("completed.html",
+                                   page_title="Cadet: Complete")
 
     if question.type == QuestionType.SHORT_ANSWER:
         form = ShortAnswerForm(question_id=question.id)
