@@ -376,8 +376,7 @@ def test():
         Attempt.question_id, Attempt.next_attempt, db.func.max(Attempt.next_attempt).label('latest_next_attempt_time')
     ).group_by(Attempt.question_id).subquery()
 
-    #target_time = date.today() + timedelta(days=2)
-    target_time = datetime.utcnow()
+    target_time = datetime.now()
     ready_questions = Question.query.join(
         latest_next_attempts, db.and_(Question.id == latest_next_attempts.c.question_id,
                                       latest_next_attempts.c.latest_next_attempt_time <= target_time)

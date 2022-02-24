@@ -199,7 +199,7 @@ class Attempt(db.Model):
     question_id = db.Column(db.Integer, db.ForeignKey('question.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-    time = db.Column(db.DateTime, default=datetime.utcnow)
+    time = db.Column(db.DateTime, default=datetime.now)
     correct = db.Column(db.Boolean)
 
     # entries for SM-2 Algorithm
@@ -318,7 +318,7 @@ class Source(db.Model):
 class Assessment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(100), index=True, nullable=False)
-    time = db.Column(db.DateTime, default=datetime.utcnow)
+    time = db.Column(db.DateTime, default=datetime.now)
     section_id = db.Column(db.Integer, db.ForeignKey('section.id'))
 
     objectives = db.relationship('Objective',
