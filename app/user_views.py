@@ -331,23 +331,10 @@ def test_code_jumble():
 
             db.session.commit()
 
-            #flash("Better luck next time!", "danger")
-            #return redirect(url_for('.test'))
-
             # show the user a page where they can view the correct answer
             prompt_html = markdown_to_html(question.prompt)
 
             answer_html = get_answer_html(question)
-            """
-            answer_html = "<ul class=\"list-unstyled jumble\">"
-            for block in question.blocks.filter(JumbleBlock.correct_index >= 0).order_by(
-                    JumbleBlock.correct_index):
-                block_html = block.html()
-                indent_amount = (block.correct_indent * 20) + 15
-                answer_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
-
-            answer_html += "</ul>"
-            """
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
