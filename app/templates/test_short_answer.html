@@ -3,11 +3,18 @@
 
 {% block body %}
     <div class="container pt-3">
-        <div class="container">
-            {{ prompt }}
-        </div>
+		<div class="row text-end">
+			{% if not fresh_question %}
+				<strong><i class="bi-arrow-repeat"></i> <span class="text-orange">Repeat Question</span></strong>
+			{% endif %}
+		</div>
 
-        <div class="container pt-2">
+		<div class="row">
+			{{ prompt }}
+		</div>
+
+
+        <div class="row pt-2">
             <form method="POST" action="{{ url_for('user_views.test_short_answer') }}">
                 {{ form.csrf_token }}
                 {{ form.question_id }}

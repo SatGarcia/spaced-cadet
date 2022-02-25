@@ -3,7 +3,15 @@
 
 {% block body %}
     <div class="container pt-3">
-        {{ prompt }}
+		<div class="row text-end">
+			{% if not fresh_question %}
+				<strong><i class="bi-arrow-repeat"></i> <span class="text-orange">Repeat Question</span></strong>
+			{% endif %}
+		</div>
+
+		<div class="row">
+			{{ prompt }}
+		</div>
 
         <div class="row">
             <div class="col-md-6">
@@ -36,13 +44,15 @@
             </div>
         </div>
 
-		<form method="POST" action="{{ url_for('user_views.test_code_jumble') }}">
-			{{ form.csrf_token }}
-			{{ form.question_id }}
-            {{ form.response }}
-            {{ form.no_answer(class_="btn btn-outline-danger btn-sm") }}
-			{{ form.submit(class_="btn btn-primary btn-sm") }}
-		</form>
+		<div class="row">
+			<form method="POST" action="{{ url_for('user_views.test_code_jumble') }}">
+				{{ form.csrf_token }}
+				{{ form.question_id }}
+				{{ form.response }}
+				{{ form.no_answer(class_="btn btn-outline-danger btn-sm") }}
+				{{ form.submit(class_="btn btn-primary btn-sm") }}
+			</form>
+		</div>
     </div>
 
     <script src="{{ url_for('static', filename='js/code-jumble.js') }}"></script>

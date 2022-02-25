@@ -380,7 +380,8 @@ def test():
     # randomly pick one of the ready questions
     question = ready_questions.order_by(db.func.random()).first()
 
-    first_time = True
+    # question is "fresh" if it hasn't been attempted yet today
+    fresh_question = True
 
     if not question:
         # There weren't any "new" questions (i.e. those the user hasn't
@@ -398,7 +399,7 @@ def test():
         """
 
         question = needs_reps.order_by(db.func.random()).first()
-        first_time = False
+        fresh_question = False
 
         if not question:
             # No questions that need more reps today so display a "congrats"
@@ -411,6 +412,7 @@ def test():
         prompt_html = markdown_to_html(question.prompt)
         return render_template("test_short_answer.html",
                                page_title="Cadet Test",
+                               fresh_question=fresh_question,
                                form=form,
                                prompt=Markup(prompt_html))
 
@@ -423,6 +425,7 @@ def test():
 
         return render_template("test_multiple_choice.html",
                                page_title="Cadet Test",
+                               fresh_question=fresh_question,
                                form=form,
                                prompt=Markup(prompt_html))
 
@@ -433,6 +436,7 @@ def test():
 
         return render_template("test_code_jumble.html",
                                page_title="Cadet Test",
+                               fresh_question=fresh_question,
                                form=form,
                                prompt=Markup(prompt_html),
                                code_blocks=code_blocks)

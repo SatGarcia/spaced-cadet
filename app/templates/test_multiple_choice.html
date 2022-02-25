@@ -3,20 +3,30 @@
 
 {% block body %}
     <div class="container pt-3">
-        {{ prompt }}
+		<div class="row text-end">
+			{% if not fresh_question %}
+				<strong><i class="bi-arrow-repeat"></i> <span class="text-orange">Repeat Question</span></strong>
+			{% endif %}
+		</div>
 
-		<form method="POST" action="{{ url_for('user_views.test_multiple_choice') }}">
-			{{ form.csrf_token }}
-			{{ form.question_id }}
-            <ul class="list-unstyled">
-                {% for subfield in form.response %}
-                    <li>
-                        {{ subfield(class_="form-check-input") }}
-                        {{ subfield.label(class_="form-check-label") }}
-                    </li>
-                {% endfor %}
-            </ul>
-			{{ form.submit(class_="btn btn-primary btn-sm") }}
-		</form>
+		<div class="row">
+			{{ prompt }}
+		</div>
+
+		<div class="row">
+			<form method="POST" action="{{ url_for('user_views.test_multiple_choice') }}">
+				{{ form.csrf_token }}
+				{{ form.question_id }}
+				<ul class="list-unstyled">
+					{% for subfield in form.response %}
+						<li>
+							{{ subfield(class_="form-check-input") }}
+							{{ subfield.label(class_="form-check-label") }}
+						</li>
+					{% endfor %}
+				</ul>
+				{{ form.submit(class_="btn btn-primary btn-sm") }}
+			</form>
+		</div>
     </div>
 {% endblock %}
