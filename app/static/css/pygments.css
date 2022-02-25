@@ -78,6 +78,10 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 td.code { border-left:2px solid gray; padding-left: 7px}
 div.arithmatex { padding-left: 20px }
 
+table.codehilitetable {
+	width: fit-content;
+}
+
 
 .jumble p, .jumble pre {
 	display: inline;
