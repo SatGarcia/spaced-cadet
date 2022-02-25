@@ -309,7 +309,7 @@ def test_code_jumble():
 
 
         try:
-            user_response = ast.literal_eval(response_str) # FIXME: wrap this in try/catch
+            user_response = ast.literal_eval(response_str)
         except:
             # if we couldn't parse the response, we're in trouble
             abort(500)
@@ -360,10 +360,9 @@ def test():
     # Find questions whose next attempt is before today, as these will also be
     # part of the pool of questions to ask
 
-    # FIXME: The following query will get attempts for ALL users, not just the current one!
     latest_next_attempts = db.session.query(
         Attempt.question_id, Attempt.next_attempt, db.func.max(Attempt.next_attempt).label('latest_next_attempt_time')
-    ).group_by(Attempt.question_id).subquery()
+    ).group_by(Attempt.question_id).filter(Attempt.user_id == current_user.id).subquery()
 
     target_time = datetime.now()
     ready_questions = Question.query.join(
