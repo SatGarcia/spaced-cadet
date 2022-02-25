@@ -343,7 +343,7 @@ def test_code_jumble():
 
     return "FAIL"
 
-@user_views.route('/test', methods=['GET', 'POST'])
+@user_views.route('/test')
 @login_required
 def test():
     """ Presents a random question to the user. """
