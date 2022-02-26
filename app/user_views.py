@@ -85,9 +85,16 @@ def self_review():
             flash("Keep your chin up, cadet. We'll test you on that question again tomorrow.", "danger")
             return redirect(url_for('.test'))
 
-    # FIXME: should render the self_verify template again... but really should
-    # never happen!
-    return "BAD STUFF"
+    attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
+    prompt_html = markdown_to_html(attempt.question.prompt)
+    answer_html = markdown_to_html(attempt.question.answer)
+
+    return render_template("self_verify.html",
+                           page_title="Cadet Test: Self Verification",
+                           form=form,
+                           prompt=Markup(prompt_html),
+                           response=attempt.response,
+                           correct_answer=Markup(answer_html))
 
 
 def get_last_attempt(user_id, question_id):
@@ -188,6 +195,7 @@ def test_multiple_choice():
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
+    # FIXME: display multiple choice form again
     return "FAIL"
 
 @user_views.route('/test/short-answer', methods=['POST'])
