@@ -5,7 +5,7 @@
     <div class="container pt-3">
 		<div class="row text-end">
 			{% if not fresh_question %}
-				<strong><i class="bi-arrow-repeat"></i> <span class="text-orange">Repeat Question</span></strong>
+				<strong><i class="bi-arrow-repeat"></i> Repeat Question</strong>
 			{% endif %}
 		</div>
 
@@ -19,7 +19,13 @@
                 {{ form.csrf_token }}
                 {{ form.question_id }}
 
-                {{ form.response(class_="form-control", placeholder="Enter your answer", required=False) }}
+				{% set class_str = "form-control " + forms.get_valid_class(form.response) %}
+				{{ form.response(class_=class_str, placeholder="Enter your answer", required=False) }}
+				{% if form.response.errors %} 
+					<div class="ms-1 invalid-feedback">
+						Enter an answer or click "I Don't Know".
+					</div>
+				{% endif %}
 
                 <p class="pt-2">
                     {{ form.no_answer(class_="btn btn-outline-danger btn-sm") }}

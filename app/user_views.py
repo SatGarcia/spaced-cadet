@@ -242,6 +242,7 @@ def test_short_answer():
                                response=form.response.data,
                                correct_answer=Markup(answer_html))
 
+    # FIXME: set fresh_question appropriately below
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
                            form=form,
@@ -443,7 +444,7 @@ def test():
         return "UNSUPPORTED QUESTION TYPE"
 
 
-class DataRequiredIf(InputRequired):
+class DataRequiredIf(DataRequired):
     # a validator which makes a field required if another field is set and has
     # a truthy value
 

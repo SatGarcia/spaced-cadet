@@ -1,16 +1,21 @@
+{% macro get_valid_class(form_field) -%}
+	{% if form_field.errors %}
+		is-invalid
+	{% endif %}
+{%- endmacro %}
+
 {% macro input(form_field, placeholder, form_class="form-control") -%}
     <div class="form-group py-1">
         <strong>{{ form_field.label }}:</strong>
-        {{ form_field(class_=form_class, placeholder=placeholder) }}
+		{% set class_str = form_class + " " + get_valid_class(form_field) %}
+        {{ form_field(class_=class_str, placeholder=placeholder) }}
 
         {% if form_field.errors %} 
-        <div class="ms-1">
-            <small class="text-danger">
-                {% for error in form_field.errors %}
-                {{ error }}.
-                {% endfor %}
-            </small>
-        </div>
+			<div class="ms-1 invalid-feedback">
+				{% for error in form_field.errors %}
+					{{ error }}.
+				{% endfor %}
+			</div>
         {% endif %}
     </div>
 {%- endmacro %}
@@ -28,3 +33,4 @@
         </div>
     </div>
 {%- endmacro %}
+
