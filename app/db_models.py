@@ -7,10 +7,10 @@ from app import db
 
 
 class QuestionType(enum.Enum):
-    GENERIC = 0
-    SHORT_ANSWER = 1
-    MULTIPLE_CHOICE = 2
-    CODE_JUMBLE = 3
+    GENERIC = "generic"
+    SHORT_ANSWER = "short-answer"
+    MULTIPLE_CHOICE = "multiple-choice"
+    CODE_JUMBLE = "code-jumble"
 
 class ResponseType(enum.Enum):
     GENERIC = 0
@@ -258,6 +258,13 @@ class Section(db.Model):
 
     def __repr__(self):
         return f"<Section {self.id}: {self.course} - Section #{self.section_num}>"
+
+    def format(self):
+        s = {}
+        s['id'] = self.id
+        s['course'] = self.course
+        s['students'] = [u.id for u in self.users]
+        return s
 
 
 class User(UserMixin, db.Model):

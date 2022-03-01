@@ -124,11 +124,15 @@ y = x
     from app.api import api
     app.register_blueprint(api, url_prefix='/api')
 
+    from app.api import init_app as init_api
+    init_api(app)
+
     from app.auth import auth
     app.register_blueprint(auth, url_prefix="/auth")
 
     from app.auth import init_app as init_auth
     init_auth(app)
+
 
     return app
 
