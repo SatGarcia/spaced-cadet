@@ -2,7 +2,7 @@ from flask import (
     Blueprint, url_for, redirect, request, abort, jsonify
 )
 from flask_restful import Resource, Api
-from marshmallow import Schema, fields, ValidationError, pre_load
+from marshmallow import Schema, fields, ValidationError, pre_load, EXCLUDE
 from marshmallow.decorators import post_load
 from datetime import date, timedelta, datetime
 from enum import Enum
@@ -16,15 +16,15 @@ class QuestionSchema(Schema):
     model_class = Question
 
     id = fields.Int(dump_only=True)
-    type = fields.Method("get_type", deserialize="create_type")
-    prompt = fields.Str()
+    type = fields.Method("get_type", required=True, deserialize="create_type")
+    prompt = fields.Str(required=True)
 
     def get_type(self, obj):
         return obj.type.value
 
     def create_type(self, value):
         try:
-            QuestionType(value)
+            return QuestionType(value)
         except ValueError as error:
             raise ValidationError("Invalid question type.") from error
 
@@ -37,7 +37,7 @@ class ShortAnswerQuestionSchema(QuestionSchema):
     from app.db_models import ShortAnswerQuestion
     model_class = ShortAnswerQuestion
 
-    answer = fields.Str()
+    answer = fields.Str(required=True)
 
     """
     @post_dump
@@ -117,7 +117,7 @@ class SectionSchema(Schema):
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 section_schema = SectionSchema()
-question_schema = QuestionSchema()
+question_schema = QuestionSchema(unknown=EXCLUDE)
 sa_question_schema = ShortAnswerQuestionSchema()
 mc_question_schema = MultipleChoiceQuestionSchema()
 cj_question_schema = CodeJumbleQuestionSchema()
@@ -129,6 +129,7 @@ def init_app(flask_app):
     rf_api.add_resource(UsersApi, '/api/users')
     rf_api.add_resource(SectionApi, '/api/section/<int:section_id>')
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
+    rf_api.add_resource(QuestionsApi, '/api/questions')
 
 
 class UserApi(Resource):
@@ -162,20 +163,60 @@ class SectionApi(Resource):
         return {todo_id: todos[todo_id]}
     """
 
+
 class QuestionApi(Resource):
+    def dump_by_type(question):
+        if question.type == QuestionType.SHORT_ANSWER:
+            return sa_question_schema.dump(question)
+        elif question.type == QuestionType.MULTIPLE_CHOICE:
+            return mc_question_schema.dump(question)
+        elif question.type == QuestionType.CODE_JUMBLE:
+            return cj_question_schema.dump(question)
+        else:
+            return question_schema.dump(question)
+
+
     def get(self, question_id):
         q = Question.query.filter_by(id=question_id).one_or_none()
         if q:
-            if q.type == QuestionType.SHORT_ANSWER:
-                return sa_question_schema.dump(q)
-            elif q.type == QuestionType.MULTIPLE_CHOICE:
-                return mc_question_schema.dump(q)
-            elif q.type == QuestionType.CODE_JUMBLE:
-                return cj_question_schema.dump(q)
-            else:
-                return question_schema.dump(q)
+            return {"question": QuestionApi.dump_by_type(q)}
         else:
             return {'message': f"Question {question_id} not found."}, 404
+
+
+class QuestionsApi(Resource):
+    def get(self):
+        questions = Question.query.all()
+        result = question_schema.dump(questions, many=True)
+        return {'questions': result}
+
+    def post(self):
+        json_data = request.get_json()
+
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        # check that basic question fields exists
+        errors = question_schema.validate(json_data)
+        if errors:
+            return errors, 422
+
+        # based on the type of question, pick the schema to load with
+        if json_data['type'] == 'short-answer':
+            schema = sa_question_schema
+        elif json_data['type'] == 'multiple-choice':
+            schema = mc_question_schema
+        elif json_data['type'] == 'code-jumble':
+            schema = cj_question_schema
+
+        try:
+            data = schema.load(json_data)
+        except ValidationError as err:
+            return err.messages, 422
+
+        print(type(data))
+        print(data)
+        return {"message": "success"}
 
 
 @api.route('/courses/<int:section_num>/questions')
