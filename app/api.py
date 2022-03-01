@@ -12,8 +12,8 @@ from app import db
 api = Blueprint('api', __name__)
 
 class QuestionSchema(Schema):
-    from app.db_models import Question
-    model_class = Question
+    class Meta:
+        ordered = True
 
     id = fields.Int(dump_only=True)
     type = fields.Method("get_type", required=True, deserialize="create_type")
@@ -28,35 +28,37 @@ class QuestionSchema(Schema):
         except ValueError as error:
             raise ValidationError("Invalid question type.") from error
 
-    @post_load
-    def make_question(self, data, **kwargs):
-        return type(self).model_class(**data)
-
 
 class ShortAnswerQuestionSchema(QuestionSchema):
-    from app.db_models import ShortAnswerQuestion
-    model_class = ShortAnswerQuestion
-
     answer = fields.Str(required=True)
 
-    """
-    @post_dump
-    def foo(self, data, **kwargs):
-        data['answer'] = self.answer
-    """
+    @post_load
+    def make_sa_question(self, data, **kwargs):
+        return ShortAnswerQuestion(**data)
 
 
 class AnswerOptionSchema(Schema):
     id = fields.Int(dump_only=True)
-    text = fields.Str()
-    correct = fields.Boolean()
+    text = fields.Str(required=True)
+    correct = fields.Boolean(required=True)
 
 
 class MultipleChoiceQuestionSchema(QuestionSchema):
-    from app.db_models import MultipleChoiceQuestion
-    model_class = MultipleChoiceQuestion
+    options = fields.List(fields.Nested(AnswerOptionSchema), required=True)
 
-    options = fields.List(fields.Nested(AnswerOptionSchema))
+    @post_load
+    def make_mc_question(self, data, **kwargs):
+        answer_options = []
+        for opt in data['options']:
+            ao = AnswerOption(**opt)
+            answer_options.append(ao)
+            db.session.add(ao)
+
+        del data['options']
+        q = MultipleChoiceQuestion(**data)
+        q.options = answer_options
+
+        return q
 
 
 class JumbleBlockSchema(Schema):
@@ -210,13 +212,16 @@ class QuestionsApi(Resource):
             schema = cj_question_schema
 
         try:
-            data = schema.load(json_data)
+            obj = schema.load(json_data)
         except ValidationError as err:
             return err.messages, 422
 
-        print(type(data))
-        print(data)
-        return {"message": "success"}
+        db.session.add(obj)
+        db.session.commit()
+
+        print(type(obj))
+        print(obj)
+        return {"question": schema.dump(obj)}
 
 
 @api.route('/courses/<int:section_num>/questions')
