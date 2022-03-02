@@ -114,17 +114,13 @@ class UserSchema(Schema):
 
 
 class SectionSchema(Schema):
+    class Meta:
+        ordered = True
+
     id = fields.Int(dump_only=True)
-    name = fields.Str()
-    number = fields.Int()
-    users = fields.List(fields.Nested(UserSchema))
-
-    """
-    formatted_name = fields.Method("format_name", dump_only=True)
-
-    def format_name(self, author):
-        return f"{author.last}, {author.first}"
-    """
+    course = fields.Str(required=True)
+    number = fields.Int(required=True)
+    users = fields.List(fields.Nested(UserSchema), dump_only=True)
 
 
 user_schema = UserSchema()
@@ -145,6 +141,7 @@ def init_app(flask_app):
                         '/api/section/<int:section_id>/questions')
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
     rf_api.add_resource(QuestionsApi, '/api/questions')
+    rf_api.add_resource(SectionsApi, '/api/sections')
 
 
 class UserApi(Resource):
@@ -169,7 +166,35 @@ class SectionApi(Resource):
         if s:
             return section_schema.dump(s)
         else:
-            {}, 404
+            return {'message': f"Section {section_id} not found."}, 404
+
+
+class SectionsApi(Resource):
+    def get(self):
+        sections = Section.query.all()
+        schema = SectionSchema(many=True, exclude=('users',))
+        result = schema.dump(sections)
+        return {'sections': result}
+
+    def post(self):
+        json_data = request.get_json()
+
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        # validate and load the section's data
+        try:
+            data = SectionSchema().load(json_data)
+        except ValidationError as err:
+            return err.messages, 422
+
+        new_section = Section(**data)
+        db.session.add(new_section)
+        db.session.commit()
+
+        result = section_schema.dump(new_section)
+        return {'section': result}
+
 
 
 class QuestionApi(Resource):
