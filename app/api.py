@@ -141,6 +141,8 @@ def init_app(flask_app):
     rf_api.add_resource(UserApi, '/api/user/<int:user_id>')
     rf_api.add_resource(UsersApi, '/api/users')
     rf_api.add_resource(SectionApi, '/api/section/<int:section_id>')
+    rf_api.add_resource(SectionQuestionsApi,
+                        '/api/section/<int:section_id>/questions')
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
     rf_api.add_resource(QuestionsApi, '/api/questions')
 
@@ -165,16 +167,9 @@ class SectionApi(Resource):
     def get(self, section_id):
         s = Section.query.filter_by(id=section_id).one_or_none()
         if s:
-            #return s.format()
             return section_schema.dump(s)
         else:
             {}, 404
-
-    """
-    def put(self, section_id):
-        todos[todo_id] = request.form['data']
-        return {todo_id: todos[todo_id]}
-    """
 
 
 class QuestionApi(Resource):
@@ -195,6 +190,62 @@ class QuestionApi(Resource):
             return {"question": QuestionApi.dump_by_type(q)}
         else:
             return {'message': f"Question {question_id} not found."}, 404
+
+
+class QuestionListSchema(Schema):
+    question_ids = fields.List(fields.Int(), required=True)
+
+
+class SectionQuestionsApi(Resource):
+    def get(self, section_id):
+        s = Section.query.filter_by(id=section_id).one_or_none()
+        if s:
+            result = QuestionSchema(only=("id",)).dump(s.questions, many=True)
+            return {"question_ids": [q['id'] for q in result]}
+        else:
+            return {'message': f"Section {section_id} not found."}, 404
+
+    def post(self, section_id):
+        s = Section.query.filter_by(id=section_id).one_or_none()
+        if not s:
+            return {'message': f"Section {section_id} not found."}, 404
+
+        json_data = request.get_json()
+
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        # validate and load the list of questions
+        try:
+            data = QuestionListSchema().load(json_data)
+        except ValidationError as err:
+            return err.messages, 422
+
+        good_ones = []
+        bad_ones = []
+
+        for q_id in data['question_ids']:
+            # FIXME: check if question is already in the section
+            q = Question.query.filter_by(id=q_id).one_or_none()
+
+            if q:
+                if q in s.questions:
+                    bad_ones.append({q_id: "Section already has this question."})
+                else:
+                    good_ones.append(q)
+
+            else:
+                bad_ones.append({q_id: "No question with this ID."})
+
+        if bad_ones:
+            return {"errors": bad_ones}, 400
+
+        for q in good_ones:
+            s.questions.append(q)
+
+        db.session.commit()
+
+        return {"questions": QuestionSchema().dump(good_ones, many=True)}
 
 
 class QuestionsApi(Resource):
