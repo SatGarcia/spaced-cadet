@@ -63,17 +63,28 @@ class MultipleChoiceQuestionSchema(QuestionSchema):
 
 class JumbleBlockSchema(Schema):
     id = fields.Int(dump_only=True)
-    code = fields.Str()
-    correct_index = fields.Int()
-    correct_indent = fields.Int()
+    code = fields.Str(required=True)
+    correct_index = fields.Int(required=True, data_key='correct-index')
+    correct_indent = fields.Int(required=True, data_key='correct-indent')
 
 
 class CodeJumbleQuestionSchema(QuestionSchema):
-    from app.db_models import CodeJumbleQuestion
-    model_class = CodeJumbleQuestion
-
-    language = fields.Str()
+    language = fields.Str(required=True)
     blocks = fields.List(fields.Nested(JumbleBlockSchema))
+
+    @post_load
+    def make_cj_question(self, data, **kwargs):
+        code_blocks = []
+        for block in data['blocks']:
+            jb = JumbleBlock(**block)
+            code_blocks.append(jb)
+            db.session.add(jb)
+
+        del data['blocks']
+        q = CodeJumbleQuestion(**data)
+        q.blocks = code_blocks
+
+        return q
 
 
 class ObjectiveSchema(Schema):
@@ -312,5 +323,5 @@ def create_question(section_num):
 
 from app.db_models import (
     QuestionType, AnswerOption, Section, ShortAnswerQuestion,
-    MultipleChoiceQuestion, User, Question
+    MultipleChoiceQuestion, User, Question, JumbleBlock, CodeJumbleQuestion
 )
