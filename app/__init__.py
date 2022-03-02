@@ -121,9 +121,6 @@ y = x
     from app.user_views import user_views as uv
     app.register_blueprint(uv)
 
-    from app.api import api
-    app.register_blueprint(api, url_prefix='/api')
-
     from app.api import init_app as init_api
     init_api(app)
 
