@@ -40,7 +40,7 @@ def create_app(test_config=None):
         # set up some example entries in the database for testing
         section = db_models.Section(course="COMP110", number=3)
         db.session.add(section)
-        user = db_models.User(username="sat", email="sat@sandeigeo.edu",
+        user = db_models.User(email="sat@sandeigeo.edu",
                               first_name="Sat", last_name="Garcia",
                               admin=True, instructor=True)
         user.set_password("foobar")
