@@ -158,6 +158,8 @@ def init_app(flask_app):
     rf_api.add_resource(UserApi, '/api/user/<int:user_id>')
     rf_api.add_resource(UsersApi, '/api/users')
     rf_api.add_resource(SectionApi, '/api/section/<int:section_id>')
+    rf_api.add_resource(RosterApi,
+                        '/api/section/<int:section_id>/students')
     rf_api.add_resource(SectionQuestionsApi,
                         '/api/section/<int:section_id>/questions')
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
@@ -244,8 +246,64 @@ class QuestionApi(Resource):
             return {'message': f"Question {question_id} not found."}, 404
 
 
-class QuestionListSchema(Schema):
-    question_ids = fields.List(fields.Int(), required=True)
+class IdListSchema(Schema):
+    ids = fields.List(fields.Int(), required=True)
+
+
+class RosterApi(Resource):
+    def get(self, section_id):
+        s = Section.query.filter_by(id=section_id).one_or_none()
+        if s:
+            result = users_schema.dump(s.users)
+            return {"roster": result}
+        else:
+            return {'message': f"Section {section_id} not found."}, 404
+
+    def post(self, section_id):
+        s = Section.query.filter_by(id=section_id).one_or_none()
+        if not s:
+            return {'message': f"Section {section_id} not found."}, 404
+
+        json_data = request.get_json()
+
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        # validate and load the list of student IDs
+        try:
+            data = IdListSchema().load(json_data)
+        except ValidationError as err:
+            return err.messages, 422
+
+        already_enrolled = []
+        newly_enrolled = []
+        invalid_ids = []
+
+        for user_id in data['ids']:
+            user = User.query.filter_by(id=user_id).one_or_none()
+
+            if user:
+                if user in s.users:
+                    already_enrolled.append(user)
+                else:
+                    newly_enrolled.append(user)
+                    s.users.append(user)
+
+            else:
+                invalid_ids.append(user_id)
+
+        db.session.commit()
+
+        return {
+            "newly-enrolled": UserSchema(many=True, only=("id", "email",
+                                                          "first_name",
+                                                          "last_name")).dump(
+                                                              newly_enrolled),
+            "already-enrolled": UserSchema(many=True, only=("id", "email",
+                                                            "first_name",
+                                                            "last_name")).dump(
+                                                                already_enrolled),
+            "invalid-ids": invalid_ids}
 
 
 class SectionQuestionsApi(Resource):
@@ -267,17 +325,16 @@ class SectionQuestionsApi(Resource):
         if not json_data:
             return {"message": "No input data provided"}, 400
 
-        # validate and load the list of questions
+        # validate and load the list of question IDs
         try:
-            data = QuestionListSchema().load(json_data)
+            data = IdListSchema().load(json_data)
         except ValidationError as err:
             return err.messages, 422
 
         good_ones = []
         bad_ones = []
 
-        for q_id in data['question_ids']:
-            # FIXME: check if question is already in the section
+        for q_id in data['ids']:
             q = Question.query.filter_by(id=q_id).one_or_none()
 
             if q:
