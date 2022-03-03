@@ -7,9 +7,9 @@ from flask_login import current_user, login_user, logout_user, LoginManager
 
 from flask_wtf import FlaskForm
 from wtforms import (
-    StringField, SubmitField, PasswordField
+    StringField, SubmitField, PasswordField, EmailField
 )
-from wtforms.validators import InputRequired
+from wtforms.validators import InputRequired, Email
 
 
 #from cas import CASClient
@@ -65,18 +65,18 @@ def login():
     next_url = request.args.get('next')
 
     if current_user.is_authenticated:
-        flash(f"You are already signed in as {current_user.username}", "warning")
+        flash(f"You are already signed in as {current_user.email}", "warning")
         post_login_redirect(next_url)
 
     else:
         form = LoginForm()
 
         if form.validate_on_submit():
-            user = User.query.filter_by(username=form.username.data).one_or_none()
+            user = User.query.filter_by(email=form.email.data).one_or_none()
 
             if user and user.check_password(form.password.data):
                 login_user(user)
-                flash(f"Successfully signed in as {user.username}", "success")
+                flash(f"Successfully signed in as {user.email}", "success")
                 return post_login_redirect(next_url)
 
             else:
@@ -159,7 +159,7 @@ def verify_ticket():
 @auth.route('/logout')
 def logout():
     if current_user.is_authenticated:
-        current_app.logger.info(f"logout: {current_user.username}")
+        current_app.logger.info(f"logout: {current_user.email}")
         logout_user()
         flash("You've successfully logged out!", "success")
 
@@ -177,7 +177,7 @@ def logout():
 
 
 class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[InputRequired()])
+    email = EmailField('Email', validators=[InputRequired(), Email()])
     password = PasswordField('Password', validators=[InputRequired()])
     submit = SubmitField("Submit")
 

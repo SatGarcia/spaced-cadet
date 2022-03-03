@@ -7,7 +7,7 @@
 
         <form method="POST" action="">
             {{ form.csrf_token }}
-            {{ forms.input(form.username, "Enter Your Username") }}
+            {{ forms.input(form.email, "Enter Your Email Address") }}
             {{ forms.input(form.password, "Enter Your Password") }}
             <div class="container pt-2 px-1">
                 {{ form.submit(class_="btn btn-primary") }}
