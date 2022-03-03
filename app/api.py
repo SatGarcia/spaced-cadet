@@ -1,9 +1,13 @@
 from flask import request
 from flask_restful import Resource, Api
-from marshmallow import Schema, fields, ValidationError, pre_load, EXCLUDE
+from marshmallow import (
+    Schema, fields, ValidationError, validates, pre_load, EXCLUDE
+)
 from marshmallow.decorators import post_load
+from werkzeug.security import generate_password_hash
 from datetime import date, timedelta, datetime
 from enum import Enum
+import secrets
 
 from app import db
 
@@ -99,14 +103,35 @@ class AssessmentSchema(Schema):
 
 
 class UserSchema(Schema):
+    class Meta:
+        ordered = True
+
     id = fields.Int(dump_only=True)
-    username = fields.Str()
-    email = fields.Str()
-    first_name = fields.Str()
-    last_name = fields.Str()
-    password_hash = fields.Str(load_only=True)
-    admin = fields.Boolean()
+    email = fields.Str(required=True)
+    password_hash = fields.Str(load_only=True, data_key="password")
+    last_name = fields.Str(required=True, data_key="last-name")
+    first_name = fields.Str(required=True, data_key="first-name")
     instructor = fields.Boolean()
+    admin = fields.Boolean()
+
+    @pre_load
+    def process_password(self, data, **kwargs):
+        """ Checks if a plaintext password is present, using it (or a random
+        new password) to generate a password hash to store in the database. """
+
+        plain_password = data.get("password")
+        if plain_password:
+            data["password"] = generate_password_hash(plain_password)
+        else:
+            data["password"] = generate_password_hash(secrets.token_hex(25))
+
+        return data
+
+    @validates("email")
+    def unique_email(self, email_address):
+        if User.query.filter(User.email == email_address).count() > 0:
+            raise ValidationError("email must be unique")
+
 
 
 class SectionSchema(Schema):
@@ -155,6 +180,9 @@ class UsersApi(Resource):
         result = users_schema.dump(users)
         return {'users': result}
 
+    def post(self):
+        return create_and_commit(User, user_schema, request.get_json())
+
 
 class SectionApi(Resource):
     def get(self, section_id):
@@ -165,6 +193,26 @@ class SectionApi(Resource):
             return {'message': f"Section {section_id} not found."}, 404
 
 
+def create_and_commit(obj_type, schema, json_data):
+    """ Uses the given JSON data and schema to create an object of the given
+    type. """
+    if not json_data:
+        return {"message": "No input data provided"}, 400
+
+    # validate and de-serialize (i.e. load) the data
+    try:
+        data = schema.load(json_data)
+    except ValidationError as err:
+        return err.messages, 422
+
+    # create the object and add it to the database
+    obj = obj_type(**data)
+    db.session.add(obj)
+    db.session.commit()
+
+    result = schema.dump(obj)
+    return {obj_type.__name__.lower(): result}
+
 class SectionsApi(Resource):
     def get(self):
         sections = Section.query.all()
@@ -173,24 +221,7 @@ class SectionsApi(Resource):
         return {'sections': result}
 
     def post(self):
-        json_data = request.get_json()
-
-        if not json_data:
-            return {"message": "No input data provided"}, 400
-
-        # validate and load the section's data
-        try:
-            data = SectionSchema().load(json_data)
-        except ValidationError as err:
-            return err.messages, 422
-
-        new_section = Section(**data)
-        db.session.add(new_section)
-        db.session.commit()
-
-        result = section_schema.dump(new_section)
-        return {'section': result}
-
+        return create_and_commit(Section, section_schema, request.get_json())
 
 
 class QuestionApi(Resource):
