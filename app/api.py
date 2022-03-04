@@ -245,6 +245,21 @@ class QuestionApi(Resource):
         else:
             return {'message': f"Question {question_id} not found."}, 404
 
+    def delete(self, question_id):
+        q = Question.query.filter_by(id=question_id).one_or_none()
+
+        if q:
+            deleted_q = QuestionApi.dump_by_type(q)
+            db.session.delete(q)
+            db.session.commit()
+
+            # TODO: ensure all attempts get deleted as well
+
+            return {"deleted": deleted_q}
+
+        else:
+            return {'message': f"Question {question_id} not found."}, 404
+
 
 class IdListSchema(Schema):
     ids = fields.List(fields.Int(), required=True)

@@ -108,8 +108,9 @@ class MultipleChoiceQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
 
     options = db.relationship('AnswerOption',
-                                foreign_keys='AnswerOption.question_id',
-                                backref='question', lazy='dynamic')
+                              foreign_keys='AnswerOption.question_id',
+                              backref='question', lazy='dynamic',
+                              cascade="all, delete-orphan")
 
     __mapper_args__ = {
         'polymorphic_identity': QuestionType.MULTIPLE_CHOICE,
