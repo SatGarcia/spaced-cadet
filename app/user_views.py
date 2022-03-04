@@ -198,6 +198,7 @@ def test_multiple_choice():
     # FIXME: display multiple choice form again
     return "FAIL"
 
+
 @user_views.route('/test/short-answer', methods=['POST'])
 @login_required
 def test_short_answer():
@@ -253,6 +254,81 @@ def test_short_answer():
     # FIXME: set fresh_question appropriately below
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
+                           form=form,
+                           prompt=Markup(prompt_html))
+
+
+@user_views.route('/test/auto-check', methods=['POST'])
+@login_required
+def test_auto_check():
+    form = AutoCheckForm(request.form)
+    original_question_id = form.question_id.data
+    original_question = Question.query.filter_by(id=original_question_id).first()
+
+    prompt_html = markdown_to_html(original_question.prompt)
+
+    #answer_html = markdown_to_html(original_question.answer)
+
+    if form.validate_on_submit():
+        # check for a previous attempt
+        previous_attempt = Attempt.query.filter(Attempt.user_id == current_user.id,
+                                                Attempt.question_id == original_question_id).order_by(
+                                                    Attempt.time.desc()).first()
+
+        # add the attempt to the database (leaving the outcome undefined for
+        # now)
+        attempt = TextAttempt(response=form.response.data,
+                              question_id=original_question_id,
+                              user_id=current_user.id)
+
+        # if there was a previous attempt, copy over e_factor and interval
+        if previous_attempt:
+            attempt.e_factor = previous_attempt.e_factor
+            attempt.interval = previous_attempt.interval
+
+        db.session.add(attempt)
+        db.session.commit() # TRICKY: need to commit to get default e_factor and interval
+
+        if form.no_answer.data:
+            # No response from user ("I Don't Know"), which is response
+            # quality 1 in SM-2
+            sm2_update(attempt, 1)
+            db.session.commit()
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   prompt=Markup(prompt_html),
+                                   answer=original_question.answer)
+
+        # check whether they got it correct or not
+        user_response = attempt.response.strip()
+        if user_response == original_question.answer:
+            # The user was correct so send them to the form to rate the
+            # quality of their response.
+            attempt.correct = True
+            db.session.commit()
+
+            difficulty_form = DifficultyForm(attempt_id=attempt.id)
+            return render_template("difficulty.html",
+                                   page_title="Cadet Test: Rating",
+                                   form=difficulty_form)
+
+        else:
+            # User was wrong so show them the correct answer
+            attempt.correct = False
+            sm2_update(attempt, 2)
+            db.session.commit()
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   prompt=Markup(prompt_html),
+                                   answer=original_question.answer)
+
+
+    # FIXME: set fresh_question appropriately below
+    return render_template("test_short_answer.html",
+                           page_title="Cadet Test",
+                           post_url=url_for(".test_auto_check"),
                            form=form,
                            prompt=Markup(prompt_html))
 
@@ -421,6 +497,17 @@ def test():
         return render_template("test_short_answer.html",
                                page_title="Cadet Test",
                                fresh_question=fresh_question,
+                               post_url=url_for(".test_short_answer"),
+                               form=form,
+                               prompt=Markup(prompt_html))
+
+    elif question.type == QuestionType.AUTO_CHECK:
+        form = AutoCheckForm(question_id=question.id)
+        prompt_html = markdown_to_html(question.prompt)
+        return render_template("test_short_answer.html",
+                               page_title="Cadet Test",
+                               fresh_question=fresh_question,
+                               post_url=url_for(".test_auto_check"),
                                form=form,
                                prompt=Markup(prompt_html))
 
@@ -490,6 +577,14 @@ class ShortAnswerForm(FlaskForm):
     response = TextAreaField('answer', validators=[DataRequiredIf('submit')])
     no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
+
+
+class AutoCheckForm(FlaskForm):
+    question_id = HiddenField("Question ID")
+    response = StringField('answer', validators=[DataRequiredIf('submit')])
+    no_answer = SubmitField("I Don't Know")
+    submit = SubmitField("Submit")
+
 
 class CodeJumbleForm(FlaskForm):
     question_id = HiddenField("Question ID")

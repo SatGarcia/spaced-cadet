@@ -66,8 +66,8 @@ def create_app(test_config=None):
 
         q1 = db_models.ShortAnswerQuestion(prompt="Define: **vegan**",
                                 answer="A _cool_ person")
-        q2 = db_models.ShortAnswerQuestion(prompt="Define: **cat**",
-                                answer="Cute furrball")
+        q2 = db_models.AutoCheckQuestion(prompt="What number is the result of the following computation: $2^3-1$",
+                                answer="7")
 
         q3 = db_models.MultipleChoiceQuestion(prompt="Why is **less** code better?")
         o1 = db_models.AnswerOption(text="Fewer lines to have bugs in.",
@@ -79,7 +79,7 @@ def create_app(test_config=None):
                                           language="python")
         b1 = db_models.JumbleBlock(code="# display a value\nprint(i)", correct_index=1, correct_indent=1)
         b2 = db_models.JumbleBlock(code="x = 5", correct_index=-1, correct_indent=0)
-        b3 = db_models.JumbleBlock(code="for i in range(1, 11)", correct_index=0, correct_indent=0)
+        b3 = db_models.JumbleBlock(code="for i in range(1, 11):", correct_index=0, correct_indent=0)
 
         q5 = db_models.ShortAnswerQuestion(prompt=\
 """

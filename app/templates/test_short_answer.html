@@ -15,7 +15,7 @@
 
 
         <div class="row pt-2">
-            <form method="POST" action="{{ url_for('user_views.test_short_answer') }}">
+            <form method="POST" action="{{ post_url }}">
                 {{ form.csrf_token }}
                 {{ form.question_id }}
 

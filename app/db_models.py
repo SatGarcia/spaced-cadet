@@ -11,6 +11,7 @@ class QuestionType(enum.Enum):
     SHORT_ANSWER = "short-answer"
     MULTIPLE_CHOICE = "multiple-choice"
     CODE_JUMBLE = "code-jumble"
+    AUTO_CHECK = "auto-check"
 
 class ResponseType(enum.Enum):
     GENERIC = 0
@@ -90,6 +91,17 @@ class ShortAnswerQuestion(Question):
         q['prompt'] = self.prompt
         q['answer'] = self.answer
         return q
+
+
+class AutoCheckQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+
+    answer = db.Column(db.String, nullable=False)
+    regex = db.Column(db.Boolean, default=False, nullable=False)
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.AUTO_CHECK,
+    }
 
 
 class MultipleChoiceQuestion(Question):
