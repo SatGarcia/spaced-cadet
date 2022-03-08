@@ -42,6 +42,24 @@
                 </div>
                 {% endif %}
 
+				{% if current_user.is_authenticated and current_user.instructor %}
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarAdminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Questions
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="navbarAdminDropdown">
+						{% for section in current_user.sections %}
+							<li>
+								<a class="dropdown-item" 
+		   							href="{{ url_for('instructor.manage_questions', course_id=section.id) }}"
+									>{{ section.course }}</a>
+							
+							</li>
+						{% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
 
                 {% if current_user.is_authenticated %}
                 <div class="container d-flex flex-row-reverse">
