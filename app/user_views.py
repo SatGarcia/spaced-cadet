@@ -5,7 +5,8 @@ from flask import (
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField,
-    RadioField, FieldList, FormField, IntegerField
+    RadioField,
+    FieldList, FormField, IntegerField, BooleanField
 )
 from wtforms.validators import (
     DataRequired, InputRequired, NumberRange, ValidationError
@@ -58,6 +59,13 @@ def create_new_question(course_id):
                                    page_title="Cadet: Create New Quesion (Short Answer)",
                                    form=sa_form)
 
+        if form.type.data == "auto-check":
+            ac_form = NewAutoCheckQuestionForm(section_id=course_id,
+                                               prompt=form.prompt.data)
+            return render_template("create_new_auto_check.html",
+                                   page_title="Cadet: Create New Quesion (Short Answer)",
+                                   form=ac_form)
+
         elif form.type.data == "code-jumble":
             cj_form = NewJumbleQuestionForm(section_id=course_id,
                                             prompt=form.prompt.data)
@@ -94,6 +102,34 @@ def create_short_answer():
                                 course_id=form.section_id.data))
 
     return render_template("create_new_short_answer.html",
+                           page_title="Cadet: Create New Quesion (Short Answer)",
+                           form=form)
+
+
+@user_views.route('/new-question/auto-check', methods=['POST'])
+@login_required
+def create_auto_check():
+    form = NewAutoCheckQuestionForm(request.form)
+
+    if form.validate_on_submit():
+        section = Section.query.filter_by(id=form.section_id.data).first()
+        if not section:
+            abort(400)
+
+        new_q = AutoCheckQuestion(prompt=form.prompt.data,
+                                  answer=form.answer.data,
+                                  regex=form.regex.data)
+
+        section.questions.append(new_q)
+
+        # TODO: show preview of question before commiting
+        db.session.commit()
+
+        flash("New question added!", "success")
+        return redirect(url_for(".create_new_question",
+                                course_id=form.section_id.data))
+
+    return render_template("create_new_audo_check.html",
                            page_title="Cadet: Create New Quesion (Short Answer)",
                            form=form)
 
@@ -714,6 +750,15 @@ class NewShortAnswerQuestionForm(FlaskForm):
     answer = TextAreaField("Question Answer", [DataRequired()])
     submit = SubmitField("Continue...")
 
+
+class NewAutoCheckQuestionForm(FlaskForm):
+    section_id = HiddenField("Section ID")
+    prompt = StringField("Question Prompt", [DataRequired()])
+    answer = StringField("Question Answer", [DataRequired()])
+    regex = BooleanField("Regex")
+    submit = SubmitField("Continue...")
+
+
 class NewJumbleQuestionForm(FlaskForm):
     section_id = HiddenField("Section ID")
     prompt = TextAreaField("Question Prompt", [DataRequired()])
@@ -738,5 +783,6 @@ class NewJumbleQuestionForm(FlaskForm):
 from app.db_models import (
     Question, Attempt, enrollments, QuestionType, AnswerOption,
     TextAttempt, SelectionAttempt,
-    CodeJumbleQuestion, JumbleBlock, Section, ShortAnswerQuestion
+    CodeJumbleQuestion, JumbleBlock, Section, ShortAnswerQuestion,
+    AutoCheckQuestion
 )

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+    <div class="container pt-3">
+        <h4>Create New Question (Auto-Graded Short Answer)</h4>
+
+		<div class="row">
+			<form method="POST" action="{{ url_for('user_views.create_auto_check') }}">
+				{{ form.csrf_token }}
+				{{ form.section_id }}
+
+                {{ forms.input(form.prompt) }}
+                {{ forms.input(form.answer) }}
+                <div class="form-group ms-1 pt-2 pb-2">
+                    {{ form.regex(class_="pl-2 form-check-input") }} {{ form.regex.label }}
+                </div>
+
+                {{ form.submit(class_="btn btn-primary btn-sm") }}
+			</form>
+		</div>
+    </div>
+
+{% endblock %}
