@@ -41,16 +41,27 @@ def markdown_to_html(markdown_text, code_linenums=True):
 def root():
     return render_template("home.html")
 
-@user_views.route('/course/<int:course_id>/new-question')
+@user_views.route('/course/<int:course_id>/new-question', methods=['GET', 'POST'])
 @login_required
 def create_new_question(course_id):
     s = Section.query.filter_by(id=course_id).first()
     if not s:
         abort(404)
 
-    form = NewJumbleQuestionForm(section_id=course_id)
+    form = NewQuestionForm(section_id=course_id)
+
+    if form.validate_on_submit():
+        if form.type.data == "code-jumble":
+            form = NewJumbleQuestionForm(section_id=course_id,
+                                         prompt=form.prompt.data)
+            return render_template("create_new_code_jumble.html",
+                                   page_title="Cadet: Create New Quesion (Code Jumble)",
+                                   form=form)
+        else:
+            flash("Unsupported question type.", "warning")
+
     return render_template("create_new_question.html",
-                           page_title="Cadet: Create New Quesion (Code Jumble)",
+                           page_title="Cadet: Create New Quesion",
                            form=form)
 
 @user_views.route('/new-question/jumble', methods=['POST'])
@@ -81,7 +92,7 @@ def create_code_jumble():
         return redirect(url_for(".create_new_question",
                                 course_id=form.section_id.data))
 
-    return render_template("create_new_question.html",
+    return render_template("create_new_code_jumble.html",
                            page_title="Cadet: Create New Quesion (Code Jumble)",
                            form=form)
 
@@ -649,6 +660,19 @@ class JumbleBlockForm(FlaskForm):
     correct_index = IntegerField('Correct Location')
     correct_indent = IntegerField('Correct Indentation',
                                   [NumberRange(min=0, max=4), InputRequired()])
+
+class NewQuestionForm(FlaskForm):
+    section_id = HiddenField("Section ID")
+    prompt = TextAreaField("Question Prompt", [DataRequired()])
+    type = SelectField("Question Type",
+                           validators=[InputRequired()],
+                           choices=[
+                               ('short-answer', "Short Answer (Self Graded)"),
+                               ('auto-check', "Short Answer (Auto Graded)"),
+                               ('multiple-choice', "Multiple Choice"),
+                               ('code-jumble', "Code Jumble"),
+                           ])
+    submit = SubmitField("Continue...")
 
 class NewJumbleQuestionForm(FlaskForm):
     section_id = HiddenField("Section ID")

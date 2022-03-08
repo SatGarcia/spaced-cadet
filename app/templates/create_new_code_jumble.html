@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+    <div class="container pt-3">
+        <h4>Create New Question (Code Jumble)</h4>
+
+		<div class="row">
+			<form method="POST" action="{{ url_for('user_views.create_code_jumble') }}">
+				{{ form.csrf_token }}
+				{{ form.section_id }}
+
+                {{ forms.input(form.prompt) }}
+                {{ forms.input(form.language, form_class="form-select") }}
+
+                <h5 class="pt-3">Code Blocks:</h5>
+
+                {% if form.code_blocks.errors %} 
+                    <span class="is-invalid"></span>
+                    <div class="ms-1 invalid-feedback">
+                        ERROR:
+                        {% for error in form.code_blocks.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <ul class="list-unstyled" id="jumble-blocks">
+                {% for block_form in form.code_blocks %}
+                    <li class="row border rounded my-3 py-2" block_num="{{loop.index0}}">
+                        {{ block_form.csrf_token }}
+                        <ul class="list-unstyled">
+                            <li>{{ forms.input(block_form.code) }}</li>
+                            <li>{{ forms.input(block_form.correct_index) }}</li>
+                            <li>{{ forms.input(block_form.correct_indent) }}</li>
+                        </ul>
+                    </li>
+                {% endfor %}
+                </ul>
+
+                <div class="my-3" style="color: green; font-size: 1.25rem;">
+                    <i class="bi-patch-plus-fill" onclick="add_jumble_block()"></i>
+                    Add Block
+                </div>
+                
+                {{ form.submit(class_="btn btn-primary btn-sm") }}
+			</form>
+		</div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/jumble-form.js') }}"></script>
+
+{% endblock %}
