@@ -6,10 +6,9 @@ from flask_wtf import FlaskForm
 from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField,
     RadioField,
-    FieldList, FormField, IntegerField, BooleanField
 )
 from wtforms.validators import (
-    DataRequired, InputRequired, NumberRange, ValidationError
+    DataRequired, InputRequired
 )
 from flask_login import current_user, login_required
 
@@ -106,6 +105,8 @@ def get_last_attempt(user_id, question_id):
                                 Attempt.question_id == question_id).order_by(
                                     Attempt.time.desc()).first()
 
+
+# TODO: make this a method inside of the Attempt class
 def sm2_update(attempt, quality):
     """ Updates the attempt's e_factor and interval based on the quality of
     their most recent answer. """

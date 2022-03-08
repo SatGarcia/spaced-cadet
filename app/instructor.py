@@ -1,11 +1,9 @@
 from flask import (
-    Blueprint, render_template, url_for, redirect, flash, request, Markup,
-    abort
+    Blueprint, render_template, url_for, redirect, flash, request, abort
 )
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField,
-    RadioField,
     FieldList, FormField, IntegerField, BooleanField
 )
 from wtforms.validators import (
@@ -13,30 +11,9 @@ from wtforms.validators import (
 )
 from flask_login import current_user, login_required
 
-import ast, markdown
-from datetime import date, timedelta, datetime
-from math import ceil
-
 from app import db
 
 instructor = Blueprint('instructor', __name__)
-
-def markdown_to_html(markdown_text, code_linenums=True):
-    """ Convert markdown text to html. """
-    html = markdown.markdown(markdown_text,
-                             extensions=['fenced_code',
-                                         'codehilite',
-                                         'pymdownx.arithmatex'],
-
-                             extension_configs = {
-                                 "pymdownx.arithmatex": {
-                                     "generic": True
-                                 },
-                                 "codehilite": {
-                                     "linenums": code_linenums
-                                 }
-                             })
-    return html
 
 @instructor.route('/course/<int:course_id>/new-question', methods=['GET', 'POST'])
 @login_required
