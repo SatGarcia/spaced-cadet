@@ -13,6 +13,8 @@
                 {{ forms.input(form.prompt) }}
                 {{ forms.input(form.language, form_class="form-select") }}
 
+                <h5 class="pt-3">Code Blocks:</h5>
+
                 {% if form.code_blocks.errors %} 
                     <span class="is-invalid"></span>
                     <div class="ms-1 invalid-feedback">
