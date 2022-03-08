@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+    <div class="container pt-3">
+        <h4>Create New Question (Self-Graded Short Answer)</h4>
+
+		<div class="row">
+			<form method="POST" action="{{ url_for('user_views.create_short_answer') }}">
+				{{ form.csrf_token }}
+				{{ form.section_id }}
+
+                {{ forms.input(form.prompt) }}
+                {{ forms.input(form.answer) }}
+
+                {{ form.submit(class_="btn btn-primary btn-sm") }}
+			</form>
+		</div>
+    </div>
+
+{% endblock %}

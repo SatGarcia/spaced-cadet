@@ -51,17 +51,50 @@ def create_new_question(course_id):
     form = NewQuestionForm(section_id=course_id)
 
     if form.validate_on_submit():
-        if form.type.data == "code-jumble":
-            form = NewJumbleQuestionForm(section_id=course_id,
-                                         prompt=form.prompt.data)
+        if form.type.data == "short-answer":
+            sa_form = NewShortAnswerQuestionForm(section_id=course_id,
+                                                 prompt=form.prompt.data)
+            return render_template("create_new_short_answer.html",
+                                   page_title="Cadet: Create New Quesion (Short Answer)",
+                                   form=sa_form)
+
+        elif form.type.data == "code-jumble":
+            cj_form = NewJumbleQuestionForm(section_id=course_id,
+                                            prompt=form.prompt.data)
             return render_template("create_new_code_jumble.html",
                                    page_title="Cadet: Create New Quesion (Code Jumble)",
-                                   form=form)
+                                   form=cj_form)
         else:
             flash("Unsupported question type.", "warning")
 
     return render_template("create_new_question.html",
                            page_title="Cadet: Create New Quesion",
+                           form=form)
+
+@user_views.route('/new-question/short-answer', methods=['POST'])
+@login_required
+def create_short_answer():
+    form = NewShortAnswerQuestionForm(request.form)
+
+    if form.validate_on_submit():
+        section = Section.query.filter_by(id=form.section_id.data).first()
+        if not section:
+            abort(400)
+
+        new_q = ShortAnswerQuestion(prompt=form.prompt.data,
+                                    answer=form.answer.data)
+
+        section.questions.append(new_q)
+
+        # TODO: show preview of question before commiting
+        db.session.commit()
+
+        flash("New question added!", "success")
+        return redirect(url_for(".create_new_question",
+                                course_id=form.section_id.data))
+
+    return render_template("create_new_short_answer.html",
+                           page_title="Cadet: Create New Quesion (Short Answer)",
                            form=form)
 
 @user_views.route('/new-question/jumble', methods=['POST'])
@@ -86,6 +119,7 @@ def create_code_jumble():
 
         section.questions.append(new_q)
 
+        # TODO: show preview of question before commiting
         db.session.commit()
 
         flash("New question added!", "success")
@@ -667,11 +701,17 @@ class NewQuestionForm(FlaskForm):
     type = SelectField("Question Type",
                            validators=[InputRequired()],
                            choices=[
-                               ('short-answer', "Short Answer (Self Graded)"),
-                               ('auto-check', "Short Answer (Auto Graded)"),
+                               ('short-answer', "Short Answer (Self-Graded)"),
+                               ('auto-check', "Short Answer (Auto-Graded)"),
                                ('multiple-choice', "Multiple Choice"),
                                ('code-jumble', "Code Jumble"),
                            ])
+    submit = SubmitField("Continue...")
+
+class NewShortAnswerQuestionForm(FlaskForm):
+    section_id = HiddenField("Section ID")
+    prompt = TextAreaField("Question Prompt", [DataRequired()])
+    answer = TextAreaField("Question Answer", [DataRequired()])
     submit = SubmitField("Continue...")
 
 class NewJumbleQuestionForm(FlaskForm):
@@ -698,5 +738,5 @@ class NewJumbleQuestionForm(FlaskForm):
 from app.db_models import (
     Question, Attempt, enrollments, QuestionType, AnswerOption,
     TextAttempt, SelectionAttempt,
-    CodeJumbleQuestion, JumbleBlock, Section
+    CodeJumbleQuestion, JumbleBlock, Section, ShortAnswerQuestion
 )
