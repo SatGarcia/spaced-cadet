@@ -32,11 +32,13 @@
 						<div class="row my-1">
 							{% set remove_url = url_for('section_question', section_id=course_id, question_id=q.id, _external=True) %}
 							<div class="col">
-								<button type="button" class=" btn btn-sm btn-outline-primary">
+								<button type="button"
+										class=" btn btn-sm btn-outline-primary"
+										onclick="showMessage('howdy')">
 									Preview
 								</button>
 								<button type="button" 
-										onclick="removeQuestion('{{remove_url}}', '{{q_id}}').then(alert)" 
+										onclick="removeQuestion('{{remove_url}}', '{{q_id}}').then(showMessage)" 
 										class=" btn btn-sm btn-outline-danger">
 									Remove
 								</button>
@@ -48,23 +50,38 @@
 		</div>
     </div>
 
+	<div id="snackbar">Default message.</div> 
+
 	<script type="text/javascript">
+		function showMessage(message) {
+			var x = document.getElementById("snackbar");
+			x.innerHTML = message;
+
+			x.classList.add("show");
+
+			// hide after 3 seconds
+			setTimeout(() => x.classList.remove("show"), 3000);
+
+			// TODO: handle case when show snackbar is displayed before the
+			// previous timer went off
+		}
+
 		async function removeQuestion(url, q_id) {
 			console.log(url);
 			const config = {
 				method: 'DELETE',
 			}
-			const response = await fetch(url, config);
+			const response = await fetch("fart", config);
 			if (!response.ok) {
-				alert(response.status);
-				throw new Error(`HTTP error! status: ${response.status}`);
+				return `Error removing question. (HTTP Status: ${response.status})`
+				//throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
 			// remove the question from the list on this page
 			const to_remove = document.getElementById(q_id);
 			to_remove.parentNode.removeChild(to_remove);
 
-			return "Success!";
+			return "Question successfully removed.";
 		}
 	</script>
 {% endblock %}
