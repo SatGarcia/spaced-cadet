@@ -34,10 +34,15 @@ def create_app(test_config=None):
     db.init_app(app)
 
     with app.app_context():
-        db.drop_all() # clear out table (testing only FIXME)
+        # clear out all attempts (just for TESTING)
+        db_models.Attempt.__table__.drop(db.engine)
+        db_models.TextAttempt.__table__.drop(db.engine)
+        db_models.SelectionAttempt.__table__.drop(db.engine)
+
         db.create_all()
 
         # set up some example entries in the database for testing
+        """
         section = db_models.Section(course="COMP110", number=3)
         db.session.add(section)
         user = db_models.User(email="sat@sandiego.edu",
@@ -48,15 +53,13 @@ def create_app(test_config=None):
         section.users.append(user)
         db.session.commit()
 
-        """
-        source = db_models.Source(description="Textbook Section 3.5")
-        db.session.add(source)
-        section.sources.append(source)
+        #source = db_models.Source(description="Textbook Section 3.5")
+        #db.session.add(source)
+        #section.sources.append(source)
 
-        assessment = db_models.Assessment(description="Quiz 1")
-        db.session.add(assessment)
-        section.assessments.append(assessment)
-        """
+        #assessment = db_models.Assessment(description="Quiz 1")
+        #db.session.add(assessment)
+        #section.assessments.append(assessment)
 
         lo = db_models.Objective(description="Use basic programming terminology")
         db.session.add(lo)
@@ -81,22 +84,10 @@ def create_app(test_config=None):
         b2 = db_models.JumbleBlock(code="x = 5", correct_index=-1, correct_indent=0)
         b3 = db_models.JumbleBlock(code="for i in range(1, 11):", correct_index=0, correct_indent=0)
 
-        q5 = db_models.ShortAnswerQuestion(prompt=\
-"""
-Describe what line 2 does in the following code.
-
-```python
-x = 7
-y = x
-```
-""",
-                                           answer="It creates a new variable that refers to the same value as x.")
-
         db.session.add(q1)
         db.session.add(q2)
         db.session.add(q3)
         db.session.add(q4)
-        db.session.add(q5)
         q3.options.append(o1)
         q3.options.append(o2)
         q3.options.append(o3)
@@ -107,13 +98,12 @@ y = x
         lo.questions.append(q2)
         lo.questions.append(q3)
         lo.questions.append(q4)
-        lo.questions.append(q5)
         section.questions.append(q1)
         section.questions.append(q2)
         section.questions.append(q3)
         section.questions.append(q4)
-        section.questions.append(q5)
         db.session.commit()
+        """
 
         for q in db_models.Question.query:
             print(repr(q))
@@ -123,6 +113,9 @@ y = x
 
     from app.api import init_app as init_api
     init_api(app)
+
+    from app.instructor import instructor
+    app.register_blueprint(instructor)
 
     from app.auth import auth
     app.register_blueprint(auth, url_prefix="/auth")

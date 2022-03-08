@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+    <div class="container pt-3">
+        <h4>Create New Question (Multiple Choice)</h4>
+
+		<div class="row">
+			<form method="POST" action="{{ url_for('instructor.create_multiple_choice') }}">
+				{{ form.csrf_token }}
+				{{ form.section_id }}
+
+                {{ forms.input(form.prompt) }}
+
+                <h5 class="pt-3">Options:</h5>
+
+                {% if form.options.errors %} 
+                    <span class="is-invalid"></span>
+                    <div class="ms-1 invalid-feedback">
+                        ERROR:
+                        {% for error in form.options.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <ul class="list-unstyled" id="mc-options">
+                {% for option_form in form.options %}
+                    <li option_num="{{loop.index0}}">
+                        {{ option_form.csrf_token }}
+                        {{ forms.input(option_form.text, placeholder="Enter text for this option.", include_label=False) }}
+                        <div class="form-group ms-1 pt-2 pb-2">
+                            {{ option_form.correct(class_="pl-2 form-check-input") }} {{ option_form.correct.label }}
+                        </div>
+                    </li>
+                {% endfor %}
+                </ul>
+
+                <div class="my-3" style="color: green; font-size: 1.25rem;">
+                    <i class="bi-patch-plus-fill" onclick="add_mc_option()"></i>
+                    Add Option
+                </div>
+                
+                {{ form.submit(class_="btn btn-primary btn-sm") }}
+			</form>
+		</div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/multiple-choice-form.js') }}"></script>
+
+{% endblock %}

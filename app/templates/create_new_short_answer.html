@@ -6,7 +6,7 @@
         <h4>Create New Question (Self-Graded Short Answer)</h4>
 
 		<div class="row">
-			<form method="POST" action="{{ url_for('user_views.create_short_answer') }}">
+			<form method="POST" action="{{ url_for('instructor.create_short_answer') }}">
 				{{ form.csrf_token }}
 				{{ form.section_id }}
 
