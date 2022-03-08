@@ -4,9 +4,12 @@
 	{% endif %}
 {%- endmacro %}
 
-{% macro input(form_field, placeholder, form_class="form-control") -%}
+{% macro input(form_field, placeholder, form_class="form-control", include_label=True) -%}
     <div class="form-group py-1">
-        <strong>{{ form_field.label }}:</strong>
+        {% if include_label %}
+            <strong>{{ form_field.label }}:</strong>
+        {% endif %}
+
 		{% set class_str = form_class + " " + get_valid_class(form_field) %}
         {{ form_field(class_=class_str, placeholder=placeholder) }}
 

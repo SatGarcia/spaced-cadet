@@ -59,12 +59,19 @@ def create_new_question(course_id):
                                    page_title="Cadet: Create New Quesion (Short Answer)",
                                    form=sa_form)
 
-        if form.type.data == "auto-check":
+        elif form.type.data == "auto-check":
             ac_form = NewAutoCheckQuestionForm(section_id=course_id,
                                                prompt=form.prompt.data)
             return render_template("create_new_auto_check.html",
                                    page_title="Cadet: Create New Quesion (Short Answer)",
                                    form=ac_form)
+
+        elif form.type.data == "multiple-choice":
+            mc_form = NewMultipleChoiceQuestionForm(section_id=course_id,
+                                                    prompt=form.prompt.data)
+            return render_template("create_new_multiple_choice.html",
+                                   page_title="Cadet: Create New Quesion (Multiple Choice)",
+                                   form=mc_form)
 
         elif form.type.data == "code-jumble":
             cj_form = NewJumbleQuestionForm(section_id=course_id,
@@ -132,6 +139,39 @@ def create_auto_check():
     return render_template("create_new_audo_check.html",
                            page_title="Cadet: Create New Quesion (Short Answer)",
                            form=form)
+
+
+@user_views.route('/new-question/multiple-choice', methods=['POST'])
+@login_required
+def create_multiple_choice():
+    form = NewMultipleChoiceQuestionForm(request.form)
+
+    if form.validate_on_submit():
+        section = Section.query.filter_by(id=form.section_id.data).first()
+        if not section:
+            abort(400)
+
+        new_q = MultipleChoiceQuestion(prompt=form.prompt.data)
+        db.session.add(new_q)
+
+        for option in form.options:
+            ao = AnswerOption(text=option.text.data,
+                              correct=option.correct.data)
+            new_q.options.append(ao)
+
+        section.questions.append(new_q)
+
+        # TODO: show preview of question before commiting
+        db.session.commit()
+
+        flash("New question added!", "success")
+        return redirect(url_for(".create_new_question",
+                                course_id=form.section_id.data))
+
+    return render_template("create_new_multiple_choice.html",
+                           page_title="Cadet: Create New Quesion (Multiple Choice)",
+                           form=form)
+
 
 @user_views.route('/new-question/jumble', methods=['POST'])
 @login_required
@@ -758,6 +798,22 @@ class NewAutoCheckQuestionForm(FlaskForm):
     regex = BooleanField("Regex")
     submit = SubmitField("Continue...")
 
+class McOptionForm(FlaskForm):
+    text = StringField('Text', [DataRequired()])
+    correct = BooleanField("Correct")
+
+class NewMultipleChoiceQuestionForm(FlaskForm):
+    section_id = HiddenField("Section ID")
+    prompt = TextAreaField("Question Prompt", [DataRequired()])
+    options = FieldList(FormField(McOptionForm), min_entries=2)
+    submit = SubmitField("Submit")
+
+    def validate_options(self, field):
+        """ Checks that correct indices go from 0 up to N-1 """
+        num_correct = len([1 for option in field if option.correct.data])
+        if num_correct != 1:
+            raise ValidationError("Exactly one option should be marked as correct.")
+
 
 class NewJumbleQuestionForm(FlaskForm):
     section_id = HiddenField("Section ID")
@@ -784,5 +840,5 @@ from app.db_models import (
     Question, Attempt, enrollments, QuestionType, AnswerOption,
     TextAttempt, SelectionAttempt,
     CodeJumbleQuestion, JumbleBlock, Section, ShortAnswerQuestion,
-    AutoCheckQuestion
+    AutoCheckQuestion, MultipleChoiceQuestion
 )
