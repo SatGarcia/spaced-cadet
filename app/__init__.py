@@ -47,6 +47,9 @@ def create_app(test_config=None):
     from app.user_views import user_views as uv
     app.register_blueprint(uv)
 
+    from app.user_views import markdown_to_html
+    app.jinja_env.filters['mdown'] = markdown_to_html
+
     from app.api import init_app as init_api
     init_api(app)
 

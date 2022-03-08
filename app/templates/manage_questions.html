@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+        <h4>Manage Questions</h4>
+
+		<div class="row">
+			<h5>Add Questions</h5>
+			<ul class="list-unstyled mx-3">
+				<li>Search Existing by Source</li>
+				<li>Search Existing by Learning Objective</li>
+				<li><a href="{{ url_for('instructor.create_new_question', course_id=course_id) }}">Create New Question</a></li>
+			</ul>
+		</div>
+
+		<div class="row">
+			<h5>Current Questions</h5>
+			<ul class="list-unstyled">
+				{% for q in questions %}
+					<li class="m-2 border-bottom">
+						<div class="row">
+							<div class="col bg-light p-1">
+								{{ q.prompt|mdown|safe }}
+							</div>
+							<div class="col-md-2">
+								<strong>Attempts:</strong>
+								<br/>Correct: {{ q.correct_attempts()|length }}
+								<br/>Incorrect: {{ q.incorrect_attempts()|length }}
+							</div>
+						</div>
+						<div class="row my-1">
+							<div class="col">
+								<button type="button" class=" btn btn-sm btn-outline-primary">Preview</button>
+								<button type="button" class=" btn btn-sm btn-outline-danger">Remove</button>
+							</div>
+						</div>
+					</li>
+				{% endfor %}
+			</ul>
+		</div>
+    </div>
+{% endblock %}

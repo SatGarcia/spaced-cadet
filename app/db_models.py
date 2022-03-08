@@ -74,6 +74,12 @@ class Question(db.Model):
         # FIXME: Do we need to manually delete options in MC questions?
         db.session.commit()
 
+    def correct_attempts(self):
+        return self.attempts.filter_by(correct=True).all()
+
+    def incorrect_attempts(self):
+        return self.attempts.filter_by(correct=False).all()
+
 
 class ShortAnswerQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)

@@ -180,6 +180,20 @@ def create_code_jumble():
                            form=form)
 
 
+@instructor.route('/course/<int:course_id>/questions')
+@login_required
+def manage_questions(course_id):
+    section = Section.query.filter_by(id=course_id).first()
+    if not section:
+        abort(404)
+
+    all_questions = section.questions.all()
+    return render_template("manage_questions.html",
+                           page_title="Cadet: Manage Course Questions",
+                           course_id=course_id,
+                           questions=all_questions)
+
+
 class DataRequiredIf(DataRequired):
     # a validator which makes a field required if another field is set and has
     # a truthy value
