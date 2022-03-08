@@ -16,7 +16,9 @@
 			<h5>Current Questions</h5>
 			<ul class="list-unstyled">
 				{% for q in questions %}
-					<li class="m-2 border-bottom">
+					{% set q_id = "question-" ~ q.id %}
+
+					<li class="m-2 border-bottom" id="{{q_id}}">
 						<div class="row">
 							<div class="col bg-light p-1">
 								{{ q.prompt|mdown|safe }}
@@ -28,9 +30,16 @@
 							</div>
 						</div>
 						<div class="row my-1">
+							{% set remove_url = url_for('section_question', section_id=course_id, question_id=q.id, _external=True) %}
 							<div class="col">
-								<button type="button" class=" btn btn-sm btn-outline-primary">Preview</button>
-								<button type="button" class=" btn btn-sm btn-outline-danger">Remove</button>
+								<button type="button" class=" btn btn-sm btn-outline-primary">
+									Preview
+								</button>
+								<button type="button" 
+										onclick="removeQuestion('{{remove_url}}', '{{q_id}}').then(alert)" 
+										class=" btn btn-sm btn-outline-danger">
+									Remove
+								</button>
 							</div>
 						</div>
 					</li>
@@ -38,4 +47,24 @@
 			</ul>
 		</div>
     </div>
+
+	<script type="text/javascript">
+		async function removeQuestion(url, q_id) {
+			console.log(url);
+			const config = {
+				method: 'DELETE',
+			}
+			const response = await fetch(url, config);
+			if (!response.ok) {
+				alert(response.status);
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			// remove the question from the list on this page
+			const to_remove = document.getElementById(q_id);
+			to_remove.parentNode.removeChild(to_remove);
+
+			return "Success!";
+		}
+	</script>
 {% endblock %}
