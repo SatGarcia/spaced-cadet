@@ -5,9 +5,11 @@ from flask import (
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField,
-    RadioField
+    RadioField, FieldList, FormField, IntegerField
 )
-from wtforms.validators import DataRequired, InputRequired
+from wtforms.validators import (
+    DataRequired, InputRequired, NumberRange, ValidationError
+)
 from flask_login import current_user, login_required
 
 import ast, markdown
@@ -38,6 +40,50 @@ def markdown_to_html(markdown_text, code_linenums=True):
 @user_views.route('/')
 def root():
     return render_template("home.html")
+
+@user_views.route('/course/<int:course_id>/new-question')
+@login_required
+def create_new_question(course_id):
+    s = Section.query.filter_by(id=course_id).first()
+    if not s:
+        abort(404)
+
+    form = NewJumbleQuestionForm(section_id=course_id)
+    return render_template("create_new_question.html",
+                           page_title="Cadet: Create New Quesion (Code Jumble)",
+                           form=form)
+
+@user_views.route('/new-question/jumble', methods=['POST'])
+@login_required
+def create_code_jumble():
+    form = NewJumbleQuestionForm(request.form)
+
+    if form.validate_on_submit():
+        section = Section.query.filter_by(id=form.section_id.data).first()
+        if not section:
+            abort(400)
+
+        new_q = CodeJumbleQuestion(prompt=form.prompt.data,
+                                   language=form.language.data)
+        db.session.add(new_q)
+
+        for block in form.code_blocks:
+            jb = JumbleBlock(code=block.code.data,
+                             correct_index=block.correct_index.data,
+                             correct_indent=block.correct_indent.data)
+            new_q.blocks.append(jb)
+
+        section.questions.append(new_q)
+
+        db.session.commit()
+
+        flash("New question added!", "success")
+        return redirect(url_for(".create_new_question",
+                                course_id=form.section_id.data))
+
+    return render_template("create_new_question.html",
+                           page_title="Cadet: Create New Quesion (Code Jumble)",
+                           form=form)
 
 @user_views.route('/difficulty', methods=['POST'])
 @login_required
@@ -598,8 +644,35 @@ class MultipleChoiceForm(FlaskForm):
     response = RadioField('answer', validators=[InputRequired()], coerce=int)
     submit = SubmitField("Submit")
 
+class JumbleBlockForm(FlaskForm):
+    code = TextAreaField('Code', [DataRequired()])
+    correct_index = IntegerField('Correct Location')
+    correct_indent = IntegerField('Correct Indentation',
+                                  [NumberRange(min=0, max=4), InputRequired()])
+
+class NewJumbleQuestionForm(FlaskForm):
+    section_id = HiddenField("Section ID")
+    prompt = TextAreaField("Question Prompt", [DataRequired()])
+    language = SelectField("Language",
+                           validators=[InputRequired()],
+                           choices=[('python', "Python")])
+    code_blocks = FieldList(FormField(JumbleBlockForm), min_entries=2)
+    submit = SubmitField("Submit")
+
+    def validate_code_blocks(self, field):
+        """ Checks that correct indices go from 0 up to N-1 """
+        blocks_in_answer = [block.correct_index.data
+                            for block in field
+                                if block.correct_index.data >= 0]
+
+        blocks_in_answer.sort()
+        for i in range(len(blocks_in_answer)):
+            if i not in blocks_in_answer:
+                raise ValidationError(f"Missing a Code Block with Correct Location {i}")
+
 
 from app.db_models import (
     Question, Attempt, enrollments, QuestionType, AnswerOption,
-    TextAttempt, SelectionAttempt, JumbleBlock
+    TextAttempt, SelectionAttempt,
+    CodeJumbleQuestion, JumbleBlock, Section
 )
