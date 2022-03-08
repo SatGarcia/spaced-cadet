@@ -162,6 +162,9 @@ def init_app(flask_app):
                         '/api/section/<int:section_id>/students')
     rf_api.add_resource(SectionQuestionsApi,
                         '/api/section/<int:section_id>/questions')
+    rf_api.add_resource(SectionQuestionApi,
+                        '/api/section/<int:section_id>/question/<int:question_id>',
+                        endpoint='section_question')
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
     rf_api.add_resource(QuestionsApi, '/api/questions')
     rf_api.add_resource(SectionsApi, '/api/sections')
@@ -260,6 +263,20 @@ class QuestionApi(Resource):
         else:
             return {'message': f"Question {question_id} not found."}, 404
 
+class SectionQuestionApi(Resource):
+    def delete(self, section_id, question_id):
+        s = Section.query.filter_by(id=section_id).one_or_none()
+        if not s:
+            return {'message': f"Section {section_id} not found."}, 404
+
+        q = s.questions.filter_by(id=question_id).one_or_none()
+        if not q:
+            return {'message': f"Question {question_id} not found in Section {section_id}."}, 404
+        deleted_q = QuestionApi.dump_by_type(q)
+        s.questions.remove(q)
+        db.session.commit()
+
+        return {"removed": deleted_q}
 
 class IdListSchema(Schema):
     ids = fields.List(fields.Int(), required=True)
