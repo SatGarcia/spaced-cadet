@@ -73,7 +73,7 @@
 			const config = {
 				method: 'DELETE',
 			}
-			const response = await fetch("fart", config);
+			const response = await fetch(url, config);
 			if (!response.ok) {
 				return `Error removing question. (HTTP Status: ${response.status})`
 				//throw new Error(`HTTP error! status: ${response.status}`);
