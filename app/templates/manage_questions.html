@@ -25,8 +25,10 @@
 							</div>
 							<div class="col-md-2">
 								<strong>Attempts:</strong>
-								<br/>Correct: {{ q.correct_attempts()|length }}
-								<br/>Incorrect: {{ q.incorrect_attempts()|length }}
+								<br/><i class="bi-check-circle" style="color: green;"></i>
+								Correct: {{ q.correct_attempts()|length }}
+								<br/><i class="bi-x-circle" style="color: red;"></i>
+								Incorrect: {{ q.incorrect_attempts()|length }}
 							</div>
 						</div>
 						<div class="row my-1">
