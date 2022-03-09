@@ -143,6 +143,12 @@ class CourseSchema(Schema):
     title = fields.Str(required=True)
     users = fields.List(fields.Nested(UserSchema), dump_only=True)
 
+    @validates("name")
+    def unique_name(self, course_name):
+        if Course.query.filter_by(name=course_name).count() > 0:
+            raise ValidationError("name must be unique")
+
+
 
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
