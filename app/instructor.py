@@ -1,5 +1,6 @@
 from flask import (
-    Blueprint, render_template, url_for, redirect, flash, request, abort
+    Blueprint, render_template, url_for, redirect, flash, request, abort,
+    Markup
 )
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -12,8 +13,70 @@ from wtforms.validators import (
 from flask_login import current_user, login_required
 
 from app import db
+from app.user_views import (
+    ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm,
+    MultipleChoiceForm
+)
 
 instructor = Blueprint('instructor', __name__)
+
+@instructor.route('/q/<int:question_id>/preview')
+@login_required
+def preview_question(question_id):
+    question = Question.query.filter_by(id=question_id).first()
+
+    if not question:
+        abort(404)
+
+    page_title = "Cadet: Question Preview"
+
+    if question.type == QuestionType.SHORT_ANSWER:
+        form = ShortAnswerForm(question_id=question.id)
+        prompt_html = markdown_to_html(question.prompt)
+        return render_template("test_short_answer.html",
+                               page_title=page_title,
+                               preview_mode=True,
+                               form=form,
+                               prompt=Markup(prompt_html))
+
+    elif question.type == QuestionType.AUTO_CHECK:
+        form = AutoCheckForm(question_id=question.id)
+        prompt_html = markdown_to_html(question.prompt)
+        return render_template("test_short_answer.html",
+                               page_title=page_title,
+                               preview_mode=True,
+                               form=form,
+                               prompt=Markup(prompt_html))
+
+
+    elif question.type == QuestionType.CODE_JUMBLE:
+        form = CodeJumbleForm(question_id=question.id, response="")
+        prompt_html = markdown_to_html(question.prompt)
+        code_blocks = [(b.id, Markup(b.html())) for b in question.blocks]
+
+        return render_template("test_code_jumble.html",
+                               page_title=page_title,
+                               preview_mode=True,
+                               form=form,
+                               prompt=Markup(prompt_html),
+                               code_blocks=code_blocks)
+
+    elif question.type == QuestionType.MULTIPLE_CHOICE:
+        form = MultipleChoiceForm(question_id=question.id)
+        form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
+        form.response.choices.append((-1, "I Don't Know"))
+
+        prompt_html = markdown_to_html(question.prompt)
+
+        return render_template("test_multiple_choice.html",
+                               page_title=page_title,
+                               preview_mode=True,
+                               form=form,
+                               prompt=Markup(prompt_html))
+
+    else:
+        abort(500)
+
 
 @instructor.route('/course/<int:course_id>/new-question', methods=['GET', 'POST'])
 @login_required
@@ -286,5 +349,6 @@ class NewJumbleQuestionForm(FlaskForm):
 
 from app.db_models import (
     AnswerOption, CodeJumbleQuestion, JumbleBlock, Section,
-    ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion
+    ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, Question,
+    QuestionType
 )

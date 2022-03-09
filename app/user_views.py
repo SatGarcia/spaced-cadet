@@ -600,7 +600,7 @@ class CodeJumbleForm(FlaskForm):
 
 class MultipleChoiceForm(FlaskForm):
     question_id = HiddenField("Question ID")
-    response = RadioField('answer', validators=[InputRequired()], coerce=int)
+    response = RadioField('Select One', validators=[InputRequired()], coerce=int)
     submit = SubmitField("Submit")
 
 from app.db_models import (
