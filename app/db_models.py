@@ -90,14 +90,6 @@ class ShortAnswerQuestion(Question):
         'polymorphic_identity': QuestionType.SHORT_ANSWER,
     }
 
-    def format(self):
-        q = {}
-        q['id'] = self.id
-        q['type'] = 'short-answer'
-        q['prompt'] = self.prompt
-        q['answer'] = self.answer
-        return q
-
 
 class AutoCheckQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
@@ -122,14 +114,6 @@ class MultipleChoiceQuestion(Question):
         'polymorphic_identity': QuestionType.MULTIPLE_CHOICE,
     }
 
-    def format(self):
-        q = {}
-        q['id'] = self.id
-        q['type'] = 'multiple-choice'
-        q['prompt'] = self.prompt
-        q['options'] = [o.format() for o in self.options]
-        return q
-
 
 class AnswerOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -141,13 +125,6 @@ class AnswerOption(db.Model):
     attempts = db.relationship('SelectionAttempt',
                                     foreign_keys='SelectionAttempt.option_id',
                                     backref='response', lazy='dynamic')
-
-    def format(self):
-        ao = {}
-        ao['id'] = self.id
-        ao['text'] = self.text
-        ao['correct'] = self.correct
-        return ao
 
 
 class CodeJumbleQuestion(Question):
@@ -173,14 +150,6 @@ class CodeJumbleQuestion(Question):
 
         return correct_response
 
-    def format(self):
-        q = {}
-        q['id'] = self.id
-        q['type'] = 'code-jumble'
-        q['prompt'] = self.prompt
-        q['options'] = [b.format() for b in self.blocks]
-        return q
-
 
 class JumbleBlock(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -201,14 +170,6 @@ class JumbleBlock(db.Model):
         language_str = "" if not self.question.language else self.question.language
         code_str = f"```{language_str}\n{self.code}\n```\n"
         return markdown_to_html(code_str, code_linenums=False)
-
-    def format(self):
-        jb = {}
-        jb['id'] = self.id
-        jb['code'] = self.code
-        jb['correct_index'] = self.correct_index
-        jb['correct_indent'] = self.correct_indent
-        return jb
 
 
 class Attempt(db.Model):
@@ -277,13 +238,6 @@ class Section(db.Model):
 
     def __repr__(self):
         return f"<Section {self.id}: {self.course} - Section #{self.section_num}>"
-
-    def format(self):
-        s = {}
-        s['id'] = self.id
-        s['course'] = self.course
-        s['students'] = [u.id for u in self.users]
-        return s
 
 
 class User(UserMixin, db.Model):
