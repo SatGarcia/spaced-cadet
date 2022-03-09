@@ -51,7 +51,7 @@
 						{% for course in current_user.courses %}
 							<li>
 								<a class="dropdown-item" 
-		   							href="{{ url_for('instructor.manage_questions', course_id=course.id) }}"
+		   							href="{{ url_for('instructor.manage_questions', course_name=course.name) }}"
 									>{{ course.name }}</a>
 							
 							</li>
