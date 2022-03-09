@@ -18,10 +18,10 @@ class ResponseType(enum.Enum):
     TEXT = 1
     SELECTION = 2
 
-# association table for users enrolled in a section
+# association table for users enrolled in a course
 enrollments = db.Table(
     'enrollments',
-    db.Column('section_id', db.Integer, db.ForeignKey('section.id'),
+    db.Column('course_id', db.Integer, db.ForeignKey('course.id'),
               primary_key=True),
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'),
               primary_key=True)
@@ -48,7 +48,7 @@ class Question(db.Model):
 
     prompt = db.Column(db.String, nullable=False)
 
-    section_id = db.Column(db.Integer, db.ForeignKey('section.id'))
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
     objective_id = db.Column(db.Integer, db.ForeignKey('objective.id'))
 
     attempts = db.relationship('Attempt', backref='question', lazy='dynamic')
@@ -216,28 +216,28 @@ class SelectionAttempt(Attempt):
     }
 
 
-class Section(db.Model):
+class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    course = db.Column(db.String(64), index=True)
-    number = db.Column(db.Integer, index=True)
+    name = db.Column(db.String(64), index=True, unique=True)
+    title = db.Column(db.String(100), index=True)
 
     users = db.relationship('User',
                                secondary=enrollments,
-                               primaryjoin=('enrollments.c.section_id == Section.id'),
+                               primaryjoin=('enrollments.c.course_id == Course.id'),
                                secondaryjoin=('enrollments.c.user_id == User.id'),
-                               backref=db.backref('sections', lazy='dynamic'),
+                               backref=db.backref('courses', lazy='dynamic'),
                                lazy='dynamic')
 
     assessments = db.relationship('Assessment',
-                                    foreign_keys='Assessment.section_id',
-                                    backref='section', lazy='dynamic')
+                                    foreign_keys='Assessment.course_id',
+                                    backref='course', lazy='dynamic')
 
     questions = db.relationship('Question',
-                                foreign_keys='Question.section_id',
-                                backref='section', lazy='dynamic')
+                                foreign_keys='Question.course_id',
+                                backref='course', lazy='dynamic')
 
     def __repr__(self):
-        return f"<Section {self.id}: {self.course} - Section #{self.section_num}>"
+        return f"<Course {self.id}: {self.name} ({self.title})>"
 
 
 class User(UserMixin, db.Model):
@@ -299,7 +299,7 @@ class Assessment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(100), index=True, nullable=False)
     time = db.Column(db.DateTime, default=datetime.now)
-    section_id = db.Column(db.Integer, db.ForeignKey('section.id'))
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
 
     objectives = db.relationship('Objective',
                                  secondary=assigned_objectives,

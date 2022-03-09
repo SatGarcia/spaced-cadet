@@ -8,7 +8,7 @@
 		<div class="row">
 			<form method="POST" action="{{ url_for('instructor.create_multiple_choice') }}">
 				{{ form.csrf_token }}
-				{{ form.section_id }}
+				{{ form.course_id }}
 
                 {{ forms.input(form.prompt) }}
 

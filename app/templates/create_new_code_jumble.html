@@ -8,7 +8,7 @@
 		<div class="row">
 			<form method="POST" action="{{ url_for('instructor.create_code_jumble') }}">
 				{{ form.csrf_token }}
-				{{ form.section_id }}
+				{{ form.course_id }}
 
                 {{ forms.input(form.prompt) }}
                 {{ forms.input(form.language, form_class="form-select") }}

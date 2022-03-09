@@ -134,19 +134,19 @@ class UserSchema(Schema):
 
 
 
-class SectionSchema(Schema):
+class CourseSchema(Schema):
     class Meta:
         ordered = True
 
     id = fields.Int(dump_only=True)
-    course = fields.Str(required=True)
-    number = fields.Int(required=True)
+    name = fields.Str(required=True)
+    title = fields.Str(required=True)
     users = fields.List(fields.Nested(UserSchema), dump_only=True)
 
 
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
-section_schema = SectionSchema()
+course_schema = CourseSchema()
 question_schema = QuestionSchema(unknown=EXCLUDE)
 sa_question_schema = ShortAnswerQuestionSchema()
 mc_question_schema = MultipleChoiceQuestionSchema()
@@ -157,17 +157,17 @@ def init_app(flask_app):
     rf_api = Api(flask_app)
     rf_api.add_resource(UserApi, '/api/user/<int:user_id>')
     rf_api.add_resource(UsersApi, '/api/users')
-    rf_api.add_resource(SectionApi, '/api/section/<int:section_id>')
+    rf_api.add_resource(CourseApi, '/api/course/<int:course_id>')
     rf_api.add_resource(RosterApi,
-                        '/api/section/<int:section_id>/students')
-    rf_api.add_resource(SectionQuestionsApi,
-                        '/api/section/<int:section_id>/questions')
-    rf_api.add_resource(SectionQuestionApi,
-                        '/api/section/<int:section_id>/question/<int:question_id>',
-                        endpoint='section_question')
+                        '/api/course/<int:course_id>/students')
+    rf_api.add_resource(CourseQuestionsApi,
+                        '/api/course/<int:course_id>/questions')
+    rf_api.add_resource(CourseQuestionApi,
+                        '/api/course/<int:course_id>/question/<int:question_id>',
+                        endpoint='course_question')
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
     rf_api.add_resource(QuestionsApi, '/api/questions')
-    rf_api.add_resource(SectionsApi, '/api/sections')
+    rf_api.add_resource(CoursesApi, '/api/courses')
 
 
 class UserApi(Resource):
@@ -189,13 +189,13 @@ class UsersApi(Resource):
         return create_and_commit(User, user_schema, request.get_json())
 
 
-class SectionApi(Resource):
-    def get(self, section_id):
-        s = Section.query.filter_by(id=section_id).one_or_none()
-        if s:
-            return section_schema.dump(s)
+class CourseApi(Resource):
+    def get(self, course_id):
+        c = Course.query.filter_by(id=course_id).one_or_none()
+        if c:
+            return course_schema.dump(c)
         else:
-            return {'message': f"Section {section_id} not found."}, 404
+            return {'message': f"Course {course_id} not found."}, 404
 
 
 def create_and_commit(obj_type, schema, json_data):
@@ -218,15 +218,15 @@ def create_and_commit(obj_type, schema, json_data):
     result = schema.dump(obj)
     return {obj_type.__name__.lower(): result}
 
-class SectionsApi(Resource):
+class CoursesApi(Resource):
     def get(self):
-        sections = Section.query.all()
-        schema = SectionSchema(many=True, exclude=('users',))
-        result = schema.dump(sections)
-        return {'sections': result}
+        courses = Course.query.all()
+        schema = CourseSchema(many=True, exclude=('users',))
+        result = schema.dump(courses)
+        return {'courses': result}
 
     def post(self):
-        return create_and_commit(Section, section_schema, request.get_json())
+        return create_and_commit(Course, course_schema, request.get_json())
 
 
 class QuestionApi(Resource):
@@ -263,17 +263,17 @@ class QuestionApi(Resource):
         else:
             return {'message': f"Question {question_id} not found."}, 404
 
-class SectionQuestionApi(Resource):
-    def delete(self, section_id, question_id):
-        s = Section.query.filter_by(id=section_id).one_or_none()
-        if not s:
-            return {'message': f"Section {section_id} not found."}, 404
+class CourseQuestionApi(Resource):
+    def delete(self, course_id, question_id):
+        course = Course.query.filter_by(id=course_id).one_or_none()
+        if not course:
+            return {'message': f"Course {course_id} not found."}, 404
 
-        q = s.questions.filter_by(id=question_id).one_or_none()
+        q = course.questions.filter_by(id=question_id).one_or_none()
         if not q:
-            return {'message': f"Question {question_id} not found in Section {section_id}."}, 404
+            return {'message': f"Question {question_id} not found in Course {course_id}."}, 404
         deleted_q = QuestionApi.dump_by_type(q)
-        s.questions.remove(q)
+        course.questions.remove(q)
         db.session.commit()
 
         return {"removed": deleted_q}
@@ -283,18 +283,18 @@ class IdListSchema(Schema):
 
 
 class RosterApi(Resource):
-    def get(self, section_id):
-        s = Section.query.filter_by(id=section_id).one_or_none()
-        if s:
-            result = users_schema.dump(s.users)
+    def get(self, course_id):
+        c = Course.query.filter_by(id=course_id).one_or_none()
+        if c:
+            result = users_schema.dump(c.users)
             return {"roster": result}
         else:
-            return {'message': f"Section {section_id} not found."}, 404
+            return {'message': f"Course {course_id} not found."}, 404
 
-    def post(self, section_id):
-        s = Section.query.filter_by(id=section_id).one_or_none()
-        if not s:
-            return {'message': f"Section {section_id} not found."}, 404
+    def post(self, course_id):
+        course = Course.query.filter_by(id=course_id).one_or_none()
+        if not course:
+            return {'message': f"Course {course_id} not found."}, 404
 
         json_data = request.get_json()
 
@@ -315,11 +315,11 @@ class RosterApi(Resource):
             user = User.query.filter_by(id=user_id).one_or_none()
 
             if user:
-                if user in s.users:
+                if user in course.users:
                     already_enrolled.append(user)
                 else:
                     newly_enrolled.append(user)
-                    s.users.append(user)
+                    course.users.append(user)
 
             else:
                 invalid_ids.append(user_id)
@@ -338,19 +338,19 @@ class RosterApi(Resource):
             "invalid-ids": invalid_ids}
 
 
-class SectionQuestionsApi(Resource):
-    def get(self, section_id):
-        s = Section.query.filter_by(id=section_id).one_or_none()
-        if s:
-            result = QuestionSchema(only=("id",)).dump(s.questions, many=True)
+class CourseQuestionsApi(Resource):
+    def get(self, course_id):
+        c = Course.query.filter_by(id=course_id).one_or_none()
+        if c:
+            result = QuestionSchema(only=("id",)).dump(c.questions, many=True)
             return {"question_ids": [q['id'] for q in result]}
         else:
-            return {'message': f"Section {section_id} not found."}, 404
+            return {'message': f"Course {course_id} not found."}, 404
 
-    def post(self, section_id):
-        s = Section.query.filter_by(id=section_id).one_or_none()
-        if not s:
-            return {'message': f"Section {section_id} not found."}, 404
+    def post(self, course_id):
+        course = Course.query.filter_by(id=course_id).one_or_none()
+        if not course:
+            return {'message': f"Course {course_id} not found."}, 404
 
         json_data = request.get_json()
 
@@ -370,8 +370,8 @@ class SectionQuestionsApi(Resource):
             q = Question.query.filter_by(id=q_id).one_or_none()
 
             if q:
-                if q in s.questions:
-                    bad_ones.append({q_id: "Section already has this question."})
+                if q in course.questions:
+                    bad_ones.append({q_id: "Course already has this question."})
                 else:
                     good_ones.append(q)
 
@@ -382,7 +382,7 @@ class SectionQuestionsApi(Resource):
             return {"errors": bad_ones}, 400
 
         for q in good_ones:
-            s.questions.append(q)
+            course.questions.append(q)
 
         db.session.commit()
 
@@ -422,12 +422,10 @@ class QuestionsApi(Resource):
         db.session.add(obj)
         db.session.commit()
 
-        print(type(obj))
-        print(obj)
         return {"question": schema.dump(obj)}
 
 
 from app.db_models import (
-    QuestionType, AnswerOption, Section, ShortAnswerQuestion,
+    QuestionType, AnswerOption, Course, ShortAnswerQuestion,
     MultipleChoiceQuestion, User, Question, JumbleBlock, CodeJumbleQuestion
 )

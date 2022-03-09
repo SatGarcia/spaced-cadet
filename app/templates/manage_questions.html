@@ -8,7 +8,7 @@
 			<ul class="list-unstyled mx-3">
 				<li>Search Existing by Source</li>
 				<li>Search Existing by Learning Objective</li>
-				<li><a href="{{ url_for('instructor.create_new_question', course_id=course_id) }}">Create New Question</a></li>
+				<li><a href="{{ url_for('instructor.create_new_question', course_name=course.name) }}">Create New Question</a></li>
 			</ul>
 		</div>
 
@@ -32,7 +32,7 @@
 							</div>
 						</div>
 						<div class="row my-1">
-							{% set remove_url = url_for('section_question', section_id=course_id, question_id=q.id, _external=True) %}
+							{% set remove_url = url_for('course_question', course_id=course.id, question_id=q.id, _external=True) %}
 							<div class="col">
 								<a role="button"
 									class=" btn btn-sm btn-outline-primary"

@@ -48,11 +48,11 @@
                         Questions
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="navbarAdminDropdown">
-						{% for section in current_user.sections %}
+						{% for course in current_user.courses %}
 							<li>
 								<a class="dropdown-item" 
-		   							href="{{ url_for('instructor.manage_questions', course_id=section.id) }}"
-									>{{ section.course }}</a>
+		   							href="{{ url_for('instructor.manage_questions', course_id=course.id) }}"
+									>{{ course.name }}</a>
 							
 							</li>
 						{% endfor %}

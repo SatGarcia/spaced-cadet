@@ -78,39 +78,39 @@ def preview_question(question_id):
         abort(500)
 
 
-@instructor.route('/course/<int:course_id>/new-question', methods=['GET', 'POST'])
+@instructor.route('/c/<course_name>/new-question', methods=['GET', 'POST'])
 @login_required
-def create_new_question(course_id):
-    s = Section.query.filter_by(id=course_id).first()
-    if not s:
+def create_new_question(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
         abort(404)
 
-    form = NewQuestionForm(section_id=course_id)
+    form = NewQuestionForm(course_id=course.id)
 
     if form.validate_on_submit():
         if form.type.data == "short-answer":
-            sa_form = NewShortAnswerQuestionForm(section_id=course_id,
+            sa_form = NewShortAnswerQuestionForm(course_id=course.id,
                                                  prompt=form.prompt.data)
             return render_template("create_new_short_answer.html",
                                    page_title="Cadet: Create New Quesion (Short Answer)",
                                    form=sa_form)
 
         elif form.type.data == "auto-check":
-            ac_form = NewAutoCheckQuestionForm(section_id=course_id,
+            ac_form = NewAutoCheckQuestionForm(course_id=course.id,
                                                prompt=form.prompt.data)
             return render_template("create_new_auto_check.html",
                                    page_title="Cadet: Create New Quesion (Short Answer)",
                                    form=ac_form)
 
         elif form.type.data == "multiple-choice":
-            mc_form = NewMultipleChoiceQuestionForm(section_id=course_id,
+            mc_form = NewMultipleChoiceQuestionForm(course_id=course.id,
                                                     prompt=form.prompt.data)
             return render_template("create_new_multiple_choice.html",
                                    page_title="Cadet: Create New Quesion (Multiple Choice)",
                                    form=mc_form)
 
         elif form.type.data == "code-jumble":
-            cj_form = NewJumbleQuestionForm(section_id=course_id,
+            cj_form = NewJumbleQuestionForm(course_id=course.id,
                                             prompt=form.prompt.data)
             return render_template("create_new_code_jumble.html",
                                    page_title="Cadet: Create New Quesion (Code Jumble)",
@@ -128,21 +128,21 @@ def create_short_answer():
     form = NewShortAnswerQuestionForm(request.form)
 
     if form.validate_on_submit():
-        section = Section.query.filter_by(id=form.section_id.data).first()
-        if not section:
+        course = Course.query.filter_by(id=form.course_id.data).first()
+        if not course:
             abort(400)
 
         new_q = ShortAnswerQuestion(prompt=form.prompt.data,
                                     answer=form.answer.data)
 
-        section.questions.append(new_q)
+        course.questions.append(new_q)
 
         # TODO: show preview of question before commiting
         db.session.commit()
 
         flash("New question added!", "success")
         return redirect(url_for(".create_new_question",
-                                course_id=form.section_id.data))
+                                course_name=course.name))
 
     return render_template("create_new_short_answer.html",
                            page_title="Cadet: Create New Quesion (Short Answer)",
@@ -155,22 +155,22 @@ def create_auto_check():
     form = NewAutoCheckQuestionForm(request.form)
 
     if form.validate_on_submit():
-        section = Section.query.filter_by(id=form.section_id.data).first()
-        if not section:
+        course = Course.query.filter_by(id=form.course_id.data).first()
+        if not course:
             abort(400)
 
         new_q = AutoCheckQuestion(prompt=form.prompt.data,
                                   answer=form.answer.data,
                                   regex=form.regex.data)
 
-        section.questions.append(new_q)
+        course.questions.append(new_q)
 
         # TODO: show preview of question before commiting
         db.session.commit()
 
         flash("New question added!", "success")
         return redirect(url_for(".create_new_question",
-                                course_id=form.section_id.data))
+                                course_name=course.name))
 
     return render_template("create_new_audo_check.html",
                            page_title="Cadet: Create New Quesion (Short Answer)",
@@ -183,8 +183,8 @@ def create_multiple_choice():
     form = NewMultipleChoiceQuestionForm(request.form)
 
     if form.validate_on_submit():
-        section = Section.query.filter_by(id=form.section_id.data).first()
-        if not section:
+        course = Course.query.filter_by(id=form.course_id.data).first()
+        if not course:
             abort(400)
 
         new_q = MultipleChoiceQuestion(prompt=form.prompt.data)
@@ -195,14 +195,14 @@ def create_multiple_choice():
                               correct=option.correct.data)
             new_q.options.append(ao)
 
-        section.questions.append(new_q)
+        course.questions.append(new_q)
 
         # TODO: show preview of question before commiting
         db.session.commit()
 
         flash("New question added!", "success")
         return redirect(url_for(".create_new_question",
-                                course_id=form.section_id.data))
+                                course_name=course.name))
 
     return render_template("create_new_multiple_choice.html",
                            page_title="Cadet: Create New Quesion (Multiple Choice)",
@@ -215,8 +215,8 @@ def create_code_jumble():
     form = NewJumbleQuestionForm(request.form)
 
     if form.validate_on_submit():
-        section = Section.query.filter_by(id=form.section_id.data).first()
-        if not section:
+        course = Course.query.filter_by(id=form.course_id.data).first()
+        if not course:
             abort(400)
 
         new_q = CodeJumbleQuestion(prompt=form.prompt.data,
@@ -229,31 +229,31 @@ def create_code_jumble():
                              correct_indent=block.correct_indent.data)
             new_q.blocks.append(jb)
 
-        section.questions.append(new_q)
+        course.questions.append(new_q)
 
         # TODO: show preview of question before commiting
         db.session.commit()
 
         flash("New question added!", "success")
         return redirect(url_for(".create_new_question",
-                                course_id=form.section_id.data))
+                                course_name=course.name))
 
     return render_template("create_new_code_jumble.html",
                            page_title="Cadet: Create New Quesion (Code Jumble)",
                            form=form)
 
 
-@instructor.route('/course/<int:course_id>/questions')
+@instructor.route('/course/<course_name>/questions')
 @login_required
-def manage_questions(course_id):
-    section = Section.query.filter_by(id=course_id).first()
-    if not section:
+def manage_questions(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
         abort(404)
 
-    all_questions = section.questions.all()
+    all_questions = course.questions.all()
     return render_template("manage_questions.html",
                            page_title="Cadet: Manage Course Questions",
-                           course_id=course_id,
+                           course=course,
                            questions=all_questions)
 
 
@@ -274,7 +274,7 @@ class DataRequiredIf(DataRequired):
 
 
 class NewQuestionForm(FlaskForm):
-    section_id = HiddenField("Section ID")
+    course_id = HiddenField("Course ID")
     prompt = TextAreaField("Question Prompt", [DataRequired()])
     type = SelectField("Question Type",
                            validators=[InputRequired()],
@@ -288,14 +288,14 @@ class NewQuestionForm(FlaskForm):
 
 
 class NewShortAnswerQuestionForm(FlaskForm):
-    section_id = HiddenField("Section ID")
+    course_id = HiddenField("Course ID")
     prompt = TextAreaField("Question Prompt", [DataRequired()])
     answer = TextAreaField("Question Answer", [DataRequired()])
     submit = SubmitField("Continue...")
 
 
 class NewAutoCheckQuestionForm(FlaskForm):
-    section_id = HiddenField("Section ID")
+    course_id = HiddenField("Course ID")
     prompt = StringField("Question Prompt", [DataRequired()])
     answer = StringField("Question Answer", [DataRequired()])
     regex = BooleanField("Regex")
@@ -308,7 +308,7 @@ class McOptionForm(FlaskForm):
 
 
 class NewMultipleChoiceQuestionForm(FlaskForm):
-    section_id = HiddenField("Section ID")
+    course_id = HiddenField("Course ID")
     prompt = TextAreaField("Question Prompt", [DataRequired()])
     options = FieldList(FormField(McOptionForm), min_entries=2)
     submit = SubmitField("Submit")
@@ -327,7 +327,7 @@ class JumbleBlockForm(FlaskForm):
                                   [NumberRange(min=0, max=4), InputRequired()])
 
 class NewJumbleQuestionForm(FlaskForm):
-    section_id = HiddenField("Section ID")
+    course_id = HiddenField("Course ID")
     prompt = TextAreaField("Question Prompt", [DataRequired()])
     language = SelectField("Language",
                            validators=[InputRequired()],
@@ -348,7 +348,7 @@ class NewJumbleQuestionForm(FlaskForm):
 
 
 from app.db_models import (
-    AnswerOption, CodeJumbleQuestion, JumbleBlock, Section,
+    AnswerOption, CodeJumbleQuestion, JumbleBlock, Course,
     ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, Question,
     QuestionType
 )

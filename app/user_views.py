@@ -438,9 +438,9 @@ def test_code_jumble():
 def test():
     """ Presents a random question to the user. """
 
-    # get all the questions from section's that this user is enrolled in
+    # get all the questions from courses that this user is enrolled in
     possible_questions = Question.query.join(
-        enrollments, (enrollments.c.section_id == Question.section_id)).filter(
+        enrollments, (enrollments.c.course_id == Question.course_id)).filter(
             enrollments.c.user_id == current_user.id)
 
     # find questions that haven't been attempted yet, as these will be part of
