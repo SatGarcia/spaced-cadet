@@ -32,11 +32,11 @@
 						<div class="row my-1">
 							{% set remove_url = url_for('section_question', section_id=course_id, question_id=q.id, _external=True) %}
 							<div class="col">
-								<button type="button"
-										class=" btn btn-sm btn-outline-primary"
-										onclick="showMessage('howdy')">
+								<a role="button"
+									class=" btn btn-sm btn-outline-primary"
+									 href="{{ url_for('instructor.preview_question', question_id=q.id) }}">
 									Preview
-								</button>
+								</a>
 								<button type="button" 
 										onclick="removeQuestion('{{remove_url}}', '{{q_id}}').then(showMessage)" 
 										class=" btn btn-sm btn-outline-danger">
