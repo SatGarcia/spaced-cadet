@@ -19,8 +19,8 @@ class ResponseType(enum.Enum):
     SELECTION = 2
 
 class SourceType(enum.Enum):
-    GENERIC = 0
-    TEXTBOOK_SECTION = 1
+    GENERIC = "generic"
+    TEXTBOOK_SECTION = "textbook-section"
 
 # association table for users enrolled in a course
 enrollments = db.Table(
@@ -289,7 +289,7 @@ class Source(db.Model):
 
     title = db.Column(db.String(100), index=True)
 
-    public = db.Column(db.Boolean)
+    public = db.Column(db.Boolean, default=True)
 
     objectives = db.relationship('Objective',
                                  secondary=source_objectives,

@@ -110,16 +110,24 @@ class SourceSchema(Schema):
 
     def create_type(self, value):
         try:
-            return QuestionType(value)
+            return SourceType(value)
         except ValueError as error:
-            raise ValidationError("Invalid question type.") from error
+            raise ValidationError("Invalid source type.") from error
 
 
 class TextbookSectionSchema(SourceSchema):
-    section_number = fields.Str(required=True)
+    section_number = fields.Str(required=True, data_key="section-number")
     url = fields.Str()
     textbook = fields.Nested("TextbookSchema",
-                             only=("id", "section_number"))
+                             only=("id", "title"))
+
+    @pre_load
+    def set_type(self, data, **kwargs):
+        """ Sets source type to that of textbook-section so user doesn't have
+        to specify it themselves. """
+
+        data['type'] = "textbook-section"
+        return data
 
 
 class TextbookSchema(Schema):
@@ -200,6 +208,7 @@ sa_question_schema = ShortAnswerQuestionSchema()
 mc_question_schema = MultipleChoiceQuestionSchema()
 cj_question_schema = CodeJumbleQuestionSchema()
 textbook_schema = TextbookSchema()
+textbook_section_schema = TextbookSectionSchema()
 
 
 def init_app(flask_app):
@@ -224,6 +233,8 @@ def init_app(flask_app):
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
     rf_api.add_resource(QuestionsApi, '/api/questions')
 
+    rf_api.add_resource(TextbookSectionsApi, '/api/textbook/<int:textbook_id>/sections')
+
 
 class TextbookApi(Resource):
     def get(self, textbook_id):
@@ -231,7 +242,7 @@ class TextbookApi(Resource):
         if t:
             return textbook_schema.dump(t)
         else:
-            {"message": f"No textbook found with id {textbook_id}"}, 404
+            return {"message": f"No textbook found with id {textbook_id}"}, 404
 
 
 class TextbooksApi(Resource):
@@ -242,6 +253,26 @@ class TextbooksApi(Resource):
 
     def post(self):
         return create_and_commit(Textbook, textbook_schema, request.get_json())
+
+
+class TextbookSectionsApi(Resource):
+    def get(self, textbook_id):
+        t = Textbook.query.filter_by(id=textbook_id).one_or_none()
+
+        if not t:
+            return {"message": f"No textbook found with id {textbook_id}"}, 404
+
+        result = textbook_section_schema.dump(t.sections, many=True)
+        return {'textbook_sections': result}
+
+    def post(self, textbook_id):
+        t = Textbook.query.filter_by(id=textbook_id).one_or_none()
+
+        if not t:
+            return {"message": f"No textbook found with id {textbook_id}"}, 404
+
+        return create_and_commit(TextbookSection, textbook_section_schema,
+                                 request.get_json(), add_to=t.sections)
 
 
 class UserApi(Resource):
@@ -272,7 +303,7 @@ class CourseApi(Resource):
             return {'message': f"Course {course_id} not found."}, 404
 
 
-def create_and_commit(obj_type, schema, json_data):
+def create_and_commit(obj_type, schema, json_data, add_to=None):
     """ Uses the given JSON data and schema to create an object of the given
     type. """
     if not json_data:
@@ -287,6 +318,11 @@ def create_and_commit(obj_type, schema, json_data):
     # create the object and add it to the database
     obj = obj_type(**data)
     db.session.add(obj)
+
+    # add it to the collection specified by add_to, if that param was given
+    if add_to:
+        add_to.append(obj)
+
     db.session.commit()
 
     result = schema.dump(obj)
@@ -502,5 +538,5 @@ class QuestionsApi(Resource):
 from app.db_models import (
     QuestionType, AnswerOption, Course, ShortAnswerQuestion,
     MultipleChoiceQuestion, User, Question, JumbleBlock, CodeJumbleQuestion,
-    Textbook, TextbookSection
+    Textbook, TextbookSection, SourceType
 )
