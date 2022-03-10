@@ -18,6 +18,10 @@ class ResponseType(enum.Enum):
     TEXT = 1
     SELECTION = 2
 
+class SourceType(enum.Enum):
+    GENERIC = 0
+    TEXTBOOK_SECTION = 1
+
 # association table for users enrolled in a course
 enrollments = db.Table(
     'enrollments',
@@ -281,8 +285,11 @@ class Objective(db.Model):
 
 class Source(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.String(100), index=True, nullable=False)
-    url = db.Column(db.String(100), index=True, unique=True)
+    type = db.Column(db.Enum(SourceType), nullable=False)
+
+    title = db.Column(db.String(100), index=True)
+
+    public = db.Column(db.Boolean)
 
     objectives = db.relationship('Objective',
                                  secondary=source_objectives,
@@ -291,8 +298,51 @@ class Source(db.Model):
                                  backref=db.backref('sources', lazy='dynamic'),
                                  lazy='dynamic')
 
+    __mapper_args__ = {
+        'polymorphic_identity': SourceType.GENERIC,
+        'polymorphic_on': type
+    }
+
     def __repr__(self):
-        return f"<Source {self.id}: {self.description}>"
+        r = f"<Source {self.id}: {self.title}"
+        if self.authors:
+            r += f" by {self.authors}"
+
+        r += f". Type: {self.type}>"
+        return r
+
+
+class Textbook(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    title = db.Column(db.String(100), index=True, nullable=False)
+    edition = db.Column(db.Integer)
+
+    # TODO: make authors a relationship to Person table
+    authors = db.Column(db.String(100), index=True, nullable=False)
+
+    publisher = db.Column(db.String(100), index=True)
+    year = db.Column(db.Integer)
+    isbn = db.Column(db.String, index=True)
+    url = db.Column(db.String, index=True)
+
+    sections = db.relationship('TextbookSection',
+                                foreign_keys='TextbookSection.textbook_id',
+                                backref='textbook', lazy='dynamic')
+
+
+
+class TextbookSection(Source):
+    id = db.Column(db.Integer, db.ForeignKey('source.id'), primary_key=True)
+
+    section_number = db.Column(db.String(20), nullable=False)
+    url = db.Column(db.String)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SourceType.TEXTBOOK_SECTION,
+    }
+
+    textbook_id = db.Column(db.Integer, db.ForeignKey('textbook.id'))
 
 
 class Assessment(db.Model):

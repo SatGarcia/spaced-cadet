@@ -87,14 +87,56 @@ class CodeJumbleQuestionSchema(QuestionSchema):
         return q
 
 
-class ObjectiveSchema(Schema):
+class LearningObjectiveSchema(Schema):
     id = fields.Int(dump_only=True)
-    pass
+    description = fields.Str(required=True)
+    questions = fields.List(fields.Nested(QuestionSchema))
 
 
 class SourceSchema(Schema):
+    class Meta:
+        ordered = True
+
     id = fields.Int(dump_only=True)
-    pass
+    type = fields.Method("get_type", required=True, deserialize="create_type")
+    title = fields.Str()
+    public = fields.Boolean()
+
+    objectives = fields.List(fields.Nested(LearningObjectiveSchema),
+                             dump_only=True)
+
+    def get_type(self, obj):
+        return obj.type.value
+
+    def create_type(self, value):
+        try:
+            return QuestionType(value)
+        except ValueError as error:
+            raise ValidationError("Invalid question type.") from error
+
+
+class TextbookSectionSchema(SourceSchema):
+    section_number = fields.Str(required=True)
+    url = fields.Str()
+    textbook = fields.Nested("TextbookSchema",
+                             only=("id", "section_number"))
+
+
+class TextbookSchema(Schema):
+    id = fields.Int(dump_only=True)
+
+    title = fields.Str(required=True)
+    edition = fields.Int()
+
+    authors = fields.Str(required=True)
+    publisher = fields.Str()
+
+    year = fields.Int()
+    isbn = fields.Str()
+    url = fields.Str()
+
+    sections = fields.List(fields.Nested(TextbookSectionSchema),
+                           dump_only=True)
 
 
 class AssessmentSchema(Schema):
@@ -157,13 +199,17 @@ question_schema = QuestionSchema(unknown=EXCLUDE)
 sa_question_schema = ShortAnswerQuestionSchema()
 mc_question_schema = MultipleChoiceQuestionSchema()
 cj_question_schema = CodeJumbleQuestionSchema()
+textbook_schema = TextbookSchema()
 
 
 def init_app(flask_app):
     rf_api = Api(flask_app)
     rf_api.add_resource(UserApi, '/api/user/<int:user_id>')
     rf_api.add_resource(UsersApi, '/api/users')
+
     rf_api.add_resource(CourseApi, '/api/course/<int:course_id>')
+    rf_api.add_resource(CoursesApi, '/api/courses')
+
     rf_api.add_resource(RosterApi,
                         '/api/course/<int:course_id>/students')
     rf_api.add_resource(CourseQuestionsApi,
@@ -171,9 +217,31 @@ def init_app(flask_app):
     rf_api.add_resource(CourseQuestionApi,
                         '/api/course/<int:course_id>/question/<int:question_id>',
                         endpoint='course_question')
+
+    rf_api.add_resource(TextbookApi, '/api/textbook/<int:textbook_id>')
+    rf_api.add_resource(TextbooksApi, '/api/textbooks')
+
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
     rf_api.add_resource(QuestionsApi, '/api/questions')
-    rf_api.add_resource(CoursesApi, '/api/courses')
+
+
+class TextbookApi(Resource):
+    def get(self, textbook_id):
+        t = Textbook.query.filter_by(id=textbook_id).one_or_none()
+        if t:
+            return textbook_schema.dump(t)
+        else:
+            {"message": f"No textbook found with id {textbook_id}"}, 404
+
+
+class TextbooksApi(Resource):
+    def get(self):
+        textbooks = Textbook.query.all()
+        result = textbook_schema.dump(textbooks, many=True)
+        return {'textbooks': result}
+
+    def post(self):
+        return create_and_commit(Textbook, textbook_schema, request.get_json())
 
 
 class UserApi(Resource):
@@ -433,5 +501,6 @@ class QuestionsApi(Resource):
 
 from app.db_models import (
     QuestionType, AnswerOption, Course, ShortAnswerQuestion,
-    MultipleChoiceQuestion, User, Question, JumbleBlock, CodeJumbleQuestion
+    MultipleChoiceQuestion, User, Question, JumbleBlock, CodeJumbleQuestion,
+    Textbook, TextbookSection
 )
