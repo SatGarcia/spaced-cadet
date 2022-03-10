@@ -24,7 +24,12 @@ function add_jumble_block() {
         item.setAttribute('name', new_name);
 
         // clear out values of this item (in case they entered something)
-        item.value = '';
+		if (new_name.endsWith("-code")) {
+            item.value = '';
+        }
+		else if (new_name.endsWith("-correct_index") || new_name.endsWith("-correct_indent")) {
+        	item.value = '0';
+		}
     }
 
     let label_items = new_block.getElementsByTagName("label");
