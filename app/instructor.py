@@ -136,6 +136,7 @@ def create_short_answer():
                                     answer=form.answer.data)
 
         course.questions.append(new_q)
+        current_user.authored_questions.append(new_q)
 
         # TODO: show preview of question before commiting
         db.session.commit()
@@ -164,6 +165,7 @@ def create_auto_check():
                                   regex=form.regex.data)
 
         course.questions.append(new_q)
+        current_user.authored_questions.append(new_q)
 
         # TODO: show preview of question before commiting
         db.session.commit()
@@ -196,6 +198,7 @@ def create_multiple_choice():
             new_q.options.append(ao)
 
         course.questions.append(new_q)
+        current_user.authored_questions.append(new_q)
 
         # TODO: show preview of question before commiting
         db.session.commit()
@@ -230,6 +233,7 @@ def create_code_jumble():
             new_q.blocks.append(jb)
 
         course.questions.append(new_q)
+        current_user.authored_questions.append(new_q)
 
         # TODO: show preview of question before commiting
         db.session.commit()

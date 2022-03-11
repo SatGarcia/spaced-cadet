@@ -18,6 +18,9 @@ class QuestionSchema(Schema):
     id = fields.Int(dump_only=True)
     type = fields.Method("get_type", required=True, deserialize="create_type")
     prompt = fields.Str(required=True)
+    author = fields.Nested("UserSchema",
+                           only=("first_name", "last_name", "email"),
+                           dump_only=True)
 
     def get_type(self, obj):
         return obj.type.value
@@ -530,6 +533,11 @@ class QuestionsApi(Resource):
             return err.messages, 422
 
         db.session.add(obj)
+
+        # FIXME: set author to be current_user when API login is implemented
+        author = User.query.filter_by(id=1).first()
+        author.authored_questions.append(obj)
+
         db.session.commit()
 
         return {"question": schema.dump(obj)}

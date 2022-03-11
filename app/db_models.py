@@ -112,9 +112,11 @@ class Question(SearchableMixin, db.Model):
     type = db.Column(db.Enum(QuestionType), nullable=False)
 
     prompt = db.Column(db.String, nullable=False)
+    public = db.Column(db.Boolean, default=True, nullable=False)
 
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
     objective_id = db.Column(db.Integer, db.ForeignKey('objective.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     attempts = db.relationship('Attempt', backref='question', lazy='dynamic')
 
@@ -315,6 +317,11 @@ class User(UserMixin, db.Model):
     instructor = db.Column(db.Boolean, default=False, nullable=False)
 
     attempts = db.relationship('Attempt', backref='user', lazy='dynamic')
+
+    authored_questions = db.relationship('Question',
+                                         foreign_keys='Question.author_id',
+                                         backref='author', lazy='dynamic')
+
 
     def __repr__(self):
         return f"<User {self.id}: {self.last_name}, {self.first_name} ({self.username})>"

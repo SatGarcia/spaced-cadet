@@ -39,11 +39,6 @@ def create_app(test_config=None):
     db.init_app(app)
 
     with app.app_context():
-        # clear out all attempts (just for TESTING)
-        db_models.Attempt.__table__.drop(db.engine)
-        db_models.TextAttempt.__table__.drop(db.engine)
-        db_models.SelectionAttempt.__table__.drop(db.engine)
-
         db.create_all()
 
         for q in db_models.Question.query:
