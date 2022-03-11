@@ -3,23 +3,23 @@
     <div class="container pt-3">
         <h4>Manage Questions</h4>
 
-		<div class="row">
+		<div class="container row">
 			<h5>Add Questions</h5>
 			<ul class="list-unstyled mx-3">
-				<li><a href="{{ url_for('instructor.add_question', course_name=course.name) }}">Browse Existing Question</a></li>
+				<li><a href="{{ url_for('instructor.add_question', course_name=course.name) }}">Browse Existing Questions</a></li>
 				<li><a href="{{ url_for('instructor.create_new_question', course_name=course.name) }}">Create New Question</a></li>
 			</ul>
 		</div>
 
-		<div class="row">
+		<div class="container row">
 			<h5>Current Questions</h5>
 			<ul class="list-unstyled">
 				{% for q in questions %}
 					{% set q_id = "question-" ~ q.id %}
 
 					<li class="m-2 border-bottom" id="{{q_id}}">
-						<div class="row">
-							<div class="col bg-light p-1">
+						<div class="container row">
+							<div class="col border bg-light p-1">
 								{{ q.prompt|mdown|safe }}
 							</div>
 							<div class="col-md-2">
@@ -30,7 +30,7 @@
 								Incorrect: {{ q.incorrect_attempts()|length }}
 							</div>
 						</div>
-						<div class="row my-1">
+						<div class="container row my-2">
 							{% set remove_url = url_for('course_question', course_id=course.id, question_id=q.id, _external=True) %}
 							<div class="col">
 								<a role="button"
