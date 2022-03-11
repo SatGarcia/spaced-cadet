@@ -5,6 +5,65 @@ import enum
 
 from app import db
 
+from app.search import add_to_index, remove_from_index, query_index
+
+
+class SearchableMixin(object):
+    """ Mixin to support searching in our models. """
+    @classmethod
+    def search(cls, expression, page=0, per_page=10):
+        """ Searches for a given expression in this Table, with support for
+        pagination. """
+
+        ids, total = query_index(cls.__tablename__, expression, page, per_page)
+        if total == 0:
+            return cls.query.filter_by(id=0), 0
+
+        when = []
+        for i in range(len(ids)):
+            when.append((ids[i], i))
+
+        return cls.query.filter(cls.id.in_(ids)).order_by(
+            db.case(when, value=cls.id)), total
+
+    @classmethod
+    def before_commit(cls, session):
+        """ Create separate lists for objects that got added, updated, and
+        deleted in this commit. """
+
+        session._changes = {
+            'add': list(session.new),
+            'update': list(session.dirty),
+            'delete': list(session.deleted)
+        }
+
+
+    @classmethod
+    def after_commit(cls, session):
+        """ Update the search index based on what objects were added, updated,
+        and deleted by this commit. """
+        for obj in session._changes['add']:
+            if isinstance(obj, SearchableMixin):
+                add_to_index(obj.__tablename__, obj)
+        for obj in session._changes['update']:
+            if isinstance(obj, SearchableMixin):
+                add_to_index(obj.__tablename__, obj)
+        for obj in session._changes['delete']:
+            if isinstance(obj, SearchableMixin):
+                remove_from_index(obj.__tablename__, obj)
+        session._changes = None
+
+
+    @classmethod
+    def reindex(cls):
+        """ Updates all entries in this table. """
+        for obj in cls.query:
+            add_to_index(cls.__tablename__, obj)
+
+
+db.event.listen(db.session, 'before_commit', SearchableMixin.before_commit)
+db.event.listen(db.session, 'after_commit', SearchableMixin.after_commit)
+
 
 class QuestionType(enum.Enum):
     GENERIC = "generic"
@@ -46,7 +105,9 @@ source_objectives = db.Table(
 )
 
 
-class Question(db.Model):
+class Question(SearchableMixin, db.Model):
+    __searchable__ = ['prompt']
+
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.Enum(QuestionType), nullable=False)
 
@@ -163,12 +224,6 @@ class JumbleBlock(db.Model):
     correct_index = db.Column(db.Integer, nullable=False)
     correct_indent = db.Column(db.Integer, nullable=False)
 
-    """
-    attempts = db.relationship('SelectionAttempt',
-                                    foreign_keys='SelectionAttempt.option_id',
-                                    backref='response', lazy='dynamic')
-    """
-
     def html(self):
         """ Get HTML to display this block's code. """
         language_str = "" if not self.question.language else self.question.language
@@ -201,7 +256,9 @@ class Attempt(db.Model):
         return f"<Attempt {self.id}: Question {self.question.id} by User {self.user.id} at {self.time}>"
 
 
-class TextAttempt(Attempt):
+class TextAttempt(SearchableMixin, Attempt):
+    __searchable__ = ['response']
+
     id = db.Column(db.Integer, db.ForeignKey('attempt.id'), primary_key=True)
 
     response = db.Column(db.String, nullable=False)  # TODO: make no reesponse an option
@@ -220,7 +277,9 @@ class SelectionAttempt(Attempt):
     }
 
 
-class Course(db.Model):
+class Course(SearchableMixin, db.Model):
+    __searchable__ = ['name', 'title']
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), index=True, unique=True)
     title = db.Column(db.String(100), index=True)
@@ -271,7 +330,9 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 
-class Objective(db.Model):
+class Objective(SearchableMixin, db.Model):
+    __searchable__ = ['description']
+
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(200), index=True, unique=True)
 
@@ -312,7 +373,9 @@ class Source(db.Model):
         return r
 
 
-class Textbook(db.Model):
+class Textbook(SearchableMixin, db.Model):
+    __searchable__ = ['title', 'authors']
+
     id = db.Column(db.Integer, primary_key=True)
 
     title = db.Column(db.String(100), index=True, nullable=False)
@@ -360,5 +423,7 @@ class Assessment(db.Model):
 
     def __repr__(self):
         return f"<Assessment {self.id}: {self.description} at {str(self.time)}>"
+
+
 
 from app.user_views import markdown_to_html

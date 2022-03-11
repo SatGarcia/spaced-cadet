@@ -4,6 +4,8 @@ import logging, logging.handlers
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
+from elasticsearch import Elasticsearch
+
 db = SQLAlchemy()
 
 def create_app(test_config=None):
@@ -30,6 +32,9 @@ def create_app(test_config=None):
 
     # ensure that the instance folder exists (creating if necessary)
     os.makedirs(app.instance_path, exist_ok=True)
+
+    app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
+        if app.config['ELASTICSEARCH_URL'] else None
 
     db.init_app(app)
 
