@@ -6,8 +6,7 @@
 		<div class="row">
 			<h5>Add Questions</h5>
 			<ul class="list-unstyled mx-3">
-				<li>Search Existing by Source</li>
-				<li>Search Existing by Learning Objective</li>
+				<li><a href="{{ url_for('instructor.add_question', course_name=course.name) }}">Browse Existing Question</a></li>
 				<li><a href="{{ url_for('instructor.create_new_question', course_name=course.name) }}">Create New Question</a></li>
 			</ul>
 		</div>

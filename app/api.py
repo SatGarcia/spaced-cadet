@@ -225,7 +225,8 @@ def init_app(flask_app):
     rf_api.add_resource(RosterApi,
                         '/api/course/<int:course_id>/students')
     rf_api.add_resource(CourseQuestionsApi,
-                        '/api/course/<int:course_id>/questions')
+                        '/api/course/<int:course_id>/questions',
+                        endpoint='course_questions')
     rf_api.add_resource(CourseQuestionApi,
                         '/api/course/<int:course_id>/question/<int:question_id>',
                         endpoint='course_question')

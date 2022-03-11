@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+        <h4>Browse Questions</h4>
+
+		<div class="container row">
+			{% if questions|length == 0 %}
+				No questions available.
+			{% else %}
+			<ul class="list-unstyled">
+				{% for q in questions %}
+					{% set q_id = "question-" ~ q.id %}
+
+					<li class="m-2 p-2 border" id="{{q_id}}">
+						<div class="row">
+							{{ q.prompt|mdown|safe }}
+						</div>
+						<div class="row my-1">
+							{% set add_url = url_for('course_questions', course_id=course.id, _external=True) %}
+							<div class="col">
+								<a role="button"
+									class=" btn btn-sm btn-outline-secondary"
+									 href="{{ url_for('instructor.preview_question', question_id=q.id) }}">
+									Preview
+								</a>
+								<button type="button" 
+										onclick="addQuestion('{{add_url}}', {{q.id}}, this).then(showMessage)" 
+										class=" btn btn-sm btn-outline-primary">
+									Add
+								</button>
+							</div>
+						</div>
+					</li>
+				{% endfor %}
+			</ul>
+			{% endif %}
+		</div>
+    </div>
+
+	<div id="snackbar">Default message.</div> 
+
+	<script type="text/javascript">
+		function showMessage(message) {
+			var x = document.getElementById("snackbar");
+			x.innerHTML = message;
+
+			x.classList.add("show");
+
+			// hide after 3 seconds
+			setTimeout(() => x.classList.remove("show"), 3000);
+
+			// TODO: handle case when show snackbar is displayed before the
+			// previous timer went off
+		}
+
+		async function addQuestion(url, q_id, add_button) {
+			console.log(url);
+			const config = {
+				method: 'POST',
+				headers: {"Content-Type": "application/json"},
+				body: JSON.stringify({'ids': [q_id]})
+			}
+			const response = await fetch(url, config);
+			if (!response.ok) {
+				return `Error removing question. (HTTP Status: ${response.status})`;
+				//throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			// Disable the add button so user can't try adding again.
+			// TODO: make this toggle add/remove
+			add_button.disabled = true;
+
+			return "Question successfully added.";
+		}
+	</script>
+{% endblock %}

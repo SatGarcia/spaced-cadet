@@ -78,6 +78,21 @@ def preview_question(question_id):
         abort(500)
 
 
+@instructor.route('/c/<course_name>/add-question')
+@login_required
+def add_question(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    # query all (public questions + authored questions) - course questions
+    all_questions = Question.query.filter_by(public=True).union(current_user.authored_questions).except_(course.questions).all()
+
+    return render_template("browse_questions.html",
+                           page_title="Cadet: Available Questions",
+                           course=course,
+                           questions=all_questions)
+
 @instructor.route('/c/<course_name>/new-question', methods=['GET', 'POST'])
 @login_required
 def create_new_question(course_name):
