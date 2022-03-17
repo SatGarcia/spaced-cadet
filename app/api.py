@@ -226,6 +226,9 @@ def init_app(flask_app):
 
     rf_api.add_resource(RosterApi,
                         '/api/course/<int:course_id>/students')
+    rf_api.add_resource(EnrolledStudentApi,
+                        '/api/course/<int:course_id>/student/<int:student_id>',
+                        endpoint="enrolled_student")
     rf_api.add_resource(CourseQuestionsApi,
                         '/api/course/<int:course_id>/questions',
                         endpoint='course_questions')
@@ -461,6 +464,23 @@ class RosterApi(Resource):
                                                             "last_name")).dump(
                                                                 already_enrolled),
             "invalid-ids": invalid_ids}
+
+
+class EnrolledStudentApi(Resource):
+    def delete(self, course_id, student_id):
+        course = Course.query.filter_by(id=course_id).one_or_none()
+        if not course:
+            return {'message': f"Course {course_id} not found."}, 404
+
+        s = course.users.filter_by(id=student_id).one_or_none()
+        if not s:
+            return {'message': f"User {student_id} not enrolled in Course {course_id}."}, 404
+
+        removed_student = UserSchema(only=("email", "last_name", "first_name")).dump(s)
+        course.users.remove(s)
+        db.session.commit()
+
+        return {"removed": removed_student}
 
 
 class CourseQuestionsApi(Resource):

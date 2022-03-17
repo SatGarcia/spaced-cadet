@@ -297,7 +297,20 @@ def create_code_jumble():
                            form=form)
 
 
-@instructor.route('/course/<course_name>/questions')
+@instructor.route('/c/<course_name>/roster')
+@login_required
+def manage_roster(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    return render_template("manage_roster.html",
+                           page_title="Cadet: Manage Course Roster",
+                           course=course,
+                           students=course.users.all())
+
+
+@instructor.route('/c/<course_name>/questions')
 @login_required
 def manage_questions(course_name):
     course = Course.query.filter_by(name=course_name).first()

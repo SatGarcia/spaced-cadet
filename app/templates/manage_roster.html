@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+        <h4>Manage Roster</h4>
+
+
+		<div class="container row">
+			<h5>Enrolled Students</h5>
+			<div class="container">
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th scope="col">Last Name</th>
+						<th scope="col">First Name</th>
+						<th scope="col">Email</th>
+						<th scope="col">Action</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for s in students %}
+						{% set s_id = "student-" ~ s.id %}
+
+						<tr id="{{s_id}}">
+							<td>{{ s.last_name }}</td>
+							<td>{{ s.first_name }}</td>
+							<td>{{ s.email }}</td>
+							<td>
+								{% set remove_url = url_for('enrolled_student', course_id=course.id, student_id=s.id, _external=True) %}
+								<button type="button" 
+										onclick="removeUser('{{remove_url}}', '{{s_id}}', '{{s.email}}').then(showMessage)" 
+										class=" btn btn-sm btn-outline-danger">
+									Remove
+								</button>
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+			</div>
+		</div>
+
+		<div class="container row">
+			<h5>Upload Roster</h5>
+			<div class="container">
+				TODO
+			</div>
+		</div>
+    </div>
+
+	<div id="snackbar">Default message.</div> 
+
+	<script type="text/javascript">
+		function showMessage(message) {
+			var x = document.getElementById("snackbar");
+			x.innerHTML = message;
+
+			x.classList.add("show");
+
+			// hide after 3 seconds
+			setTimeout(() => x.classList.remove("show"), 3000);
+
+			// TODO: handle case when show snackbar is displayed before the
+			// previous timer went off
+		}
+
+		async function removeUser(url, s_id, email) {
+			console.log(url);
+			const config = {
+				method: 'DELETE',
+			}
+			const response = await fetch(url, config);
+			if (!response.ok) {
+				return `Error removing question. (HTTP Status: ${response.status})`
+				//throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			// remove the question from the list on this page
+			const to_remove = document.getElementById(s_id);
+			to_remove.parentNode.removeChild(to_remove);
+
+			return `${email} successfully removed.`;
+		}
+	</script>
+{% endblock %}
