@@ -21,6 +21,8 @@ class QuestionSchema(Schema):
     author = fields.Nested("UserSchema",
                            only=("first_name", "last_name", "email"),
                            dump_only=True)
+    public = fields.Boolean()
+    enabled = fields.Boolean()
 
     def get_type(self, obj):
         return obj.type.value
