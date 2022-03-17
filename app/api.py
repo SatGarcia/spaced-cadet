@@ -287,7 +287,16 @@ class UserApi(Resource):
         if u:
             return user_schema.dump(u)
         else:
-            {}, 404
+            return {"message": f"No user found with id {user_id}"}, 404
+
+    def delete(self, user_id):
+        u = User.query.filter_by(id=user_id).one_or_none()
+        if u:
+            db.session.delete(u)
+            db.session.commit()
+            return {"deleted": user_schema.dump(u)}
+        else:
+            return {"message": f"No user found with id {user_id}"}, 404
 
 
 class UsersApi(Resource):
