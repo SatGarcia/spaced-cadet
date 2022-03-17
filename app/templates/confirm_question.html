@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+		<h4>Add Question</h4>
+		<div class="container">
+			<h5>Preview:</h5>
+			<span class="container py-2">
+				The question will appear to students as shown below.
+			</span>
+
+			<div class="container">
+			<iframe
+				id="preview-frame"
+				title="Question Preview"
+				src="{{ url_for('instructor.preview_question', question_id=question.id) }}"
+				width="100%"
+				onload="removeNavbar(this)"></iframe>
+			</div>
+		</div>
+
+		<div class="container mt-2">
+			<h5>Answer:</h5>
+			<div class="container">
+			{{ question.get_answer()|mdown|safe }}
+			</div>
+		</div>
+
+		<div class="container">
+			<form method="POST" 
+				  action="{{ url_for('instructor.confirm_new_question') }}">
+                {{ form.csrf_token }}
+                {{ form.course_id }}
+                {{ form.question_id }}
+
+				<h5>Availability:</h5>
+				<div class="container pb-2">
+					<div class="form-group ms-1 pt-2 pb-2">
+						{{ form.public(class_="pl-2 form-check-input") }} Public
+					</div>
+					Public questions are available to all users to add to
+					their own courses.
+                </div>
+
+				<h5>Confirmation:</h5>
+				<div class="container">
+					Do you want to add this question?
+					<div class="pt-2">
+						{{ form.no(class_="btn btn-secondary btn-sm") }}
+						{{ form.yes(class_="btn btn-primary btn-sm") }}
+					</div>
+				</div>
+			</form>
+
+		</div>
+    </div>
+
+	<script type="text/javascript">
+		// Hide the navbar inside the preview
+		function removeNavbar(iframe) {
+			iframe.height = iframe.contentWindow.document.body.scrollHeight;
+			iframe.style.border = "thin solid #d3d3d3";
+			const navbar = iframe.contentWindow.document.getElementById("navbar");
+			console.log(navbar);
+			navbar.style.display = "none";
+		}
+	</script>
+{% endblock %}

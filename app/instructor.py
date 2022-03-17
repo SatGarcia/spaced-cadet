@@ -20,6 +20,57 @@ from app.user_views import (
 
 instructor = Blueprint('instructor', __name__)
 
+@instructor.route('/new-question/confirm', methods=["POST"])
+@login_required
+def confirm_new_question():
+    form = ConfirmNewQuestionForm(request.form)
+
+    question = Question.query.filter_by(id=form.question_id.data).first()
+    if not question:
+        abort(400) # TODO: more appropriate error code
+
+    if form.validate_on_submit():
+        course = Course.query.filter_by(id=form.course_id.data).first()
+        if not course:
+            abort(400) # TODO: more appropriate error code
+
+        if form.yes.data:
+            # user confirmed question, so enable it and add it to the course
+            question.enabled = True
+            question.public = form.public.data
+            course.questions.append(question)
+            db.session.commit()
+
+            # TODO: include link to view the preview in this link
+            flash("New question added!", "success")
+
+        else:
+            db.session.delete(question)
+            db.session.commit()
+
+            flash("New question NOT added!", "warning")
+
+        return redirect(url_for(".create_new_question",
+                                course_name=course.name))
+
+    return render_template("confirm_question.html",
+                           page_title="Confirm New Question",
+                           question=question,
+                           form=form)
+
+
+def get_confirmation_page(course, question):
+    # FIXME: public isn't showing up as checked by default
+    form = ConfirmNewQuestionForm(question_id=question.id,
+                                  course_id=course.id,
+                                  public=True)
+
+    return render_template("confirm_question.html",
+                           page_title="Confirm New Question",
+                           question=question,
+                           form=form)
+
+
 @instructor.route('/q/<int:question_id>/preview')
 @login_required
 def preview_question(question_id):
@@ -150,15 +201,12 @@ def create_short_answer():
         new_q = ShortAnswerQuestion(prompt=form.prompt.data,
                                     answer=form.answer.data)
 
-        course.questions.append(new_q)
         current_user.authored_questions.append(new_q)
 
-        # TODO: show preview of question before commiting
         db.session.commit()
 
-        flash("New question added!", "success")
-        return redirect(url_for(".create_new_question",
-                                course_name=course.name))
+        return get_confirmation_page(course, new_q)
+
 
     return render_template("create_new_short_answer.html",
                            page_title="Cadet: Create New Quesion (Short Answer)",
@@ -179,15 +227,10 @@ def create_auto_check():
                                   answer=form.answer.data,
                                   regex=form.regex.data)
 
-        course.questions.append(new_q)
         current_user.authored_questions.append(new_q)
-
-        # TODO: show preview of question before commiting
         db.session.commit()
 
-        flash("New question added!", "success")
-        return redirect(url_for(".create_new_question",
-                                course_name=course.name))
+        return get_confirmation_page(course, new_q)
 
     return render_template("create_new_audo_check.html",
                            page_title="Cadet: Create New Quesion (Short Answer)",
@@ -212,15 +255,11 @@ def create_multiple_choice():
                               correct=option.correct.data)
             new_q.options.append(ao)
 
-        course.questions.append(new_q)
         current_user.authored_questions.append(new_q)
-
-        # TODO: show preview of question before commiting
         db.session.commit()
 
-        flash("New question added!", "success")
-        return redirect(url_for(".create_new_question",
-                                course_name=course.name))
+        return get_confirmation_page(course, new_q)
+
 
     return render_template("create_new_multiple_choice.html",
                            page_title="Cadet: Create New Quesion (Multiple Choice)",
@@ -247,15 +286,11 @@ def create_code_jumble():
                              correct_indent=block.correct_indent.data)
             new_q.blocks.append(jb)
 
-        course.questions.append(new_q)
         current_user.authored_questions.append(new_q)
-
-        # TODO: show preview of question before commiting
         db.session.commit()
 
-        flash("New question added!", "success")
-        return redirect(url_for(".create_new_question",
-                                course_name=course.name))
+        return get_confirmation_page(course, new_q)
+
 
     return render_template("create_new_code_jumble.html",
                            page_title="Cadet: Create New Quesion (Code Jumble)",
@@ -364,6 +399,14 @@ class NewJumbleQuestionForm(FlaskForm):
         for i in range(len(blocks_in_answer)):
             if i not in blocks_in_answer:
                 raise ValidationError(f"Missing a Code Block with Correct Location {i}")
+
+
+class ConfirmNewQuestionForm(FlaskForm):
+    course_id = HiddenField("Course ID")
+    question_id = HiddenField("Question ID")
+    public = BooleanField("Make Question Public")
+    yes = SubmitField("Yes")
+    no = SubmitField("No")
 
 
 from app.db_models import (

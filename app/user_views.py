@@ -66,9 +66,11 @@ def self_review():
     """ User will self-verify whether the answer they submitted is the correct
     one or not. """
     form = SelfReviewForm(request.form)
+    attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
+    # FIXME: check that attempt exists
+
     if form.validate_on_submit():
         # update the outcome of the attempt in the database
-        attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
 
         if form.yes.data:
             # user reported they got it correct so show them difficulty rating form
@@ -88,7 +90,6 @@ def self_review():
             flash("Keep your chin up, cadet. We'll test you on that question again tomorrow.", "danger")
             return redirect(url_for('.test'))
 
-    attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
     prompt_html = markdown_to_html(attempt.question.prompt)
     answer_html = markdown_to_html(attempt.question.answer)
 
@@ -439,7 +440,7 @@ def test():
     """ Presents a random question to the user. """
 
     # get all the questions from courses that this user is enrolled in
-    possible_questions = Question.query.join(
+    possible_questions = Question.query.filter_by(enabled=True).join(
         enrollments, (enrollments.c.course_id == Question.course_id)).filter(
             enrollments.c.user_id == current_user.id)
 

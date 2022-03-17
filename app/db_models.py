@@ -113,6 +113,7 @@ class Question(SearchableMixin, db.Model):
 
     prompt = db.Column(db.String, nullable=False)
     public = db.Column(db.Boolean, default=True, nullable=False)
+    enabled = db.Column(db.Boolean, default=False, nullable=False)
 
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
     objective_id = db.Column(db.Integer, db.ForeignKey('objective.id'))
@@ -147,6 +148,9 @@ class Question(SearchableMixin, db.Model):
     def incorrect_attempts(self):
         return self.attempts.filter_by(correct=False).all()
 
+    def get_answer(self):
+        raise NotImplementedError("Generic questions have no answer.")
+
 
 class ShortAnswerQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
@@ -156,6 +160,9 @@ class ShortAnswerQuestion(Question):
     __mapper_args__ = {
         'polymorphic_identity': QuestionType.SHORT_ANSWER,
     }
+
+    def get_answer(self):
+        return self.answer
 
 
 class AutoCheckQuestion(Question):
@@ -167,6 +174,9 @@ class AutoCheckQuestion(Question):
     __mapper_args__ = {
         'polymorphic_identity': QuestionType.AUTO_CHECK,
     }
+
+    def get_answer(self):
+        return self.answer
 
 
 class MultipleChoiceQuestion(Question):
@@ -180,6 +190,10 @@ class MultipleChoiceQuestion(Question):
     __mapper_args__ = {
         'polymorphic_identity': QuestionType.MULTIPLE_CHOICE,
     }
+
+    def get_answer(self):
+        answer = options.filter_by(correct=True).one()
+        return answer.text
 
 
 class AnswerOption(db.Model):
@@ -216,6 +230,9 @@ class CodeJumbleQuestion(Question):
             correct_response.append((block.id, block.correct_indent))
 
         return correct_response
+
+    def get_answer(self):
+        return "STILL TRYING"
 
 
 class JumbleBlock(db.Model):
