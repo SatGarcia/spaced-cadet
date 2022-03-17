@@ -258,9 +258,7 @@ class Attempt(db.Model):
         return f"<Attempt {self.id}: Question {self.question.id} by User {self.user.id} at {self.time}>"
 
 
-class TextAttempt(SearchableMixin, Attempt):
-    __searchable__ = ['response']
-
+class TextAttempt(Attempt):
     id = db.Column(db.Integer, db.ForeignKey('attempt.id'), primary_key=True)
 
     response = db.Column(db.String, nullable=False)  # TODO: make no reesponse an option
