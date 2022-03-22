@@ -165,3 +165,20 @@ table.codehilitetable {
 	from {bottom: 30px; opacity: 1;}
 	to {bottom: 0; opacity: 0;}
 } 
+
+
+/* add support for submenus in navbar */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu .dropdown-menu {
+  top: 0em;
+  left: 95%;
+  margin-top: -1px;
+}
+
+.dropdown-submenu:hover > ul.dropdown-menu {
+    display: block;
+}
+    

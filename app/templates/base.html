@@ -44,16 +44,29 @@
 
 				{% if current_user.is_authenticated and current_user.instructor %}
                 <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarAdminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Questions
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarInstructorDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Courses
                     </a>
-                    <ul class="dropdown-menu" aria-labelledby="navbarAdminDropdown">
+                    <ul class="dropdown-menu"
+						aria-labelledby="navbarInstructorDropdown">
 						{% for course in current_user.courses %}
-							<li>
-								<a class="dropdown-item" 
-		   							href="{{ url_for('instructor.manage_questions', course_name=course.name) }}"
-									>{{ course.name }}</a>
-							
+							<li class="dropdown-submenu">
+								<a href="#" data-bs-toggle="dropdown" class="dropdown-item dropdown-toggle" role="button">{{ course.name }}</a>
+								<ul class="dropdown-menu">
+									<li>
+										<a class="dropdown-item" 
+											href="{{ url_for('instructor.manage_questions', course_name=course.name) }}"
+											>Questions</a>
+									
+									</li>
+
+									<li>
+										<a class="dropdown-item" 
+											href="{{ url_for('instructor.manage_roster', course_name=course.name) }}"
+											>Roster</a>
+									
+									</li>
+								</ul>
 							</li>
 						{% endfor %}
                     </ul>
