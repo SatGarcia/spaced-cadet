@@ -1,16 +1,20 @@
 from flask import (
     Blueprint, render_template, url_for, redirect, flash, request, abort,
-    Markup
+    Markup, current_app
 )
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField,
     FieldList, FormField, IntegerField, BooleanField
 )
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms.validators import (
     DataRequired, InputRequired, NumberRange, ValidationError
 )
 from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
+
+import os, csv
 
 from app import db
 from app.user_views import (
@@ -127,6 +131,148 @@ def preview_question(question_id):
 
     else:
         abort(500)
+
+
+def add_students_from_roster(course, file_location, email_index,
+                             last_name_index, first_name_index, add_drop=False):
+    """
+    Adds students in a given roster file (CSV format) to the specified course.
+
+    This will add new Users to the database if the student hasn't been created
+    before.
+    """
+    try:
+        with open(file_location, newline='', encoding='utf-8-sig') as roster_data:
+            roster_reader = csv.reader(roster_data)
+            header = next(roster_reader)
+
+            num_fields = len(header)
+            if email_index >= num_fields \
+                or last_name_index >= num_fields \
+                or first_name_index >= num_fields:
+
+                # Couldn't find at least one of the required columns
+                flash("Could not locate one or more of: email, last name, first name",
+                        "danger")
+                return
+
+            new_students = []  # students who are not currently enrolled
+            duplicate_students = []  # students already enrolled
+            students_in_file = []  # all students listed in given file
+
+            initial_roster = course.users.filter_by(instructor=False).all()
+
+            if not initial_roster:
+                initial_roster = []
+
+            for line in roster_reader:
+                email = line[email_index]
+                last_name = line[last_name_index]
+                first_name = line[first_name_index]
+
+                # look for an existing user with that email
+                student_to_add = User.query.filter_by(email=email).first()
+
+                if student_to_add:
+                    # found the student already so no need to create a
+                    # new User object
+                    current_app.logger.debug(f"User with {email} already exists. Skipping creation!")
+                else:
+                    # Create new User and add to database
+                    student_to_add = User(email=email,
+                                          first_name=first_name,
+                                          last_name=last_name,
+                                          instructor=False,
+                                          admin=False)
+                    student_to_add.set_password("foobar") # FIXME: randomly generate
+                    db.session.add(student_to_add)
+                    db.session.commit()
+
+                    current_app.logger.info(f"Created student user with email {email}")
+
+                students_in_file.append(student_to_add)
+
+                if student_to_add in course.users:
+                    # student is already enrolled in this course so
+                    # nothing more to do
+                    duplicate_students.append(student_to_add.email)
+                else:
+                    # Add user to this course
+                    new_students.append(student_to_add.email)
+                    course.users.append(student_to_add)
+                    db.session.commit()
+
+                current_app.logger.debug(f"Skipped (Already enrolled): {duplicate_students}")
+                current_app.logger.info(f"Enrolled: {new_students}")
+
+                db.session.commit()
+
+            if add_drop:
+                # Find and remove students who were in the roster before but
+                # weren't part of the roster file.
+                students_to_remove = [s for s in initial_roster
+                                            if s not in students_in_file]
+
+                for student in students_to_remove:
+                    # remove student from course
+                    course.users.remove(student)
+                    current_app.logger.info(f"Removed {student.email} from course {course.id}")
+
+                db.session.commit()
+
+                if len(students_to_remove) > 0:
+                    flash(f"Removed {len(students_to_remove)} students from course.", "warning")
+
+            if len(new_students) > 0:
+                flash(f"Added {len(new_students)} new students to course.", "info")
+            if len(duplicate_students) > 0:
+                flash(f"Skipped {len(duplicate_students)} who were already enrolled.", "warning")
+
+    except UnicodeError as e:
+        current_app.logger.warning(f"Roster file has incorrect encoding.")
+        flash(f"Roster file has incorrect encoding.", "danger")
+
+
+
+@instructor.route('/c/<course_name>/upload-roster', methods=['POST'])
+@login_required
+def upload_roster(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    #roster_upload_form = RosterUploadForm(request.form)
+    roster_upload_form = RosterUploadForm()
+
+    if roster_upload_form.validate_on_submit():
+        uploaded_file = roster_upload_form.roster_file.data
+
+        # save uploaded file to temporary file
+        filename = secure_filename(uploaded_file.filename)
+
+        temp_dir = file_location = os.path.join(current_app.instance_path, 'tmp')
+        os.makedirs(temp_dir, exist_ok=True)
+
+        file_location = os.path.join(temp_dir, filename)
+        uploaded_file.save(file_location)
+
+        add_students_from_roster(course, file_location,
+                                 roster_upload_form.email_index.data,
+                                 roster_upload_form.last_name_index.data,
+                                 roster_upload_form.first_name_index.data,
+                                 add_drop=roster_upload_form.add_drop.data)
+
+        os.remove(file_location)
+        return redirect(url_for(f'.manage_roster', course_name=course_name))
+
+    print(roster_upload_form.errors)
+
+    return render_template("manage_roster.html",
+                           page_title="Cadet: Manage Course Roster",
+                           course=course,
+                           students=course.users.all(),
+                           roster_form=roster_upload_form)
+
 
 
 @instructor.route('/c/<course_name>/add-question')
@@ -304,10 +450,13 @@ def manage_roster(course_name):
     if not course:
         abort(404)
 
+    form = RosterUploadForm()
+
     return render_template("manage_roster.html",
                            page_title="Cadet: Manage Course Roster",
                            course=course,
-                           students=course.users.all())
+                           students=course.users.all(),
+                           roster_form=form)
 
 
 @instructor.route('/c/<course_name>/questions')
@@ -422,8 +571,25 @@ class ConfirmNewQuestionForm(FlaskForm):
     no = SubmitField("No")
 
 
+class RosterUploadForm(FlaskForm):
+    roster_file = FileField('Class Roster',
+                            validators=[FileRequired(),
+                                        FileAllowed(['csv'], 'Roster file must be CSV format')])
+    email_index = SelectField("Email", validators=[InputRequired()],
+                              validate_choice=False, choices=[(-1, "")],
+                              coerce=int)
+    last_name_index = SelectField("Last Name", validators=[InputRequired()],
+                                  validate_choice=False, choices=[(-1, "")],
+                                  coerce=int)
+    first_name_index = SelectField("First Name", validators=[InputRequired()],
+                                   validate_choice=False, choices=[(-1, "")],
+                                   coerce=int)
+    add_drop = BooleanField('Enable Add/Drop')
+    submit = SubmitField('Upload Roster')
+
+
 from app.db_models import (
     AnswerOption, CodeJumbleQuestion, JumbleBlock, Course,
     ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, Question,
-    QuestionType
+    QuestionType, User
 )

@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
 {% block body %}
     <div class="container pt-3">
         <h4>Manage Roster</h4>
@@ -39,17 +41,131 @@
 			</div>
 		</div>
 
+
 		<div class="container row">
-			<h5>Upload Roster</h5>
+			<h5>Upload Roster File</h5>
 			<div class="container">
-				TODO
+				<form method="POST"
+		  			action="{{ url_for('instructor.upload_roster', course_name=course.name) }}"
+					enctype="multipart/form-data">
+					{{ roster_form.csrf_token() }}
+					{{ forms.input(roster_form.roster_file, "", "form-control-file") }}
+					<div id="rosterfields" class="container border px-3 py-2">
+						Select the appropriate columns in your CSV file for
+						email, last name, and first name.
+						<div class="row">
+							<div class="col">
+								{{ forms.input(roster_form.email_index, form_class="form-select") }}
+							</div>
+							<div class="col">
+								{{ forms.input(roster_form.last_name_index, form_class="form-select") }}
+							</div>
+							<div class="col">
+								{{ forms.input(roster_form.first_name_index, form_class="form-select") }}
+							</div>
+						</div>
+						<div class="row pt-2">
+							<div class="form-group">
+								{{ roster_form.add_drop(class_="pl-2 form-check-input") }} {{ roster_form.add_drop.label }}
+								<p class="pt-1">Note: Selecting <strong>Enable Add/Drop</strong> will
+									remove any students who do not appear in the uploaded roster
+									file.</p>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col w-auto">
+							{{ roster_form.submit(class_="btn btn-primary btn-sm") }}
+							</div>
+						</div>
+					</div>
+				</form>
 			</div>
 		</div>
     </div>
 
 	<div id="snackbar">Default message.</div> 
 
+
 	<script type="text/javascript">
+		const roster_file_input = document.getElementById("roster_file");
+		roster_file_input.addEventListener("change", handleFiles, false);
+
+		document.addEventListener("DOMContentLoaded", () => {
+			handleFiles();
+		});
+
+		function handleCSVParse(results) {
+			if (results.errors.length > 0) {
+				for (const e of results.errors) {
+					console.log(`Row ${e.row}: ${e.message}`);
+				}
+				return;
+			}
+			var firstNameList = document.getElementById("first_name_index");
+			firstNameList.innerHTML = '';
+			var lastNameList = document.getElementById("last_name_index");
+			lastNameList.innerHTML = '';
+			var emailList = document.getElementById("email_index");
+			emailList.innerHTML = '';
+
+			// TODO: ensure there is at least one field in the file
+
+			// Create and append the options
+			//for (const field_name of results.meta.fields) {
+			for (let i = 0; i < results.meta.fields.length; i++) {
+				const field_name = results.meta.fields[i];
+
+				var option = document.createElement("option");
+				option.value = i;
+				option.text = field_name;
+				var option_clone = option.cloneNode(true);
+				var option_clone2 = option.cloneNode(true);
+				firstNameList.appendChild(option);
+				lastNameList.appendChild(option_clone);
+				emailList.appendChild(option_clone2);
+			}
+
+			// See if we can guess which one is the first name column by
+			// searching for an option that contains the word "first".
+			// If we find something, set that as the initially selected
+			// option.
+			const first_index = results.meta.fields.findIndex(value => /first/i.test(value));
+			if (first_index >= 0) {
+				firstNameList.options[first_index].selected = true;
+			}
+
+			// Again, try to find the column with the last name
+			const last_index = results.meta.fields.findIndex(value => /last/i.test(value));
+			if (last_index >= 0) {
+				lastNameList.options[last_index].selected = true;
+			}
+
+			// Finally, search for the email
+			const email_index = results.meta.fields.findIndex(value => /email/i.test(value));
+			if (email_index >= 0) {
+				emailList.options[email_index].selected = true;
+			}
+
+			const fields_div = document.getElementById("rosterfields");
+			fields_div.style.visibility = 'visible';
+		}
+
+		function handleFiles() {
+			const fileList = roster_file_input.files;
+			if (fileList.length == 1) {
+				Papa.parse(fileList[0], { 
+					complete: handleCSVParse,
+					header: true,
+					preview: 4
+				});
+			}
+			else {
+				// No files selected so hide additional roster upload form
+				// fields
+				document.getElementById("rosterfields").style.visibility = 'hidden';
+			}
+		}
+		
 		function showMessage(message) {
 			var x = document.getElementById("snackbar");
 			x.innerHTML = message;
@@ -64,14 +180,12 @@
 		}
 
 		async function removeUser(url, s_id, email) {
-			console.log(url);
 			const config = {
 				method: 'DELETE',
 			}
 			const response = await fetch(url, config);
 			if (!response.ok) {
 				return `Error removing question. (HTTP Status: ${response.status})`
-				//throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
 			// remove the question from the list on this page
@@ -81,4 +195,6 @@
 			return `${email} successfully removed.`;
 		}
 	</script>
+
+	<script src="{{ url_for('static', filename='js/papaparse.min.js') }}"></script>
 {% endblock %}
