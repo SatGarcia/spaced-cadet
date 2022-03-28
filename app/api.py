@@ -202,6 +202,9 @@ class CourseSchema(Schema):
     id = fields.Int(dump_only=True)
     name = fields.Str(required=True)
     title = fields.Str(required=True)
+    description = fields.Str(required=True)
+    start_date = fields.Date(required=True, data_key="start-date")
+    end_date = fields.Date(required=True, data_key="end-date")
     users = fields.List(fields.Nested(UserSchema), dump_only=True)
 
     @validates("name")

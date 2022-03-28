@@ -1,6 +1,6 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, date
 import enum
 
 from app import db
@@ -298,8 +298,11 @@ class Course(SearchableMixin, db.Model):
     __searchable__ = ['name', 'title']
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), index=True, unique=True)
-    title = db.Column(db.String(100), index=True)
+    name = db.Column(db.String(64), index=True, unique=True, nullable=False)
+    title = db.Column(db.String(100), index=True, nullable=False)
+    description = db.Column(db.String, index=True, nullable=False)
+    start_date = db.Column(db.Date, default=date.today, nullable=False)
+    end_date = db.Column(db.Date, default=date.today, nullable=False)
 
     users = db.relationship('User',
                                secondary=enrollments,
