@@ -69,6 +69,11 @@
 								</ul>
 							</li>
 						{% endfor %}
+						<li><hr class="dropdown-divider"></li>
+						<li>
+							<a class="dropdown-item" href="{{ url_for('instructor.create_course') }}">
+								Create New Course</a>
+						</li>
                     </ul>
                 </div>
                 {% endif %}

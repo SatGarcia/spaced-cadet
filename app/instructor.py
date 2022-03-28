@@ -2,15 +2,19 @@ from flask import (
     Blueprint, render_template, url_for, redirect, flash, request, abort,
     Markup, current_app
 )
+
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField,
     FieldList, FormField, IntegerField, BooleanField
 )
+from wtforms.fields import DateField
+from wtforms.widgets import DateInput
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms.validators import (
     DataRequired, InputRequired, NumberRange, ValidationError
 )
+
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
@@ -23,6 +27,27 @@ from app.user_views import (
 )
 
 instructor = Blueprint('instructor', __name__)
+
+@instructor.route('/courses/create', methods=["GET", "POST"])
+@login_required
+def create_course():
+    form = NewCourseForm()
+
+    if form.validate_on_submit():
+        course = Course(name=form.name.data,
+                        title=form.title.data,
+                        description=form.description.data)
+
+        course.users.append(current_user)
+        db.session.commit()
+
+        flash(f"Successfully created course {course.name}", "success")
+        return redirect(url_for("user_views.root"))
+
+    return render_template("create_course.html",
+                           page_title="Cadet: Create Course",
+                           form=form)
+
 
 @instructor.route('/new-question/confirm', methods=["POST"])
 @login_required
@@ -492,6 +517,20 @@ class DataRequiredIf(DataRequired):
             raise Exception('no field named "%s" in form' % self.other_field_name)
         if bool(other_field.data):
             super(DataRequiredIf, self).__call__(form, field)
+
+
+class NewCourseForm(FlaskForm):
+    # TODO: set length limit on name and title
+    name = StringField("Name", [DataRequired()])
+    title = StringField("Title", [DataRequired()])
+    description = TextAreaField("Description", [DataRequired()])
+    start_date = DateField('Start Date', widget=DateInput(), validators=[DataRequired()])
+    end_date = DateField('End Date', widget=DateInput(), validators=[DataRequired()])
+    submit = SubmitField("Create Course")
+
+    def validate_name(form, field):
+        if Course.query.filter_by(name=field.data).count() != 0:
+            raise ValidationError("A course with that name already exists")
 
 
 class NewQuestionForm(FlaskForm):
