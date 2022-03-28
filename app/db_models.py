@@ -337,6 +337,13 @@ class User(UserMixin, db.Model):
                                          foreign_keys='Question.author_id',
                                          backref='author', lazy='dynamic')
 
+    authored_objections = db.relationship('Objective',
+                                          foreign_keys='Objective.author_id',
+                                          backref='author', lazy='dynamic')
+
+    authored_sources = db.relationship('Source',
+                                       foreign_keys='Source.author_id',
+                                       backref='author', lazy='dynamic')
 
     def __repr__(self):
         return f"<User {self.id}: {self.last_name}, {self.first_name} ({self.username})>"
@@ -358,6 +365,9 @@ class Objective(SearchableMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(200), index=True, unique=True)
 
+    public = db.Column(db.Boolean, default=True, nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
     questions = db.relationship('Question',
                                 foreign_keys='Question.objective_id',
                                 backref='objective', lazy='dynamic')
@@ -372,7 +382,8 @@ class Source(db.Model):
 
     title = db.Column(db.String(100), index=True)
 
-    public = db.Column(db.Boolean, default=True)
+    public = db.Column(db.Boolean, default=True, nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     objectives = db.relationship('Objective',
                                  secondary=source_objectives,

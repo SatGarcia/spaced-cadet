@@ -95,7 +95,11 @@ class CodeJumbleQuestionSchema(QuestionSchema):
 class LearningObjectiveSchema(Schema):
     id = fields.Int(dump_only=True)
     description = fields.Str(required=True)
-    questions = fields.List(fields.Nested(QuestionSchema))
+
+    public = fields.Boolean()
+    author = fields.Nested("UserSchema", dump_only=True)
+
+    questions = fields.List(fields.Nested(QuestionSchema), dump_only=True)
 
 
 class SourceSchema(Schema):
@@ -106,6 +110,7 @@ class SourceSchema(Schema):
     type = fields.Method("get_type", required=True, deserialize="create_type")
     title = fields.Str()
     public = fields.Boolean()
+    author = fields.Nested("UserSchema", dump_only=True)
 
     objectives = fields.List(fields.Nested(LearningObjectiveSchema),
                              dump_only=True)
