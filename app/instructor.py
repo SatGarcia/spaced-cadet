@@ -36,7 +36,9 @@ def create_course():
     if form.validate_on_submit():
         course = Course(name=form.name.data,
                         title=form.title.data,
-                        description=form.description.data)
+                        description=form.description.data,
+                        start_date=form.start_date.data,
+                        end_date=form.end_date.data)
 
         course.users.append(current_user)
         db.session.commit()

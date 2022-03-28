@@ -301,8 +301,8 @@ class Course(SearchableMixin, db.Model):
     name = db.Column(db.String(64), index=True, unique=True, nullable=False)
     title = db.Column(db.String(100), index=True, nullable=False)
     description = db.Column(db.String, index=True, nullable=False)
-    start_date = db.Column(db.Date, default=date.today, nullable=False)
-    end_date = db.Column(db.Date, default=date.today, nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
 
     users = db.relationship('User',
                                secondary=enrollments,
