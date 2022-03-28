@@ -431,7 +431,7 @@ class Textbook(SearchableMixin, db.Model):
 class TextbookSection(Source):
     id = db.Column(db.Integer, db.ForeignKey('source.id'), primary_key=True)
 
-    section_number = db.Column(db.String(20), nullable=False)
+    number = db.Column(db.String(10))
     url = db.Column(db.String)
 
     __mapper_args__ = {

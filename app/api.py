@@ -126,7 +126,8 @@ class SourceSchema(Schema):
 
 
 class TextbookSectionSchema(SourceSchema):
-    section_number = fields.Str(required=True, data_key="section-number")
+    number = fields.Str()
+    title = fields.Str(required=True)
     url = fields.Str()
     textbook = fields.Nested("TextbookSchema",
                              only=("id", "title"))
