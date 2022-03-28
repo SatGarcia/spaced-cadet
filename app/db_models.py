@@ -361,6 +361,12 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def get_current_courses(self):
+        return self.courses.filter(Course.start_date <= date.today()).filter(Course.end_date >= date.today())
+
+    def get_active_courses(self):
+        return self.courses.filter(Course.end_date >= date.today())
+
 
 class Objective(SearchableMixin, db.Model):
     __searchable__ = ['description']
