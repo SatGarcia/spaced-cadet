@@ -522,7 +522,6 @@ class DataRequiredIf(DataRequired):
 
 
 class NewCourseForm(FlaskForm):
-    # TODO: set length limit on name and title
     name = StringField("Name", [DataRequired(), Length(min=5, max=64),
                                 Regexp("^[a-z].*[a-z0-9]$",
                                        flags=re.IGNORECASE,
