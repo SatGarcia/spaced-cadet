@@ -58,8 +58,10 @@ def difficulty(course_name):
         sm2_update(a, form.difficulty.data) # update sm2 based on reported difficulty
         db.session.commit()
 
-    # FIXME: should display this form again, not redirect
-    return redirect(url_for('.test', course_name=course_name))
+    return render_template("difficulty.html",
+                           page_title="Cadet Test: Rating",
+                           course_name=course_name,
+                           form=form)
 
 
 @user_views.route('/c/<course_name>/train/review', methods=['POST'])
@@ -148,6 +150,10 @@ def test_multiple_choice(course_name):
     form = MultipleChoiceForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
+
+    if not original_question:
+        abort(400)
+
     form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
     form.response.choices.append((-1, "I Don't Know"))
 
@@ -209,8 +215,16 @@ def test_multiple_choice(course_name):
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
-    # FIXME: display multiple choice form again
-    return "FAIL"
+
+    prompt_html = markdown_to_html(original_question.prompt)
+
+    # FIXME: set fresh_question appropriately
+    return render_template("test_multiple_choice.html",
+                           page_title="Cadet Test",
+                           course_name=course_name,
+                           fresh_question=True,
+                           form=form,
+                           prompt=Markup(prompt_html))
 
 
 @user_views.route('/c/<course_name>/train/short-answer', methods=['POST'])
@@ -373,8 +387,12 @@ def get_answer_html(jumble_question):
 @login_required
 def test_code_jumble(course_name):
     form = CodeJumbleForm(request.form)
+
     question_id = form.question_id.data
     question = Question.query.filter_by(id=question_id).first()
+
+    if not question:
+        abort(400)
 
     if form.validate_on_submit():
         # grab the last attempt (before creating a new attempt which will be
@@ -452,7 +470,17 @@ def test_code_jumble(course_name):
                                    answer=Markup(answer_html))
 
 
-    return "FAIL" # FIXME: reshow form
+    prompt_html = markdown_to_html(question.prompt)
+    code_blocks = [(b.id, Markup(b.html())) for b in question.blocks]
+
+    # FIXME: set fresh_question appropriately
+    return render_template("test_code_jumble.html",
+                           page_title="Cadet Test",
+                           course_name=course_name,
+                           fresh_question=True,
+                           form=form,
+                           prompt=Markup(prompt_html),
+                           code_blocks=code_blocks)
 
 
 @user_views.route('/c/<course_name>/train')
