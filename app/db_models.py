@@ -90,6 +90,14 @@ enrollments = db.Table(
               primary_key=True)
 )
 
+assigned_questions = db.Table(
+    'assigned_questions',
+    db.Column('course_id', db.Integer, db.ForeignKey('course.id'),
+              primary_key=True),
+    db.Column('question_id', db.Integer, db.ForeignKey('question.id'),
+              primary_key=True)
+)
+
 # association table for objectives associated with an assessment
 assigned_objectives = db.Table(
     'assigned_objectives',
@@ -115,7 +123,6 @@ class Question(SearchableMixin, db.Model):
     public = db.Column(db.Boolean, default=True, nullable=False)
     enabled = db.Column(db.Boolean, default=False, nullable=False)
 
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
     objective_id = db.Column(db.Integer, db.ForeignKey('objective.id'))
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
@@ -316,8 +323,11 @@ class Course(SearchableMixin, db.Model):
                                     backref='course', lazy='dynamic')
 
     questions = db.relationship('Question',
-                                foreign_keys='Question.course_id',
-                                backref='course', lazy='dynamic')
+                               secondary=assigned_questions,
+                               primaryjoin=('assigned_questions.c.course_id == Course.id'),
+                               secondaryjoin=('assigned_questions.c.question_id == Question.id'),
+                               backref=db.backref('courses', lazy='dynamic'),
+                               lazy='dynamic')
 
     def __repr__(self):
         return f"<Course {self.id}: {self.name} ({self.title})>"
@@ -362,7 +372,9 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def get_current_courses(self):
-        return self.courses.filter(Course.start_date <= date.today()).filter(Course.end_date >= date.today())
+        return self.courses.filter(Course.start_date <= date.today())\
+            .filter(Course.end_date >= date.today())\
+            .all()
 
     def get_active_courses(self):
         return self.courses.filter(Course.end_date >= date.today())

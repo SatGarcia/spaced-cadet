@@ -1,3 +1,8 @@
+{% set ns = namespace(current_courses=None) %}
+{% if current_user.is_authenticated %}
+	{% set ns.current_courses = current_user.get_current_courses() %}
+{% endif %}
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -34,18 +39,29 @@
                     </a>
                 </div>
 
-                {% if current_user.is_authenticated %}
-                <div class="nav-item">
-                    <a class="nav-link" href="{{ url_for('user_views.test') }}">
+				{% if ns.current_courses %}
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarTrainingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         Training
                     </a>
+					<ul class="dropdown-menu"
+						aria-labelledby="navbarTrainingDropdown">
+						{% for course in ns.current_courses %}
+							<li>
+								<a class="dropdown-item"
+		   							href="{{ url_for('user_views.test', course_name=course.name) }}">
+									{{ course.name }}
+								</a>
+							</li>
+						{% endfor %}
+					</ul>
                 </div>
                 {% endif %}
 
 				{% if current_user.is_authenticated and current_user.instructor %}
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarInstructorDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Courses
+                        Manage Courses
                     </a>
                     <ul class="dropdown-menu"
 						aria-labelledby="navbarInstructorDropdown">
