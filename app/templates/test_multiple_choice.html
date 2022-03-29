@@ -20,7 +20,7 @@
 
         <div class="row" id="response_area">
 			<form method="POST"
-		 		  action="{% if not preview_mode %}{{ url_for('user_views.test_multiple_choice') }}{% endif %}">
+		 		  action="{% if not preview_mode %}{{ url_for('user_views.test_multiple_choice', course_name=course_name) }}{% endif %}">
 				{{ form.csrf_token }}
 				{{ form.question_id }}
 				{{ forms.checkbox_input(form.response) }}
@@ -34,9 +34,6 @@
 			window.addEventListener("DOMContentLoaded", () => {
 				submit_button = document.getElementById("submit");
 				submit_button.disabled = true;
-
-				//no_answer_button = document.getElementById("no_answer");
-				//no_answer_button.disabled = true;
 			});
 		</script>
 	{% endif %}

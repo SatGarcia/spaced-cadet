@@ -42,9 +42,9 @@ def root():
     return render_template("home.html")
 
 
-@user_views.route('/difficulty', methods=['POST'])
+@user_views.route('/c/<course_name>/train/rating', methods=['POST'])
 @login_required
-def difficulty():
+def difficulty(course_name):
     """ Route to handle self-reported difficulty of a problem that the user
     got correct. """
 
@@ -52,22 +52,26 @@ def difficulty():
     if form.validate_on_submit():
         # get the question and update it's interval and e_factor
         a = Attempt.query.filter_by(id=form.attempt_id.data).first()
-        # TODO: check that query returned something (50X error otherwise)
+        if not a:
+            abort(400)
 
         sm2_update(a, form.difficulty.data) # update sm2 based on reported difficulty
         db.session.commit()
 
-    return redirect(url_for('.test'))
+    # FIXME: should display this form again, not redirect
+    return redirect(url_for('.test', course_name=course_name))
 
 
-@user_views.route('/review', methods=['POST'])
+@user_views.route('/c/<course_name>/train/review', methods=['POST'])
 @login_required
-def self_review():
+def self_review(course_name):
     """ User will self-verify whether the answer they submitted is the correct
     one or not. """
     form = SelfReviewForm(request.form)
     attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
-    # FIXME: check that attempt exists
+
+    if not attempt:
+        abort(400)
 
     if form.validate_on_submit():
         # update the outcome of the attempt in the database
@@ -79,6 +83,7 @@ def self_review():
             difficulty_form = DifficultyForm(attempt_id=form.attempt_id.data)
             return render_template("difficulty.html",
                                    page_title="Cadet Test: Rating",
+                                   course_name=course_name,
                                    form=difficulty_form)
 
         else:
@@ -88,13 +93,14 @@ def self_review():
             db.session.commit()
 
             flash("Keep your chin up, cadet. We'll test you on that question again tomorrow.", "danger")
-            return redirect(url_for('.test'))
+            return redirect(url_for('.test', course_name=course_name))
 
     prompt_html = markdown_to_html(attempt.question.prompt)
     answer_html = markdown_to_html(attempt.question.answer)
 
     return render_template("self_verify.html",
                            page_title="Cadet Test: Self Verification",
+                           course_name=course_name,
                            form=form,
                            prompt=Markup(prompt_html),
                            response=attempt.response,
@@ -134,9 +140,9 @@ def sm2_update(attempt, quality):
     attempt.next_attempt = date.today() + timedelta(days=attempt.interval)
 
 
-@user_views.route('/test/multiple-choice', methods=['POST'])
+@user_views.route('/c/<course_name>/train/multiple-choice', methods=['POST'])
 @login_required
-def test_multiple_choice():
+def test_multiple_choice(course_name):
     # FIXME: code duplication in this function
 
     form = MultipleChoiceForm(request.form)
@@ -178,6 +184,7 @@ def test_multiple_choice():
             difficulty_form = DifficultyForm(attempt_id=attempt.id)
             return render_template("difficulty.html",
                                    page_title="Cadet Test: Rating",
+                                   course_name=course_name,
                                    form=difficulty_form)
 
         else:
@@ -198,6 +205,7 @@ def test_multiple_choice():
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
+                                   course_name=course_name,
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
@@ -205,9 +213,9 @@ def test_multiple_choice():
     return "FAIL"
 
 
-@user_views.route('/test/short-answer', methods=['POST'])
+@user_views.route('/c/<course_name>/train/short-answer', methods=['POST'])
 @login_required
-def test_short_answer():
+def test_short_answer(course_name):
     form = ShortAnswerForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
@@ -243,6 +251,7 @@ def test_short_answer():
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
+                                   course_name=course_name,
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
@@ -252,6 +261,7 @@ def test_short_answer():
 
         return render_template("self_verify.html",
                                page_title="Cadet Test: Self Verification",
+                               course_name=course_name,
                                form=review_form,
                                prompt=Markup(prompt_html),
                                response=form.response.data,
@@ -260,13 +270,15 @@ def test_short_answer():
     # FIXME: set fresh_question appropriately below
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
+                           post_url=url_for(".test_short_answer",
+                                            course_name=course_name),
                            form=form,
                            prompt=Markup(prompt_html))
 
 
-@user_views.route('/test/auto-check', methods=['POST'])
+@user_views.route('/c/<course_name>/train/auto-check', methods=['POST'])
 @login_required
-def test_auto_check():
+def test_auto_check(course_name):
     form = AutoCheckForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
@@ -303,6 +315,7 @@ def test_auto_check():
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
+                                   course_name=course_name,
                                    prompt=Markup(prompt_html),
                                    answer=original_question.answer)
 
@@ -317,6 +330,7 @@ def test_auto_check():
             difficulty_form = DifficultyForm(attempt_id=attempt.id)
             return render_template("difficulty.html",
                                    page_title="Cadet Test: Rating",
+                                   course_name=course_name,
                                    form=difficulty_form)
 
         else:
@@ -327,6 +341,7 @@ def test_auto_check():
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
+                                   course_name=course_name,
                                    prompt=Markup(prompt_html),
                                    answer=original_question.answer)
 
@@ -334,7 +349,8 @@ def test_auto_check():
     # FIXME: set fresh_question appropriately below
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
-                           post_url=url_for(".test_auto_check"),
+                           post_url=url_for(".test_auto_check",
+                                            course_name=course_name),
                            form=form,
                            prompt=Markup(prompt_html))
 
@@ -353,9 +369,9 @@ def get_answer_html(jumble_question):
 
     return answer_html
 
-@user_views.route('/test/code-jumble', methods=['POST'])
+@user_views.route('/c/<course_name>/train/code-jumble', methods=['POST'])
 @login_required
-def test_code_jumble():
+def test_code_jumble(course_name):
     form = CodeJumbleForm(request.form)
     question_id = form.question_id.data
     question = Question.query.filter_by(id=question_id).first()
@@ -395,6 +411,7 @@ def test_code_jumble():
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
+                                   course_name=course_name,
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
@@ -403,7 +420,7 @@ def test_code_jumble():
             user_response = ast.literal_eval(response_str)
         except:
             # if we couldn't parse the response, we're in trouble
-            abort(500)
+            abort(400)
 
         correct_response = question.get_correct_response()
 
@@ -414,6 +431,7 @@ def test_code_jumble():
             difficulty_form = DifficultyForm(attempt_id=attempt.id)
             return render_template("difficulty.html",
                                    page_title="Cadet Test: Rating",
+                                   course_name=course_name,
                                    form=difficulty_form)
 
         else:
@@ -429,20 +447,24 @@ def test_code_jumble():
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
+                                   course_name=course_name,
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
-    return "FAIL"
 
-@user_views.route('/test')
+    return "FAIL" # FIXME: reshow form
+
+
+@user_views.route('/c/<course_name>/train')
 @login_required
-def test():
+def test(course_name):
     """ Presents a random question to the user. """
 
-    # get all the questions from courses that this user is enrolled in
-    possible_questions = Question.query.filter_by(enabled=True).join(
-        enrollments, (enrollments.c.course_id == Question.course_id)).filter(
-            enrollments.c.user_id == current_user.id)
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    possible_questions = course.questions
 
     # find questions that haven't been attempted yet, as these will be part of
     # the pool of questions we can ask them
@@ -503,7 +525,8 @@ def test():
         return render_template("test_short_answer.html",
                                page_title="Cadet Test",
                                fresh_question=fresh_question,
-                               post_url=url_for(".test_short_answer"),
+                               post_url=url_for(".test_short_answer",
+                                                course_name=course_name),
                                form=form,
                                prompt=Markup(prompt_html))
 
@@ -513,7 +536,8 @@ def test():
         return render_template("test_short_answer.html",
                                page_title="Cadet Test",
                                fresh_question=fresh_question,
-                               post_url=url_for(".test_auto_check"),
+                               post_url=url_for(".test_auto_check",
+                                                course_name=course_name),
                                form=form,
                                prompt=Markup(prompt_html))
 
@@ -526,6 +550,7 @@ def test():
 
         return render_template("test_multiple_choice.html",
                                page_title="Cadet Test",
+                               course_name=course_name,
                                fresh_question=fresh_question,
                                form=form,
                                prompt=Markup(prompt_html))
@@ -537,6 +562,7 @@ def test():
 
         return render_template("test_code_jumble.html",
                                page_title="Cadet Test",
+                               course_name=course_name,
                                fresh_question=fresh_question,
                                form=form,
                                prompt=Markup(prompt_html),
@@ -606,5 +632,5 @@ class MultipleChoiceForm(FlaskForm):
 
 from app.db_models import (
     Question, Attempt, enrollments, QuestionType, AnswerOption, TextAttempt,
-    SelectionAttempt, JumbleBlock
+    SelectionAttempt, JumbleBlock, Course
 )

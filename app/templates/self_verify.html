@@ -23,7 +23,7 @@
         </div>
 
 		<div class="container fs-5">
-			<form method="POST" action="{{ url_for('user_views.self_review') }}">
+			<form method="POST" action="{{ url_for('user_views.self_review', course_name=course_name) }}">
 				{{ form.csrf_token }}
 				{{ form.attempt_id }}
                 Was your answer correct?

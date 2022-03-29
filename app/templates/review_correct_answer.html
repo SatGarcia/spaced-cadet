@@ -16,7 +16,7 @@
                     <div class="px-3">{{ answer }}</div></p>
 
             <p>
-                <a class="btn btn-primary" href="{{ url_for('user_views.test') }}">Continue Training...</a>
+                <a class="btn btn-primary" href="{{ url_for('user_views.test', course_name=course_name) }}">Continue Training...</a>
             </p>
     </div>
 {% endblock %}

@@ -3,13 +3,14 @@
     <div class="container pt-3">
         <h4>
             <i class="bi-clipboard-check"  style="color: green"></i>
-            <span class="px-2">Review Your Performance</span>
+            <span class="px-2">Rate Your Performance</span>
         </h4>
 
         Nice work, cadet! How difficult was it for you to recall the info
         needed to answer this question?
 
-        <form method="POST" action="{{ url_for('user_views.difficulty') }}">
+		<form method="POST" 
+			  action="{{ url_for('user_views.difficulty', course_name=course_name) }}">
             {{ form.csrf_token }}
             {{ form.attempt_id }}
             <ul class="list-unstyled px-1 pt-2">
