@@ -12,13 +12,13 @@ from wtforms.fields import DateField
 from wtforms.widgets import DateInput
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms.validators import (
-    DataRequired, InputRequired, NumberRange, ValidationError
+    DataRequired, InputRequired, NumberRange, ValidationError, Length, Regexp
 )
 
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
-import os, csv, secrets, string
+import os, csv, secrets, string, re
 
 from app import db
 from app.user_views import (
@@ -523,8 +523,18 @@ class DataRequiredIf(DataRequired):
 
 class NewCourseForm(FlaskForm):
     # TODO: set length limit on name and title
-    name = StringField("Name", [DataRequired()])
-    title = StringField("Title", [DataRequired()])
+    name = StringField("Name", [DataRequired(), Length(min=5, max=64),
+                                Regexp("^[a-z].*[a-z0-9]$",
+                                       flags=re.IGNORECASE,
+                                       message="Name must start with a letter and end with a letter or number"),
+                                Regexp("^[\w-]+$",
+                                       flags=re.IGNORECASE,
+                                       message="Name may only contain letters, numbers, underscores (_) and hyphens (-)"),
+                                Regexp("^([^-_][-_]?)+$",
+                                       flags=re.IGNORECASE,
+                                       message="Name may not have consecutive hyphens (-) or underscores (_)")])
+
+    title = StringField("Title", [DataRequired(), Length(min=5, max=100)])
     description = TextAreaField("Description", [DataRequired()])
     start_date = DateField('Start Date', widget=DateInput(), validators=[DataRequired()])
     end_date = DateField('End Date', widget=DateInput(), validators=[DataRequired()])
