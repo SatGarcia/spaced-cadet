@@ -14,7 +14,6 @@ from flask_login import current_user, login_required
 
 import ast, markdown
 from datetime import date, timedelta, datetime
-from math import ceil
 
 from app import db
 
@@ -55,7 +54,7 @@ def difficulty(course_name):
         if not a:
             abort(400)
 
-        sm2_update(a, form.difficulty.data) # update sm2 based on reported difficulty
+        a.sm2_update(form.difficulty.data) # update sm2 based on reported difficulty
         db.session.commit()
 
         return redirect(url_for('.test', course_name=course_name))
@@ -93,7 +92,7 @@ def self_review(course_name):
         else:
             # user reported they were wrong
             attempt.correct = False
-            sm2_update(attempt, 2) # they made an attempt but were wrong so set difficulty to 2
+            attempt.sm2_update(2) # they made an attempt but were wrong so set difficulty to 2
             db.session.commit()
 
             flash("Keep your chin up, cadet. We'll test you on that question again tomorrow.", "danger")
@@ -116,32 +115,6 @@ def get_last_attempt(user_id, question_id):
                                 Attempt.question_id == question_id).order_by(
                                     Attempt.time.desc()).first()
 
-
-# TODO: make this a method inside of the Attempt class
-def sm2_update(attempt, quality):
-    """ Updates the attempt's e_factor and interval based on the quality of
-    their most recent answer. """
-
-    print("Setting quality to", quality)
-    attempt.quality = quality
-
-    if quality < 3:
-        # The question wasn't answered incorrectly. Keep the same e_factor as
-        # before and set the interval to 1 (i.e. like learning from new)
-        attempt.interval = 1
-
-    else:
-        attempt.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
-
-        # set a floor for the e_factor
-        if attempt.e_factor < 1.3:
-            attempt.e_factor = 1.3
-
-        # They got the correct answer, so interval increases
-        attempt.interval = 6 if attempt.interval == 1 else ceil(attempt.interval * attempt.e_factor)
-
-    # next attempt will be interval days from today
-    attempt.next_attempt = date.today() + timedelta(days=attempt.interval)
 
 
 @user_views.route('/c/<course_name>/train/multiple-choice', methods=['POST'])
@@ -199,9 +172,9 @@ def test_multiple_choice(course_name):
             attempt.correct = False
 
             if selected_answer:
-                sm2_update(attempt, 2)  # they made an attempt but were wrong so set response quality to 2
+                attempt.sm2_update(2)  # they made an attempt but were wrong so set response quality to 2
             else:
-                sm2_update(attempt, 1)  # no attempt ("I Don't Know"), so set response quality to 1
+                attempt.sm2_update(1)  # no attempt ("I Don't Know"), so set response quality to 1
 
             db.session.commit()
 
@@ -262,7 +235,7 @@ def test_short_answer(course_name):
         if form.no_answer.data:
             # No response from user ("I Don't Know"), which is response
             # quality 1 in SM-2
-            sm2_update(attempt, 1)
+            attempt.sm2_update(1)
             db.session.commit()
 
             return render_template("review_correct_answer.html",
@@ -326,7 +299,7 @@ def test_auto_check(course_name):
         if form.no_answer.data:
             # No response from user ("I Don't Know"), which is response
             # quality 1 in SM-2
-            sm2_update(attempt, 1)
+            attempt.sm2_update(1)
             db.session.commit()
 
             return render_template("review_correct_answer.html",
@@ -352,7 +325,7 @@ def test_auto_check(course_name):
         else:
             # User was wrong so show them the correct answer
             attempt.correct = False
-            sm2_update(attempt, 2)
+            attempt.sm2_update(2)
             db.session.commit()
 
             return render_template("review_correct_answer.html",
@@ -423,7 +396,7 @@ def test_code_jumble(course_name):
         if form.no_answer.data:
             # No response from user ("I Don't Know"), which is response
             # quality 1 in SM-2
-            sm2_update(attempt, 1)
+            attempt.sm2_update(1)
             db.session.commit()
 
             prompt_html = markdown_to_html(question.prompt)
@@ -457,7 +430,7 @@ def test_code_jumble(course_name):
         else:
             attempt.correct = False
 
-            sm2_update(attempt, 2)  # they made an attempt but were wrong so set response quality to 2
+            attempt.sm2_update(2)  # they made an attempt but were wrong so set response quality to 2
             db.session.commit()
 
             # show the user a page where they can view the correct answer

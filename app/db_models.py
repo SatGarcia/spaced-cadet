@@ -1,7 +1,8 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import enum
+from math import ceil
 
 from app import db
 
@@ -280,6 +281,31 @@ class Attempt(db.Model):
 
     def __repr__(self):
         return f"<Attempt {self.id}: Question {self.question.id} by User {self.user.id} at {self.time}>"
+
+    def sm2_update(self, quality):
+        """ Updates this attempt's e_factor and interval based on the given
+        quality. """
+
+        self.quality = quality
+
+        if quality < 3:
+            # The question wasn't answered incorrectly. Keep the same e_factor as
+            # before and set the interval to 1 (i.e. like learning from new)
+            self.interval = 1
+
+        else:
+            self.e_factor += 0.1 - ((5-quality) * (0.08 + ((5-quality) * 0.02)))
+
+            # set a floor for the e_factor
+            if self.e_factor < 1.3:
+                self.e_factor = 1.3
+
+            # They got the correct answer, so interval increases
+            self.interval = 6 if self.interval == 1 else ceil(self.interval *
+                                                              self.e_factor)
+
+        # next attempt will be interval days from today
+        self.next_attempt = date.today() + timedelta(days=self.interval)
 
 
 class TextAttempt(Attempt):
