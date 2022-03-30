@@ -58,6 +58,8 @@ def difficulty(course_name):
         sm2_update(a, form.difficulty.data) # update sm2 based on reported difficulty
         db.session.commit()
 
+        return redirect(url_for('.test', course_name=course_name))
+
     return render_template("difficulty.html",
                            page_title="Cadet Test: Rating",
                            course_name=course_name,
