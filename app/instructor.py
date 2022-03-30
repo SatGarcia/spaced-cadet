@@ -28,9 +28,29 @@ from app.user_views import (
 
 instructor = Blueprint('instructor', __name__)
 
+class AuthorizationError(Exception):
+    pass
+
+
+def check_authorization(user, course=None, instructor=False, admin=False):
+    if instructor and not user.instructor:
+        raise AuthorizationError("Must be an instructor")
+
+    elif admin and not user.admin:
+        raise AuthorizationError("Must be an admin")
+
+    elif course and user not in course.users:
+        raise AuthorizationError("Must be enrolled in course")
+
+
 @instructor.route('/courses/create', methods=["GET", "POST"])
 @login_required
 def create_course():
+    try:
+        check_authorization(current_user, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
     form = NewCourseForm()
 
     if form.validate_on_submit():
@@ -54,16 +74,27 @@ def create_course():
 @instructor.route('/new-question/confirm', methods=["POST"])
 @login_required
 def confirm_new_question():
+    try:
+        check_authorization(current_user, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
     form = ConfirmNewQuestionForm(request.form)
 
     question = Question.query.filter_by(id=form.question_id.data).first()
+
     if not question:
-        abort(400) # TODO: more appropriate error code
+        abort(400)
+    elif question.author != current_user:
+        abort(401)
 
     if form.validate_on_submit():
         course = Course.query.filter_by(id=form.course_id.data).first()
+
         if not course:
-            abort(400) # TODO: more appropriate error code
+            abort(400)
+        elif user not in course.users:
+            abort(401)
 
         if form.yes.data:
             # user confirmed question, so enable it and add it to the course
@@ -109,6 +140,12 @@ def preview_question(question_id):
 
     if not question:
         abort(404)
+    elif (not question.public)\
+        and (question.author != current_user)\
+        and (not current_user.admin):
+        # Only allow user to preview public questions or ones they have
+        # created. Admins can view all questions though.
+        abort(401)
 
     page_title = "Cadet: Question Preview"
 
@@ -273,6 +310,11 @@ def upload_roster(course_name):
     if not course:
         abort(404)
 
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
     #roster_upload_form = RosterUploadForm(request.form)
     roster_upload_form = RosterUploadForm()
 
@@ -314,6 +356,11 @@ def add_question(course_name):
     if not course:
         abort(404)
 
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
     # query all (public questions + authored questions) - course questions
     all_questions = Question.query.filter_by(public=True).union(current_user.authored_questions).except_(course.questions).all()
 
@@ -328,6 +375,11 @@ def create_new_question(course_name):
     course = Course.query.filter_by(name=course_name).first()
     if not course:
         abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
 
     form = NewQuestionForm(course_id=course.id)
 
@@ -376,6 +428,11 @@ def create_short_answer():
         if not course:
             abort(400)
 
+        try:
+            check_authorization(current_user, course=course, instructor=True)
+        except AuthorizationError:
+            abort(401)
+
         new_q = ShortAnswerQuestion(prompt=form.prompt.data,
                                     answer=form.answer.data)
 
@@ -401,6 +458,11 @@ def create_auto_check():
         if not course:
             abort(400)
 
+        try:
+            check_authorization(current_user, course=course, instructor=True)
+        except AuthorizationError:
+            abort(401)
+
         new_q = AutoCheckQuestion(prompt=form.prompt.data,
                                   answer=form.answer.data,
                                   regex=form.regex.data)
@@ -424,6 +486,11 @@ def create_multiple_choice():
         course = Course.query.filter_by(id=form.course_id.data).first()
         if not course:
             abort(400)
+
+        try:
+            check_authorization(current_user, course=course, instructor=True)
+        except AuthorizationError:
+            abort(401)
 
         new_q = MultipleChoiceQuestion(prompt=form.prompt.data)
         db.session.add(new_q)
@@ -454,6 +521,11 @@ def create_code_jumble():
         if not course:
             abort(400)
 
+        try:
+            check_authorization(current_user, course=course, instructor=True)
+        except AuthorizationError:
+            abort(401)
+
         new_q = CodeJumbleQuestion(prompt=form.prompt.data,
                                    language=form.language.data)
         db.session.add(new_q)
@@ -482,6 +554,11 @@ def manage_roster(course_name):
     if not course:
         abort(404)
 
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
     form = RosterUploadForm()
 
     return render_template("manage_roster.html",
@@ -497,6 +574,11 @@ def manage_questions(course_name):
     course = Course.query.filter_by(name=course_name).first()
     if not course:
         abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
 
     all_questions = course.questions.all()
     return render_template("manage_questions.html",

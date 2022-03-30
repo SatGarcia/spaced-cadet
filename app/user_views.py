@@ -19,6 +19,7 @@ from app import db
 
 user_views = Blueprint('user_views', __name__)
 
+
 def markdown_to_html(markdown_text, code_linenums=True):
     """ Convert markdown text to html. """
     html = markdown.markdown(markdown_text,
@@ -47,12 +48,24 @@ def difficulty(course_name):
     """ Route to handle self-reported difficulty of a problem that the user
     got correct. """
 
+    course = Course.query.filter_by(name=course_name).first()
+
+    if not course:
+        abort(404)
+    try:
+        check_authorization(current_user, course=course)
+    except AuthorizationError:
+        abort(401)
+
     form = DifficultyForm(request.form)
     if form.validate_on_submit():
         # get the question and update it's interval and e_factor
         a = Attempt.query.filter_by(id=form.attempt_id.data).first()
+
         if not a:
             abort(400)
+        elif a.user != current_user:
+            abort(401)
 
         a.sm2_update(form.difficulty.data) # update sm2 based on reported difficulty
         db.session.commit()
@@ -70,11 +83,23 @@ def difficulty(course_name):
 def self_review(course_name):
     """ User will self-verify whether the answer they submitted is the correct
     one or not. """
+
+    course = Course.query.filter_by(name=course_name).first()
+
+    if not course:
+        abort(404)
+    try:
+        check_authorization(current_user, course=course)
+    except AuthorizationError:
+        abort(401)
+
     form = SelfReviewForm(request.form)
     attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
 
     if not attempt:
         abort(400)
+    elif attempt.user != current_user:
+        abort(401)
 
     if form.validate_on_submit():
         # update the outcome of the attempt in the database
@@ -122,6 +147,15 @@ def get_last_attempt(user_id, question_id):
 def test_multiple_choice(course_name):
     # FIXME: code duplication in this function
 
+    course = Course.query.filter_by(name=course_name).first()
+
+    if not course:
+        abort(404)
+    try:
+        check_authorization(current_user, course=course)
+    except AuthorizationError:
+        abort(401)
+
     form = MultipleChoiceForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
@@ -154,6 +188,7 @@ def test_multiple_choice(course_name):
             # no selected answer means they didn't have a response (i.e. "I
             # Don't Know" was their answer)
             attempt.response = selected_answer
+
 
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
@@ -205,6 +240,17 @@ def test_multiple_choice(course_name):
 @user_views.route('/c/<course_name>/train/short-answer', methods=['POST'])
 @login_required
 def test_short_answer(course_name):
+    """ Checks answer given to a short answer question. """
+
+    course = Course.query.filter_by(name=course_name).first()
+
+    if not course:
+        abort(404)
+    try:
+        check_authorization(current_user, course=course)
+    except AuthorizationError:
+        abort(401)
+
     form = ShortAnswerForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
@@ -268,6 +314,17 @@ def test_short_answer(course_name):
 @user_views.route('/c/<course_name>/train/auto-check', methods=['POST'])
 @login_required
 def test_auto_check(course_name):
+    """ Checks the correctness of an auto-check type of question. """
+
+    course = Course.query.filter_by(name=course_name).first()
+
+    if not course:
+        abort(404)
+    try:
+        check_authorization(current_user, course=course)
+    except AuthorizationError:
+        abort(401)
+
     form = AutoCheckForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
@@ -361,6 +418,17 @@ def get_answer_html(jumble_question):
 @user_views.route('/c/<course_name>/train/code-jumble', methods=['POST'])
 @login_required
 def test_code_jumble(course_name):
+    """ Checks the correctness of a code jumble type of question. """
+
+    course = Course.query.filter_by(name=course_name).first()
+
+    if not course:
+        abort(404)
+    try:
+        check_authorization(current_user, course=course)
+    except AuthorizationError:
+        abort(401)
+
     form = CodeJumbleForm(request.form)
 
     question_id = form.question_id.data
@@ -387,8 +455,6 @@ def test_code_jumble(course_name):
         if previous_attempt:
             attempt.e_factor = previous_attempt.e_factor
             attempt.interval = previous_attempt.interval
-
-        # TODO: allow a "don't know" response
 
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
@@ -466,6 +532,10 @@ def test(course_name):
     course = Course.query.filter_by(name=course_name).first()
     if not course:
         abort(404)
+    try:
+        check_authorization(current_user, course=course)
+    except AuthorizationError:
+        abort(401)
 
     possible_questions = course.questions
 
@@ -637,3 +707,5 @@ from app.db_models import (
     Question, Attempt, enrollments, QuestionType, AnswerOption, TextAttempt,
     SelectionAttempt, JumbleBlock, Course
 )
+
+from app.instructor import check_authorization, AuthorizationError
