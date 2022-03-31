@@ -11,10 +11,13 @@ from wtforms import (
 )
 from wtforms.validators import InputRequired, Email, EqualTo, Length, Regexp
 
-from flask_jwt_extended import JWTManager, create_access_token, decode_token
+from flask_jwt_extended import (
+    JWTManager, create_access_token, decode_token, set_access_cookies,
+    unset_jwt_cookies, get_jwt, get_jwt_identity
+)
 from jwt.exceptions import DecodeError, ExpiredSignatureError
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 #from cas import CASClient
 
@@ -62,6 +65,28 @@ def load_user(user_id):
         current_app.logger.error(f"Couldn't load user with id {user_id}")
         return None
 
+@auth.after_app_request
+def refresh_expiring_jwts(response):
+    """ Creates a new access token if the current one is expired or will
+    expire within the next 15 minutes. """
+
+    try:
+        exp_timestamp = get_jwt()["exp"]
+        now = datetime.now(timezone.utc)
+        target_timestamp = datetime.timestamp(now + timedelta(minutes=15))
+
+        if target_timestamp > exp_timestamp:
+            identity = get_jwt_identity()
+            current_app.logger.debug(f"refreshing access token for user {identity}")
+            access_token = create_access_token(identity=identity)
+            set_access_cookies(response, access_token)
+
+        return response
+
+    except (RuntimeError, KeyError):
+        # Case where there is not a valid JWT. Just return the original respone
+        return response
+
 
 def post_login_redirect(next_url):
     """ Sends user to next_url (if specified) or to the home page. """
@@ -69,6 +94,7 @@ def post_login_redirect(next_url):
         return redirect(url_for('user_views.root'))
     else:
         return redirect(next_url)
+
 
 @auth.route('/login', methods = ['POST', 'GET'])
 def login():
@@ -87,7 +113,13 @@ def login():
             if user and user.check_password(form.password.data):
                 login_user(user)
                 flash(f"Successfully signed in as {user.email}", "success")
-                return post_login_redirect(next_url)
+                response = post_login_redirect(next_url)
+
+                # include JWT access token with a cookie
+                access_token = create_access_token(identity=user.id)
+                set_access_cookies(response, access_token)
+
+                return response
 
             else:
                 flash(f"Could not sign in.", "danger")
@@ -107,7 +139,11 @@ def logout():
     else:
         flash("You must be signed in before you can log out!", "warning")
 
-    return redirect(url_for('user_views.root'))
+    response = redirect(url_for('user_views.root'))
+
+    unset_jwt_cookies(response)
+
+    return response
 
 
 @auth.route('/forgot', methods=['GET', 'POST'])

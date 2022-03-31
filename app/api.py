@@ -1,7 +1,10 @@
-from flask import request
+from flask import request, jsonify
 from flask_restful import Resource, Api
 from marshmallow import (
     Schema, fields, ValidationError, validates, pre_load, EXCLUDE
+)
+from flask_jwt_extended import (
+    jwt_required, create_access_token, set_access_cookies, unset_jwt_cookies
 )
 from marshmallow.decorators import post_load
 from werkzeug.security import generate_password_hash
@@ -10,6 +13,10 @@ from enum import Enum
 import secrets
 
 from app import db
+
+class AuthenticationSchema(Schema):
+    email = fields.Str(required=True)
+    password = fields.Str(required=True)
 
 class QuestionSchema(Schema):
     class Meta:
@@ -227,6 +234,9 @@ textbook_section_schema = TextbookSectionSchema()
 
 def init_app(flask_app):
     rf_api = Api(flask_app)
+    rf_api.add_resource(LoginApi, '/api/login')
+    rf_api.add_resource(LogoutApi, '/api/logout')
+
     rf_api.add_resource(UserApi, '/api/user/<int:user_id>')
     rf_api.add_resource(UsersApi, '/api/users')
 
@@ -255,6 +265,7 @@ def init_app(flask_app):
 
 
 class TextbookApi(Resource):
+    @jwt_required()
     def get(self, textbook_id):
         t = Textbook.query.filter_by(id=textbook_id).one_or_none()
         if t:
@@ -264,16 +275,19 @@ class TextbookApi(Resource):
 
 
 class TextbooksApi(Resource):
+    @jwt_required()
     def get(self):
         textbooks = Textbook.query.all()
         result = textbook_schema.dump(textbooks, many=True)
         return {'textbooks': result}
 
+    @jwt_required()
     def post(self):
         return create_and_commit(Textbook, textbook_schema, request.get_json())
 
 
 class TextbookSectionsApi(Resource):
+    @jwt_required()
     def get(self, textbook_id):
         t = Textbook.query.filter_by(id=textbook_id).one_or_none()
 
@@ -283,6 +297,7 @@ class TextbookSectionsApi(Resource):
         result = textbook_section_schema.dump(t.sections, many=True)
         return {'textbook_sections': result}
 
+    @jwt_required()
     def post(self, textbook_id):
         t = Textbook.query.filter_by(id=textbook_id).one_or_none()
 
@@ -294,6 +309,7 @@ class TextbookSectionsApi(Resource):
 
 
 class UserApi(Resource):
+    @jwt_required()
     def get(self, user_id):
         u = User.query.filter_by(id=user_id).one_or_none()
         if u:
@@ -301,6 +317,7 @@ class UserApi(Resource):
         else:
             return {"message": f"No user found with id {user_id}"}, 404
 
+    @jwt_required()
     def delete(self, user_id):
         u = User.query.filter_by(id=user_id).one_or_none()
         if u:
@@ -312,16 +329,19 @@ class UserApi(Resource):
 
 
 class UsersApi(Resource):
+    @jwt_required()
     def get(self):
         users = User.query.all()
         result = users_schema.dump(users)
         return {'users': result}
 
+    @jwt_required()
     def post(self):
         return create_and_commit(User, user_schema, request.get_json())
 
 
 class CourseApi(Resource):
+    @jwt_required()
     def get(self, course_id):
         c = Course.query.filter_by(id=course_id).one_or_none()
         if c:
@@ -356,14 +376,43 @@ def create_and_commit(obj_type, schema, json_data, add_to=None):
     return {obj_type.__name__.lower(): result}
 
 class CoursesApi(Resource):
+    @jwt_required()
     def get(self):
         courses = Course.query.all()
         schema = CourseSchema(many=True, exclude=('users',))
         result = schema.dump(courses)
         return {'courses': result}
 
+    @jwt_required()
     def post(self):
         return create_and_commit(Course, course_schema, request.get_json())
+
+
+class LoginApi(Resource):
+    def post(self):
+        json_data = request.get_json()
+
+        try:
+            data = AuthenticationSchema().load(json_data)
+        except ValidationError as err:
+            return err.messages, 422
+
+
+        user = User.query.filter_by(email=data['email']).first()
+        if (not user) or (not user.check_password(data['password'])):
+            return {'message': 'Authentication failed'}, 401
+
+        response = jsonify({'logged_in': data['email']})
+        access_token = create_access_token(identity=data['email'])
+        set_access_cookies(response, access_token)
+        return response
+
+
+class LogoutApi(Resource):
+    def post(self):
+        response = jsonify({"message": "logout successful"})
+        unset_jwt_cookies(response)
+        return response
 
 
 class QuestionApi(Resource):
@@ -378,6 +427,7 @@ class QuestionApi(Resource):
             return question_schema.dump(question)
 
 
+    @jwt_required()
     def get(self, question_id):
         q = Question.query.filter_by(id=question_id).one_or_none()
         if q:
@@ -385,6 +435,7 @@ class QuestionApi(Resource):
         else:
             return {'message': f"Question {question_id} not found."}, 404
 
+    @jwt_required()
     def delete(self, question_id):
         q = Question.query.filter_by(id=question_id).one_or_none()
 
@@ -401,6 +452,7 @@ class QuestionApi(Resource):
             return {'message': f"Question {question_id} not found."}, 404
 
 class CourseQuestionApi(Resource):
+    @jwt_required()
     def delete(self, course_id, question_id):
         course = Course.query.filter_by(id=course_id).one_or_none()
         if not course:
@@ -420,6 +472,7 @@ class IdListSchema(Schema):
 
 
 class RosterApi(Resource):
+    @jwt_required()
     def get(self, course_id):
         c = Course.query.filter_by(id=course_id).one_or_none()
         if c:
@@ -428,6 +481,7 @@ class RosterApi(Resource):
         else:
             return {'message': f"Course {course_id} not found."}, 404
 
+    @jwt_required()
     def post(self, course_id):
         course = Course.query.filter_by(id=course_id).one_or_none()
         if not course:
@@ -476,6 +530,7 @@ class RosterApi(Resource):
 
 
 class EnrolledStudentApi(Resource):
+    @jwt_required()
     def delete(self, course_id, student_id):
         course = Course.query.filter_by(id=course_id).one_or_none()
         if not course:
@@ -493,6 +548,7 @@ class EnrolledStudentApi(Resource):
 
 
 class CourseQuestionsApi(Resource):
+    @jwt_required()
     def get(self, course_id):
         c = Course.query.filter_by(id=course_id).one_or_none()
         if c:
@@ -501,6 +557,7 @@ class CourseQuestionsApi(Resource):
         else:
             return {'message': f"Course {course_id} not found."}, 404
 
+    @jwt_required()
     def post(self, course_id):
         course = Course.query.filter_by(id=course_id).one_or_none()
         if not course:
@@ -544,11 +601,13 @@ class CourseQuestionsApi(Resource):
 
 
 class QuestionsApi(Resource):
+    @jwt_required()
     def get(self):
         questions = Question.query.all()
         result = question_schema.dump(questions, many=True)
         return {'questions': result}
 
+    @jwt_required()
     def post(self):
         json_data = request.get_json()
 
