@@ -385,7 +385,7 @@ class User(UserMixin, db.Model):
                                        backref='author', lazy='dynamic')
 
     def __repr__(self):
-        return f"<User {self.id}: {self.last_name}, {self.first_name} ({self.username})>"
+        return f"<User {self.id}: {self.last_name}, {self.first_name} ({self.email})>"
 
     # The following functions are used for login
     def get_id(self):
