@@ -27,6 +27,21 @@ login_manager = LoginManager()
 jwt = JWTManager()
 
 
+class AuthorizationError(Exception):
+    pass
+
+
+def check_authorization(user, course=None, instructor=False, admin=False):
+    if instructor and not user.instructor:
+        raise AuthorizationError("Must be an instructor")
+
+    elif admin and not user.admin:
+        raise AuthorizationError("Must be an admin")
+
+    elif course and user not in course.users:
+        raise AuthorizationError("Must be enrolled in course")
+
+
 def init_app(app):
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'

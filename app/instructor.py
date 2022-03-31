@@ -25,23 +25,9 @@ from app.user_views import (
     ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm,
     MultipleChoiceForm
 )
+from app.auth import AuthorizationError, check_authorization
 
 instructor = Blueprint('instructor', __name__)
-
-class AuthorizationError(Exception):
-    pass
-
-
-def check_authorization(user, course=None, instructor=False, admin=False):
-    if instructor and not user.instructor:
-        raise AuthorizationError("Must be an instructor")
-
-    elif admin and not user.admin:
-        raise AuthorizationError("Must be an admin")
-
-    elif course and user not in course.users:
-        raise AuthorizationError("Must be enrolled in course")
-
 
 @instructor.route('/courses/create', methods=["GET", "POST"])
 @login_required

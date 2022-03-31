@@ -708,4 +708,4 @@ from app.db_models import (
     SelectionAttempt, JumbleBlock, Course
 )
 
-from app.instructor import check_authorization, AuthorizationError
+from app.auth import check_authorization, AuthorizationError
