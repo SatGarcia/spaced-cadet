@@ -1,6 +1,6 @@
 from flask import (
     Blueprint, render_template, abort, current_app, request, redirect, url_for,
-    flash
+    flash, Markup
 )
 
 from flask_login import current_user, login_user, logout_user, LoginManager
@@ -9,16 +9,22 @@ from flask_wtf import FlaskForm
 from wtforms import (
     StringField, SubmitField, PasswordField, EmailField
 )
-from wtforms.validators import InputRequired, Email
+from wtforms.validators import InputRequired, Email, EqualTo, Length, Regexp
 
+from flask_jwt_extended import JWTManager, create_access_token, decode_token
+from jwt.exceptions import DecodeError, ExpiredSignatureError
+
+from datetime import timedelta
 
 #from cas import CASClient
 
 from app import db
+from app.email import send_email
 
 auth = Blueprint('auth', __name__)
 
 login_manager = LoginManager()
+jwt = JWTManager()
 
 
 def init_app(app):
@@ -26,18 +32,7 @@ def init_app(app):
     login_manager.login_view = 'auth.login'
     login_manager.login_message = None
 
-    """
-    assert app.config['CAS_SERVER_URL'] is not None, "CAS_SERVER_URL not set in config"
-
-    with app.app_context():
-        app.cas_client = CASClient(
-            version=3,
-            service_url=f"{url_for('auth.verify_ticket', next=url_for('user_views.root', _external=False))}",
-            server_url=app.config['CAS_SERVER_URL']
-        )
-
-    app.logger.debug(f'Initial CAS service_url: {app.cas_client.service_url}')
-    """
+    jwt.init_app(app)
 
 
 @login_manager.user_loader
@@ -86,75 +81,6 @@ def login():
                                page_title="Cadet: Sign In",
                                form=form)
 
-    """
-    if current_user.is_authenticated:
-        flash(f"You are already signed in as {current_user.username}", "warning")
-        if next_url is None:
-            return redirect(url_for('user_views.root'))
-        else:
-            return redirect(next_url)
-
-    service_url = f"{url_for('.verify_ticket', _external=True)}"
-    if next_url:
-        service_url += f"?next={next_url}"
-
-    current_app.cas_client.service_url = service_url
-    current_app.logger.debug(f"login: CAS service_url: {current_app.cas_client.service_url}")
-
-    cas_login_url = current_app.cas_client.get_login_url()
-    return redirect(cas_login_url)
-    """
-
-
-"""
-@auth.route('/verify_ticket')
-def verify_ticket():
-    next_url = request.args.get('next')
-    ticket = request.args.get('ticket')
-
-    if not ticket:
-        # If there isn't a ticket, flash a message and send them to home page
-        current_app.logger.error("Missing ticket for verify_ticket")
-        flash("Login process failed: missing authentication ticket!", "danger")
-        return redirect(url_for('user_views.root'))
-
-    # validate ticket and get username by calling verify_ticket
-    username, attributes, pgtiou = current_app.cas_client.verify_ticket(ticket)
-
-    current_app.logger.debug(f'CAS verify_ticket response: username: {username}, attributes: {attributes}, pgtiou: {pgtiou}')
-
-    if not username:
-        # verifying ticket failed so send them to the homepage
-        current_app.logger.warning("Authentication failed")
-        flash("Login process failed: authentication failed!", "danger")
-        return redirect(url_for('user_views.root'))
-
-    username = username.lower()
-
-    with current_app.Session() as session:
-        # try to find the username in our database
-        matching_user = (
-            session.query(db_models.User)
-                .filter(db_models.User.username == username)
-                .first()
-        )
-
-        if not matching_user:
-            # couldn't find this user in our database
-            current_app.logger.warning(f"Unauthorized login attempt: {username}")
-            flash("Login process failed: unauthorized user!", "danger")
-            return redirect(url_for('user_views.root'))
-        else:
-            # login process complete!
-            login_user(matching_user)
-            current_app.logger.info(f"Successful login: {username}")
-            flash(f"You have successfully signed in as {username}!", "success")
-            if next_url is None:
-                return redirect(url_for('user_views.root'))
-            else:
-                return redirect(next_url)
-"""
-
 
 @auth.route('/logout')
 def logout():
@@ -163,23 +89,111 @@ def logout():
         logout_user()
         flash("You've successfully logged out!", "success")
 
-        """
-        redirect_url = url_for('user_views.root', _external=True)
-        cas_logout_url = current_app.cas_client.get_logout_url(redirect_url)
-        current_app.logger.debug(f'CAS logout URL: {cas_logout_url}')
-
-        return redirect(cas_logout_url)
-        """
     else:
         flash("You must be signed in before you can log out!", "warning")
 
     return redirect(url_for('user_views.root'))
 
 
+@auth.route('/forgot', methods=['GET', 'POST'])
+def forgot_password():
+    form = ForgotPasswordForm()
+
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+
+        if user:
+            reset_token = create_access_token(str(user.id),
+                                              expires_delta=timedelta(minutes=15))
+
+            url = url_for(".reset_password", token=reset_token, _external=True)
+
+            send_email('Reset Your SpacedCadet Password',
+                       sender='cadet.noreply@hopper.sandiego.edu',
+                       recipients=[user.email],
+                       text_body=render_template('reset_password_email.txt',
+                                                 user=user,
+                                                 url=url),
+                       html_body=render_template('reset_password_email.html',
+                                                 user=user,
+                                                 url=url))
+
+        flash(f"An email will be sent to {form.email.data} with instructions on how to reset your password. You will have 15 minutes to complete the reset.",
+              "info")
+
+        return redirect(url_for("user_views.root"))
+
+    return render_template("forgot_password.html",
+                           page_title="Cadet: Forgot Password",
+                           form=form)
+
+@auth.route('/reset', methods=['GET', 'POST'])
+def reset_password():
+    reset_token = request.args.get('token')
+    if not reset_token:
+        abort(400)
+
+    try:
+        user_id = decode_token(reset_token)['sub']
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            abort(400)
+
+    except DecodeError:
+        flash("Password reset failed. Check that you used the correct link.", "danger")
+        return redirect(url_for("user_views.root"))
+    except ExpiredSignatureError:
+        flash(Markup(f"Password reset failed: Time expired. <a href='{url_for('.forgot_password')}'>Try again</a>."), "danger")
+        return redirect(url_for("user_views.root"))
+    except Exception as err:
+        flash("Password reset failed.", "danger")
+        app.logger.info(f"Password reset unknown failure type: {type(err)} ({err})")
+        return redirect(url_for("user_views.root"))
+
+    form = ResetPasswordForm()
+
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        db.session.commit()
+
+        current_app.logger.info(f"Password reset for {user.email}.")
+        flash("Password reset succeeded. Log in with your new password now.",
+              "success")
+        return redirect(url_for("auth.login"))
+
+
+    return render_template("reset_password.html",
+                           page_title="Cadet: Reset Password",
+                           form=form)
+
+
 class LoginForm(FlaskForm):
     email = EmailField('Email', validators=[InputRequired(), Email()])
     password = PasswordField('Password', validators=[InputRequired()])
     submit = SubmitField("Submit")
+
+
+class ForgotPasswordForm(FlaskForm):
+    email = EmailField('Email', validators=[InputRequired(), Email()])
+    submit = SubmitField("Submit")
+
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New Password',
+                             validators=[InputRequired(),
+                                         Length(min=10, max=50),
+                                         EqualTo('confirm',
+                                                 message='Passwords must match'),
+                                         Regexp("^[a-zA-Z0-9!@#$%^&*()\-_]+$",
+                                                message="Password may contain only letters (a-z), digits (0-9) and special characters: !@#$%^&*()-_"),
+                                         Regexp(".*\d.*",
+                                                message="Password must have at least one digit (0-9)."),
+                                         Regexp(".*[!@#$%^&*()\-_].*",
+                                                message="Password must have at least one special character: !@#$%^&*()-_")
+                                         ])
+    confirm = PasswordField('Repeat Password', validators=[InputRequired()])
+
+    submit = SubmitField("Reset Password")
 
 
 from app.db_models import (
