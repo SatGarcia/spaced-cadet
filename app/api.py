@@ -729,8 +729,7 @@ class QuestionsApi(Resource):
 
         db.session.add(obj)
 
-        # FIXME: set author to be current_user when API login is implemented
-        author = User.query.filter_by(id=1).first()
+        author = User.query.filter_by(id=current_user.id).first()
         author.authored_questions.append(obj)
 
         db.session.commit()
