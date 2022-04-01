@@ -4,7 +4,8 @@ from marshmallow import (
     Schema, fields, ValidationError, validates, pre_load, EXCLUDE
 )
 from flask_jwt_extended import (
-    jwt_required, create_access_token, set_access_cookies, unset_jwt_cookies
+    jwt_required, create_access_token, set_access_cookies, unset_jwt_cookies,
+    current_user
 )
 from marshmallow.decorators import post_load
 from werkzeug.security import generate_password_hash
@@ -283,6 +284,9 @@ class TextbooksApi(Resource):
 
     @jwt_required()
     def post(self):
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
         return create_and_commit(Textbook, textbook_schema, request.get_json())
 
 
@@ -294,11 +298,18 @@ class TextbookSectionsApi(Resource):
         if not t:
             return {"message": f"No textbook found with id {textbook_id}"}, 404
 
-        result = textbook_section_schema.dump(t.sections, many=True)
+        # only return public sections or those which this user has authored
+        available_sections = t.sections.filter(db.or_(TextbookSection.public == True,
+                                                      TextbookSection.author == current_user))
+
+        result = textbook_section_schema.dump(available_sections, many=True)
         return {'textbook_sections': result}
 
     @jwt_required()
     def post(self, textbook_id):
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
         t = Textbook.query.filter_by(id=textbook_id).one_or_none()
 
         if not t:
@@ -311,6 +322,9 @@ class TextbookSectionsApi(Resource):
 class UserApi(Resource):
     @jwt_required()
     def get(self, user_id):
+        if not current_user.admin:
+            return {'message': "Unauthorized access"}, 401
+
         u = User.query.filter_by(id=user_id).one_or_none()
         if u:
             return user_schema.dump(u)
@@ -319,6 +333,9 @@ class UserApi(Resource):
 
     @jwt_required()
     def delete(self, user_id):
+        if not current_user.admin:
+            return {'message': "Unauthorized access"}, 401
+
         u = User.query.filter_by(id=user_id).one_or_none()
         if u:
             db.session.delete(u)
@@ -331,12 +348,18 @@ class UserApi(Resource):
 class UsersApi(Resource):
     @jwt_required()
     def get(self):
+        if not current_user.admin:
+            return {'message': "Unauthorized access"}, 401
+
         users = User.query.all()
         result = users_schema.dump(users)
         return {'users': result}
 
     @jwt_required()
     def post(self):
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
         return create_and_commit(User, user_schema, request.get_json())
 
 
@@ -345,6 +368,11 @@ class CourseApi(Resource):
     def get(self, course_id):
         c = Course.query.filter_by(id=course_id).one_or_none()
         if c:
+            # Limit access to admins and course instructors
+            if (not current_user.admin)\
+                    and (not current_user.instructor or current_user not in course.users):
+                return {'message': "Unauthorized access"}, 401
+
             return course_schema.dump(c)
         else:
             return {'message': f"Course {course_id} not found."}, 404
@@ -375,16 +403,27 @@ def create_and_commit(obj_type, schema, json_data, add_to=None):
     result = schema.dump(obj)
     return {obj_type.__name__.lower(): result}
 
+
 class CoursesApi(Resource):
     @jwt_required()
     def get(self):
-        courses = Course.query.all()
+        # admins will get all courses, everyone else gets only the courses
+        # they are part of
+        if current_user.admin:
+            courses = Course.query.all()
+        else:
+            courses = current_user.courses
+
         schema = CourseSchema(many=True, exclude=('users',))
         result = schema.dump(courses)
         return {'courses': result}
 
     @jwt_required()
     def post(self):
+        # Only instructors and admins are allowed to create courses
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
         return create_and_commit(Course, course_schema, request.get_json())
 
 
@@ -429,17 +468,33 @@ class QuestionApi(Resource):
 
     @jwt_required()
     def get(self, question_id):
+
         q = Question.query.filter_by(id=question_id).one_or_none()
         if q:
+            # Limit access to admins, question author, and (if public) all
+            # instructors
+            if not ((q.public and current_user.instructor)\
+                    or current_user.admin\
+                    or q.author == current_user):
+                return {'message': "Unauthorized access"}, 401
+
             return {"question": QuestionApi.dump_by_type(q)}
         else:
             return {'message': f"Question {question_id} not found."}, 404
 
     @jwt_required()
     def delete(self, question_id):
+        # FIXME: limit access to admins and either all instructors or (if not
+        # public) the author of the question
+
         q = Question.query.filter_by(id=question_id).one_or_none()
 
         if q:
+            # Limit access to admins and the question author.
+            # TODO: restrict removal of public questions?
+            if not (current_user.admin or q.author == current_user):
+                return {'message': "Unauthorized access"}, 401
+
             deleted_q = QuestionApi.dump_by_type(q)
             db.session.delete(q)
             db.session.commit()
@@ -457,6 +512,11 @@ class CourseQuestionApi(Resource):
         course = Course.query.filter_by(id=course_id).one_or_none()
         if not course:
             return {'message': f"Course {course_id} not found."}, 404
+
+        # Limit access to admins and course instructors
+        if not (current_user.admin \
+                or (current_user.instructor and (current_user in course.users))):
+            return {'message': 'Unauthorized access.'}, 401
 
         q = course.questions.filter_by(id=question_id).one_or_none()
         if not q:
@@ -476,6 +536,11 @@ class RosterApi(Resource):
     def get(self, course_id):
         c = Course.query.filter_by(id=course_id).one_or_none()
         if c:
+            # Limit access to admins and course instructors
+            if (not current_user.admin)\
+                    and (not current_user.instructor or current_user not in c.users):
+                return {'message': 'Unauthorized access.'}, 401
+
             result = users_schema.dump(c.users)
             return {"roster": result}
         else:
@@ -486,6 +551,11 @@ class RosterApi(Resource):
         course = Course.query.filter_by(id=course_id).one_or_none()
         if not course:
             return {'message': f"Course {course_id} not found."}, 404
+
+        # Limit access to admins and course instructors
+        if (not current_user.admin)\
+                and (not current_user.instructor or current_user not in course.users):
+            return {'message': 'Unauthorized access.'}, 401
 
         json_data = request.get_json()
 
@@ -536,6 +606,11 @@ class EnrolledStudentApi(Resource):
         if not course:
             return {'message': f"Course {course_id} not found."}, 404
 
+        # Limit access to admins and course instructors
+        if (not current_user.admin)\
+                and (not current_user.instructor or current_user not in course.users):
+            return {'message': 'Unauthorized access.'}, 401
+
         s = course.users.filter_by(id=student_id).one_or_none()
         if not s:
             return {'message': f"User {student_id} not enrolled in Course {course_id}."}, 404
@@ -552,6 +627,11 @@ class CourseQuestionsApi(Resource):
     def get(self, course_id):
         c = Course.query.filter_by(id=course_id).one_or_none()
         if c:
+            # Limit access to admins and course instructors
+            if (not current_user.admin)\
+                    and (not current_user.instructor or current_user not in c.users):
+                return {'message': 'Unauthorized access.'}, 401
+
             result = QuestionSchema(only=("id",)).dump(c.questions, many=True)
             return {"question_ids": [q['id'] for q in result]}
         else:
@@ -562,6 +642,11 @@ class CourseQuestionsApi(Resource):
         course = Course.query.filter_by(id=course_id).one_or_none()
         if not course:
             return {'message': f"Course {course_id} not found."}, 404
+
+        # Limit access to admins and course instructors
+        if (not current_user.admin)\
+                and (not current_user.instructor or current_user not in course.users):
+            return {'message': 'Unauthorized access.'}, 401
 
         json_data = request.get_json()
 
@@ -603,12 +688,20 @@ class CourseQuestionsApi(Resource):
 class QuestionsApi(Resource):
     @jwt_required()
     def get(self):
+        # Limit access to instructors and admins
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
         questions = Question.query.all()
         result = question_schema.dump(questions, many=True)
         return {'questions': result}
 
     @jwt_required()
     def post(self):
+        # Limit access to instructors and admins
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
         json_data = request.get_json()
 
         if not json_data:
