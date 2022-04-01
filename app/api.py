@@ -109,6 +109,11 @@ class LearningObjectiveSchema(Schema):
 
     questions = fields.List(fields.Nested(QuestionSchema), dump_only=True)
 
+    @validates("description")
+    def unique_description(self, description):
+        if Objective.query.filter(Objective.description == description).count() > 0:
+            raise ValidationError("description must be unique")
+
 
 class SourceSchema(Schema):
     class Meta:
@@ -484,9 +489,6 @@ class QuestionApi(Resource):
 
     @jwt_required()
     def delete(self, question_id):
-        # FIXME: limit access to admins and either all instructors or (if not
-        # public) the author of the question
-
         q = Question.query.filter_by(id=question_id).one_or_none()
 
         if q:
