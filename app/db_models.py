@@ -1,7 +1,7 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
-import enum
+import enum, string, secrets
 from math import ceil
 
 from app import db
@@ -396,6 +396,15 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @staticmethod
+    def generate_password(length):
+        """ Generates a random password with ASCII letters and digits of the
+        requested length. """
+
+        alphabet = string.ascii_letters + string.digits
+        password = ''.join(secrets.choice(alphabet) for _ in range(length))
+        return password
 
     def get_current_courses(self):
         return self.courses.filter(Course.start_date <= date.today())\

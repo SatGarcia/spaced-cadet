@@ -18,7 +18,7 @@ from wtforms.validators import (
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
-import os, csv, secrets, string, re
+import os, csv, re
 
 from app import db
 from app.user_views import (
@@ -235,11 +235,7 @@ def add_students_from_roster(course, file_location, email_index,
                                           instructor=False,
                                           admin=False)
 
-                    # generate a random 20-character password for the user
-                    alphabet = string.ascii_letters + string.digits
-                    password = ''.join(secrets.choice(alphabet) for _ in range(20))
-
-                    student_to_add.set_password(password)
+                    student_to_add.set_password(User.generate_password(20))
                     db.session.add(student_to_add)
                     db.session.commit()
 
