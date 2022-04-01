@@ -403,7 +403,7 @@ class LoginApi(Resource):
             return {'message': 'Authentication failed'}, 401
 
         response = jsonify({'logged_in': data['email']})
-        access_token = create_access_token(identity=data['email'])
+        access_token = create_access_token(identity=user)
         set_access_cookies(response, access_token)
         return response
 

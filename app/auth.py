@@ -65,6 +65,18 @@ def load_user(user_id):
         current_app.logger.error(f"Couldn't load user with id {user_id}")
         return None
 
+
+@jwt.user_identity_loader
+def user_identity_lookup(user):
+    return user.id
+
+
+@jwt.user_lookup_loader
+def user_lookup_callback(_jwt_header, jwt_data):
+    identity = jwt_data["sub"]
+    return User.query.filter_by(id=identity).one_or_none()
+
+
 @auth.after_app_request
 def refresh_expiring_jwts(response):
     """ Creates a new access token if the current one is expired or will
@@ -116,7 +128,7 @@ def login():
                 response = post_login_redirect(next_url)
 
                 # include JWT access token with a cookie
-                access_token = create_access_token(identity=user.id)
+                access_token = create_access_token(identity=user)
                 set_access_cookies(response, access_token)
 
                 return response
@@ -154,7 +166,7 @@ def forgot_password():
         user = User.query.filter_by(email=form.email.data).first()
 
         if user:
-            reset_token = create_access_token(str(user.id),
+            reset_token = create_access_token(identity=user,
                                               expires_delta=timedelta(minutes=15))
 
             url = url_for(".reset_password", token=reset_token, _external=True)
