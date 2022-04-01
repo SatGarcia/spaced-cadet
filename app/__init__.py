@@ -40,13 +40,8 @@ def create_app(test_config=None):
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if app.config['ELASTICSEARCH_URL'] else None
 
-    db.init_app(app)
-
-    with app.app_context():
-        db.create_all()
-
-        for q in db_models.Question.query:
-            print(repr(q))
+    from app.db import init_app as init_db
+    init_db(app)
 
     from app.user_views import user_views as uv
     app.register_blueprint(uv)
