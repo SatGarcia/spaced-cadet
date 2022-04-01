@@ -88,9 +88,10 @@ def refresh_expiring_jwts(response):
         target_timestamp = datetime.timestamp(now + timedelta(minutes=15))
 
         if target_timestamp > exp_timestamp:
-            identity = get_jwt_identity()
-            current_app.logger.debug(f"refreshing access token for user {identity}")
-            access_token = create_access_token(identity=identity)
+            user_id = get_jwt_identity()
+            User.query.filter_by(id=user_id).one()
+            current_app.logger.debug(f"refreshing access token for user {user}")
+            access_token = create_access_token(identity=user)
             set_access_cookies(response, access_token)
 
         return response
