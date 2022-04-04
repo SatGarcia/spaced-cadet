@@ -48,16 +48,10 @@ def difficulty(course_name):
     """ Route to handle self-reported difficulty of a problem that the user
     got correct. """
 
-    course = Course.query.filter_by(name=course_name).first()
-
-    if not course:
-        abort(404)
-    try:
-        check_authorization(current_user, course=course)
-    except AuthorizationError:
-        abort(401)
+    course = check_course_authorization(course_name)
 
     form = DifficultyForm(request.form)
+
     if form.validate_on_submit():
         # get the question and update it's interval and e_factor
         a = Attempt.query.filter_by(id=form.attempt_id.data).first()
@@ -67,7 +61,14 @@ def difficulty(course_name):
         elif a.user != current_user:
             abort(401)
 
-        a.sm2_update(form.difficulty.data) # update sm2 based on reported difficulty
+        previous_attempt = Attempt.query.filter(Attempt.user_id == a.user_id,
+                                                Attempt.question_id == a.question_id,
+                                                Attempt.time < a.time)\
+                                        .order_by(Attempt.time.desc()).first()
+
+        repeated = previous_attempt and (previous_attempt.time.date() == date.today())
+
+        a.sm2_update(form.difficulty.data, repeat_attempt=repeated)
         db.session.commit()
 
         return redirect(url_for('.test', course_name=course_name))
@@ -135,18 +136,17 @@ def self_review(course_name):
                            correct_answer=Markup(answer_html))
 
 
+# TODO: move this to be a method in Question (or student?) class
 def get_last_attempt(user_id, question_id):
     return Attempt.query.filter(Attempt.user_id == user_id,
-                                Attempt.question_id == question_id).order_by(
-                                    Attempt.time.desc()).first()
+                                Attempt.question_id == question_id)\
+                        .order_by(Attempt.time.desc()).first()
 
 
-
-@user_views.route('/c/<course_name>/train/multiple-choice', methods=['POST'])
-@login_required
-def test_multiple_choice(course_name):
-    # FIXME: code duplication in this function
-
+def check_course_authorization(course_name):
+    """ Checks that course with given name exists and that the current user is
+    part of the course. Returns the Course object or aborts if either of those
+    are not true. """
     course = Course.query.filter_by(name=course_name).first()
 
     if not course:
@@ -155,6 +155,16 @@ def test_multiple_choice(course_name):
         check_authorization(current_user, course=course)
     except AuthorizationError:
         abort(401)
+    else:
+        return course
+
+
+@user_views.route('/c/<course_name>/train/multiple-choice', methods=['POST'])
+@login_required
+def test_multiple_choice(course_name):
+
+    # TODO: code duplication in this function
+    course = check_course_authorization(course_name)
 
     form = MultipleChoiceForm(request.form)
     original_question_id = form.question_id.data
@@ -166,10 +176,14 @@ def test_multiple_choice(course_name):
     form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
     form.response.choices.append((-1, "I Don't Know"))
 
+    # grab the last attempt (before creating a new attempt which will be
+    # the new "last" attempt
+    previous_attempt = get_last_attempt(current_user.id, original_question_id)
+
+    # determine if this question is repeated from earlier today
+    repeated = previous_attempt and (previous_attempt.time.date() == date.today())
+
     if form.validate_on_submit():
-        # grab the last attempt (before creating a new attempt which will be
-        # the new "last" attempt
-        previous_attempt = get_last_attempt(current_user.id, original_question_id)
 
         # add the attempt to the database
         attempt = SelectionAttempt(question_id=original_question_id,
@@ -183,6 +197,7 @@ def test_multiple_choice(course_name):
         if previous_attempt:
             attempt.e_factor = previous_attempt.e_factor
             attempt.interval = previous_attempt.interval
+            attempt.next_attempt = previous_attempt.next_attempt
 
         if selected_answer:
             # no selected answer means they didn't have a response (i.e. "I
@@ -207,9 +222,11 @@ def test_multiple_choice(course_name):
             attempt.correct = False
 
             if selected_answer:
-                attempt.sm2_update(2)  # they made an attempt but were wrong so set response quality to 2
+                # they made an attempt but were wrong so set response quality to 2
+                attempt.sm2_update(2, repeat_attempt=repeated)
             else:
-                attempt.sm2_update(1)  # no attempt ("I Don't Know"), so set response quality to 1
+                # no attempt ("I Don't Know"), so set response quality to 1
+                attempt.sm2_update(1, repeat_attempt=repeasted)
 
             db.session.commit()
 
@@ -228,11 +245,10 @@ def test_multiple_choice(course_name):
 
     prompt_html = markdown_to_html(original_question.prompt)
 
-    # FIXME: set fresh_question appropriately
     return render_template("test_multiple_choice.html",
                            page_title="Cadet Test",
                            course_name=course_name,
-                           fresh_question=True,
+                           fresh_question=(not repeated),
                            form=form,
                            prompt=Markup(prompt_html))
 
@@ -242,27 +258,24 @@ def test_multiple_choice(course_name):
 def test_short_answer(course_name):
     """ Checks answer given to a short answer question. """
 
-    course = Course.query.filter_by(name=course_name).first()
-
-    if not course:
-        abort(404)
-    try:
-        check_authorization(current_user, course=course)
-    except AuthorizationError:
-        abort(401)
+    course = check_course_authorization(course_name)
 
     form = ShortAnswerForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
 
+    if not original_question:
+        abort(400)
+
     prompt_html = markdown_to_html(original_question.prompt)
     answer_html = markdown_to_html(original_question.answer)
 
+    previous_attempt = get_last_attempt(current_user.id, original_question_id)
+
+    # determine if this question is repeated from earlier today
+    repeated = previous_attempt and (previous_attempt.time.date() == date.today())
+
     if form.validate_on_submit():
-        # check for a previous attempt
-        previous_attempt = Attempt.query.filter(Attempt.user_id == current_user.id,
-                                                Attempt.question_id == original_question_id).order_by(
-                                                    Attempt.time.desc()).first()
 
         # add the attempt to the database (leaving the outcome undefined for
         # now)
@@ -274,6 +287,7 @@ def test_short_answer(course_name):
         if previous_attempt:
             attempt.e_factor = previous_attempt.e_factor
             attempt.interval = previous_attempt.interval
+            attempt.next_attempt = previous_attempt.next_attempt
 
         db.session.add(attempt)
         db.session.commit() # TRICKY: need to commit to get default e_factor and interval
@@ -281,7 +295,7 @@ def test_short_answer(course_name):
         if form.no_answer.data:
             # No response from user ("I Don't Know"), which is response
             # quality 1 in SM-2
-            attempt.sm2_update(1)
+            attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
             return render_template("review_correct_answer.html",
@@ -290,9 +304,7 @@ def test_short_answer(course_name):
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
-        # create the self review_form
         review_form = SelfReviewForm(attempt_id=attempt.id)
-
 
         return render_template("self_verify.html",
                                page_title="Cadet Test: Self Verification",
@@ -302,11 +314,11 @@ def test_short_answer(course_name):
                                response=form.response.data,
                                correct_answer=Markup(answer_html))
 
-    # FIXME: set fresh_question appropriately below
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
                            post_url=url_for(".test_short_answer",
                                             course_name=course_name),
+                           fresh_question=(not repeated),
                            form=form,
                            prompt=Markup(prompt_html))
 
@@ -316,29 +328,23 @@ def test_short_answer(course_name):
 def test_auto_check(course_name):
     """ Checks the correctness of an auto-check type of question. """
 
-    course = Course.query.filter_by(name=course_name).first()
-
-    if not course:
-        abort(404)
-    try:
-        check_authorization(current_user, course=course)
-    except AuthorizationError:
-        abort(401)
+    course = check_course_authorization(course_name)
 
     form = AutoCheckForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
 
+    if not original_question:
+        abort(400)
+
     prompt_html = markdown_to_html(original_question.prompt)
 
-    #answer_html = markdown_to_html(original_question.answer)
+    previous_attempt = get_last_attempt(current_user.id, original_question_id)
+
+    # determine if this question is repeated from earlier today
+    repeated = previous_attempt and (previous_attempt.time.date() == date.today())
 
     if form.validate_on_submit():
-        # check for a previous attempt
-        previous_attempt = Attempt.query.filter(Attempt.user_id == current_user.id,
-                                                Attempt.question_id == original_question_id).order_by(
-                                                    Attempt.time.desc()).first()
-
         # add the attempt to the database (leaving the outcome undefined for
         # now)
         attempt = TextAttempt(response=form.response.data,
@@ -349,6 +355,7 @@ def test_auto_check(course_name):
         if previous_attempt:
             attempt.e_factor = previous_attempt.e_factor
             attempt.interval = previous_attempt.interval
+            attempt.next_attempt = previous_attempt.next_attempt
 
         db.session.add(attempt)
         db.session.commit() # TRICKY: need to commit to get default e_factor and interval
@@ -356,7 +363,7 @@ def test_auto_check(course_name):
         if form.no_answer.data:
             # No response from user ("I Don't Know"), which is response
             # quality 1 in SM-2
-            attempt.sm2_update(1)
+            attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
             return render_template("review_correct_answer.html",
@@ -382,7 +389,7 @@ def test_auto_check(course_name):
         else:
             # User was wrong so show them the correct answer
             attempt.correct = False
-            attempt.sm2_update(2)
+            attempt.sm2_update(2, repeat_attempt=repeated)
             db.session.commit()
 
             return render_template("review_correct_answer.html",
@@ -392,11 +399,11 @@ def test_auto_check(course_name):
                                    answer=original_question.answer)
 
 
-    # FIXME: set fresh_question appropriately below
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
                            post_url=url_for(".test_auto_check",
                                             course_name=course_name),
+                           fresh_question=(not repeated),
                            form=form,
                            prompt=Markup(prompt_html))
 
@@ -420,14 +427,7 @@ def get_answer_html(jumble_question):
 def test_code_jumble(course_name):
     """ Checks the correctness of a code jumble type of question. """
 
-    course = Course.query.filter_by(name=course_name).first()
-
-    if not course:
-        abort(404)
-    try:
-        check_authorization(current_user, course=course)
-    except AuthorizationError:
-        abort(401)
+    course = check_course_authorization(course_name)
 
     form = CodeJumbleForm(request.form)
 
@@ -437,11 +437,13 @@ def test_code_jumble(course_name):
     if not question:
         abort(400)
 
-    if form.validate_on_submit():
-        # grab the last attempt (before creating a new attempt which will be
-        # the new "last" attempt
-        previous_attempt = get_last_attempt(current_user.id, question_id)
+    # check for a previous attempt
+    previous_attempt = get_last_attempt(current_user.id, question_id)
 
+    # determine if this question is repeated from earlier today
+    repeated = previous_attempt and (previous_attempt.time.date() == date.today())
+
+    if form.validate_on_submit():
         # add the attempt to the database
         attempt = TextAttempt(question_id=question_id,
                               user_id=current_user.id)
@@ -455,6 +457,7 @@ def test_code_jumble(course_name):
         if previous_attempt:
             attempt.e_factor = previous_attempt.e_factor
             attempt.interval = previous_attempt.interval
+            attempt.next_attempt = previous_attempt.next_attempt
 
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
@@ -462,7 +465,7 @@ def test_code_jumble(course_name):
         if form.no_answer.data:
             # No response from user ("I Don't Know"), which is response
             # quality 1 in SM-2
-            attempt.sm2_update(1)
+            attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
             prompt_html = markdown_to_html(question.prompt)
@@ -496,7 +499,8 @@ def test_code_jumble(course_name):
         else:
             attempt.correct = False
 
-            attempt.sm2_update(2)  # they made an attempt but were wrong so set response quality to 2
+            # they made an attempt but were wrong so set response quality to 2
+            attempt.sm2_update(2, repeat_attempt=repeated)
             db.session.commit()
 
             # show the user a page where they can view the correct answer
@@ -514,11 +518,10 @@ def test_code_jumble(course_name):
     prompt_html = markdown_to_html(question.prompt)
     code_blocks = [(b.id, Markup(b.html())) for b in question.blocks]
 
-    # FIXME: set fresh_question appropriately
     return render_template("test_code_jumble.html",
                            page_title="Cadet Test",
                            course_name=course_name,
-                           fresh_question=True,
+                           fresh_question=(not repeated),
                            form=form,
                            prompt=Markup(prompt_html),
                            code_blocks=code_blocks)
