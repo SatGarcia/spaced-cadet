@@ -79,7 +79,9 @@ def confirm_new_question():
 
         if not course:
             abort(400)
-        elif user not in course.users:
+        try:
+            check_authorization(current_user, course=course)
+        except AuthorizationError:
             abort(401)
 
         if form.yes.data:
