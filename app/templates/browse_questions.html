@@ -53,11 +53,21 @@
 			// previous timer went off
 		}
 
+        function getCookie(name) {
+			const value = `; ${document.cookie}`;
+			const parts = value.split(`; ${name}=`);
+			if (parts.length === 2) return parts.pop().split(';').shift();
+		}
+
 		async function addQuestion(url, q_id, add_button) {
 			console.log(url);
 			const config = {
 				method: 'POST',
-				headers: {"Content-Type": "application/json"},
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json",
+					'X-CSRF-TOKEN': getCookie('csrf_access_token'),
+                },
 				body: JSON.stringify({'ids': [q_id]})
 			}
 			const response = await fetch(url, config);
