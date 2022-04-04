@@ -17,7 +17,16 @@
 			{{ prompt }}
 		</div>
 
-        <div class="row" id="response_area">
+        <div class="row">
+            <div class="col">
+                <strong>Instructions:</strong> Drag and drop the code blocks
+                to reorder them, using the arrows next to each block to change
+                its indentation level.. Any unnecessary/incorrect code blocks
+                should be dragged into the "Unused Code" section.
+            </div>
+		</div>
+
+        <div class="row pt-4" id="response_area">
             <div class="col-md-6">
                 <strong>Your Answer:</strong>
                 <ul id="jumbley" class="list-unstyled jumble">
@@ -48,7 +57,7 @@
             </div>
         </div>
 
-		<div class="row">
+		<div class="row pt-2">
 			<form method="POST" 
 		 		  action="{% if not preview_mode %}{{ url_for('user_views.test_code_jumble', course_name=course_name) }}{% endif %}">
 				
