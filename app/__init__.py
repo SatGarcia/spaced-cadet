@@ -40,7 +40,7 @@ def create_app(test_config=None):
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if app.config['ELASTICSEARCH_URL'] else None
 
-    from app.db import init_app as init_db
+    from app.database import init_app as init_db
     init_db(app)
 
     from app.user_views import user_views as uv
