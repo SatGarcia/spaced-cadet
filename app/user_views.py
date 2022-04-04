@@ -37,9 +37,14 @@ def markdown_to_html(markdown_text, code_linenums=True):
                              })
     return html
 
+
 @user_views.route('/')
 def root():
     return render_template("home.html")
+
+
+def is_a_repeat(last_attempt):
+    return (last_attempt is not None) and (last_attempt.time.date() == date.today())
 
 
 @user_views.route('/c/<course_name>/train/rating', methods=['POST'])
@@ -66,7 +71,7 @@ def difficulty(course_name):
                                                 Attempt.time < a.time)\
                                         .order_by(Attempt.time.desc()).first()
 
-        repeated = previous_attempt and (previous_attempt.time.date() == date.today())
+        repeated = is_a_repeat(previous_attempt)
 
         a.sm2_update(form.difficulty.data, repeat_attempt=repeated)
         db.session.commit()
@@ -118,7 +123,16 @@ def self_review(course_name):
         else:
             # user reported they were wrong
             attempt.correct = False
-            attempt.sm2_update(2) # they made an attempt but were wrong so set difficulty to 2
+
+            previous_attempt = Attempt.query.filter(Attempt.user_id == attempt.user_id,
+                                                    Attempt.question_id == attempt.question_id,
+                                                    Attempt.time < attempt.time)\
+                                            .order_by(Attempt.time.desc()).first()
+
+            repeated = is_a_repeat(previous_attempt)
+
+            # they made an attempt but were wrong so set difficulty to 2
+            attempt.sm2_update(2, repeat_attempt=repeated)
             db.session.commit()
 
             flash("Keep your chin up, cadet. We'll test you on that question again tomorrow.", "danger")
@@ -181,7 +195,7 @@ def test_multiple_choice(course_name):
     previous_attempt = get_last_attempt(current_user.id, original_question_id)
 
     # determine if this question is repeated from earlier today
-    repeated = previous_attempt and (previous_attempt.time.date() == date.today())
+    repeated = is_a_repeat(previous_attempt)
 
     if form.validate_on_submit():
 
@@ -226,7 +240,7 @@ def test_multiple_choice(course_name):
                 attempt.sm2_update(2, repeat_attempt=repeated)
             else:
                 # no attempt ("I Don't Know"), so set response quality to 1
-                attempt.sm2_update(1, repeat_attempt=repeasted)
+                attempt.sm2_update(1, repeat_attempt=repeated)
 
             db.session.commit()
 
@@ -273,7 +287,7 @@ def test_short_answer(course_name):
     previous_attempt = get_last_attempt(current_user.id, original_question_id)
 
     # determine if this question is repeated from earlier today
-    repeated = previous_attempt and (previous_attempt.time.date() == date.today())
+    repeated = is_a_repeat(previous_attempt)
 
     if form.validate_on_submit():
 
@@ -342,7 +356,7 @@ def test_auto_check(course_name):
     previous_attempt = get_last_attempt(current_user.id, original_question_id)
 
     # determine if this question is repeated from earlier today
-    repeated = previous_attempt and (previous_attempt.time.date() == date.today())
+    repeated = is_a_repeat(previous_attempt)
 
     if form.validate_on_submit():
         # add the attempt to the database (leaving the outcome undefined for
@@ -441,7 +455,7 @@ def test_code_jumble(course_name):
     previous_attempt = get_last_attempt(current_user.id, question_id)
 
     # determine if this question is repeated from earlier today
-    repeated = previous_attempt and (previous_attempt.time.date() == date.today())
+    repeated = is_a_repeat(previous_attempt)
 
     if form.validate_on_submit():
         # add the attempt to the database
@@ -559,12 +573,6 @@ def test(course_name):
                                       latest_next_attempts.c.latest_next_attempt_time <= target_time)
     ).union(unattempted_questions)
 
-    """
-    print("Ready Questions:")
-    for q in ready_questions:
-        print("\t", q)
-    """
-
     # randomly pick one of the ready questions
     question = ready_questions.order_by(db.func.random()).first()
 
@@ -579,12 +587,6 @@ def test(course_name):
         today = datetime.combine(date.today(), datetime.min.time())
         attempted_today = possible_questions.filter(Question.attempts.any(Attempt.time >= today))
         needs_reps = attempted_today.filter(~ Question.attempts.any(Attempt.quality > 3))
-
-        """
-        print("Questions That Need MORE Reps:")
-        for q in needs_reps:
-            print("\t", q)
-        """
 
         question = needs_reps.order_by(db.func.random()).first()
         fresh_question = False
