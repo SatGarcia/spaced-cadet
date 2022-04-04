@@ -200,7 +200,7 @@ class MultipleChoiceQuestion(Question):
     }
 
     def get_answer(self):
-        answer = options.filter_by(correct=True).one()
+        answer = self.options.filter_by(correct=True).one()
         return answer.text
 
 
