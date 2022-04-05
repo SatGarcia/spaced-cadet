@@ -240,6 +240,8 @@ class CodeJumbleQuestion(Question):
         return correct_response
 
     def get_answer(self):
+        # FIXME: implement this (should be similar to showing answer after
+        # incorrect answer by student)
         return "STILL TRYING"
 
 
