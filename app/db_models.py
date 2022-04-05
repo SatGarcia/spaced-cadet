@@ -170,7 +170,7 @@ class ShortAnswerQuestion(Question):
     }
 
     def get_answer(self):
-        return self.answer
+        return markdown_to_html(self.answer)
 
 
 class AutoCheckQuestion(Question):
@@ -184,7 +184,10 @@ class AutoCheckQuestion(Question):
     }
 
     def get_answer(self):
-        return self.answer
+        if self.regex:
+            return f"<code>{self.answer}</code>"
+        else:
+            return markdown_to_html(self.answer)
 
 
 class MultipleChoiceQuestion(Question):
@@ -201,7 +204,7 @@ class MultipleChoiceQuestion(Question):
 
     def get_answer(self):
         answer = self.options.filter_by(correct=True).one()
-        return answer.text
+        return markdown_to_html(answer.text)
 
 
 class AnswerOption(db.Model):
@@ -239,10 +242,18 @@ class CodeJumbleQuestion(Question):
 
         return correct_response
 
+
     def get_answer(self):
-        # FIXME: implement this (should be similar to showing answer after
-        # incorrect answer by student)
-        return "STILL TRYING"
+        answer_html = "<ul class=\"list-unstyled jumble\">"
+        for block in self.blocks.filter(JumbleBlock.correct_index >= 0)\
+                                .order_by(JumbleBlock.correct_index):
+            block_html = block.html()
+            indent_amount = (block.correct_indent * 20) + 15
+            answer_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
+
+        answer_html += "</ul>"
+
+        return answer_html
 
 
 class JumbleBlock(db.Model):

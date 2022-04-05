@@ -377,6 +377,7 @@ def test_auto_check(course_name):
         if form.no_answer.data:
             # No response from user ("I Don't Know"), which is response
             # quality 1 in SM-2
+            attempt.correct = False
             attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
@@ -421,20 +422,6 @@ def test_auto_check(course_name):
                            form=form,
                            prompt=Markup(prompt_html))
 
-
-def get_answer_html(jumble_question):
-    """ Returns HTML for the answer to the given jumble question. """
-
-    answer_html = "<ul class=\"list-unstyled jumble\">"
-    for block in jumble_question.blocks.filter(JumbleBlock.correct_index >= 0).order_by(
-            JumbleBlock.correct_index):
-        block_html = block.html()
-        indent_amount = (block.correct_indent * 20) + 15
-        answer_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
-
-    answer_html += "</ul>"
-
-    return answer_html
 
 @user_views.route('/c/<course_name>/train/code-jumble', methods=['POST'])
 @login_required
@@ -483,7 +470,7 @@ def test_code_jumble(course_name):
             db.session.commit()
 
             prompt_html = markdown_to_html(question.prompt)
-            answer_html = get_answer_html(question)
+            answer_html = question.get_answer()
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
@@ -519,8 +506,7 @@ def test_code_jumble(course_name):
 
             # show the user a page where they can view the correct answer
             prompt_html = markdown_to_html(question.prompt)
-
-            answer_html = get_answer_html(question)
+            answer_html = question.get_answer()
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
