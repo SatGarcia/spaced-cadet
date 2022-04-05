@@ -633,7 +633,7 @@ class NewShortAnswerQuestionForm(FlaskForm):
 
 class NewAutoCheckQuestionForm(FlaskForm):
     course_id = HiddenField("Course ID")
-    prompt = StringField("Question Prompt", [DataRequired()])
+    prompt = TextAreaField("Question Prompt", [DataRequired()])
     answer = StringField("Question Answer", [DataRequired()])
     regex = BooleanField("Regex")
     submit = SubmitField("Continue...")
