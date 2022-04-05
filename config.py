@@ -21,7 +21,7 @@ ELASTICSEARCH_URL = 'http://localhost:9200'
 #SERVER_NAME = 'localhost:5000'
 #APPLICATION_ROOT = '/cadet'
 
-LOGGING_LEVEL=logging.INFO
+LOGGING_LEVEL=logging.DEBUG
 
 EMAIL_ERRORS = False
 MAIL_PORT = 1099
