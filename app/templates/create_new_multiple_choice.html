@@ -5,45 +5,57 @@
     <div class="container pt-3">
         <h4>Create New Question (Multiple Choice)</h4>
 
-		<div class="row">
-			<form method="POST" action="{{ url_for('instructor.create_multiple_choice') }}">
-				{{ form.csrf_token }}
-				{{ form.course_id }}
+        <form method="POST"
+            action="{{ url_for('instructor.create_multiple_choice') }}">
+            {{ form.csrf_token }}
+            {{ form.course_id }}
 
-                {{ forms.input(form.prompt) }}
+            {{ forms.input(form.prompt, placeholder="Enter the prompt. Markdown formatting is allowed.") }}
 
-                <h5 class="pt-3">Options:</h5>
+            <h5 class="pt-3">Options:</h5>
 
+            <div class="container">
+                <i class="bi-info-circle"></i>
+                An "I Don't Know" option will automatically be added as an
+                option so do not add one here.
+            </div>
+
+            <div class="container">
                 {% if form.options.errors %} 
                     <span class="is-invalid"></span>
-                    <div class="ms-1 invalid-feedback">
-                        ERROR:
+                    <div class="invalid-feedback">
+                        <i class="bi-exclamation-circle-fill"></i>
+                        <strong>ERROR:</strong>
                         {% for error in form.options.errors %}
                             {{ error }}
                         {% endfor %}
                     </div>
                 {% endif %}
+            </div>
 
+            <div class="container">
                 <ul class="list-unstyled" id="mc-options">
                 {% for option_form in form.options %}
                     <li option_num="{{loop.index0}}">
                         {{ option_form.csrf_token }}
                         {{ forms.input(option_form.text, placeholder="Enter text for this option.", include_label=False) }}
-                        <div class="form-group ms-1 pt-2 pb-2">
+                        <div class="form-group ms-1 pb-4">
                             {{ option_form.correct(class_="pl-2 form-check-input") }} {{ option_form.correct.label }}
                         </div>
                     </li>
                 {% endfor %}
                 </ul>
+            </div>
 
-                <div class="my-3" style="color: green; font-size: 1.25rem;">
-                    <i class="bi-patch-plus-fill" onclick="add_mc_option()"></i>
-                    Add Option
-                </div>
-                
+            <div class="container my-3" style="color: gray" onclick="add_mc_option()">
+                <i class="bi-plus-circle"></i>
+                <strong>Add Option...</strong>
+            </div>
+
+            <div class="container">
                 {{ form.submit(class_="btn btn-primary btn-sm") }}
-			</form>
-		</div>
+            </div>
+        </form>
     </div>
 
     <script src="{{ url_for('static', filename='js/multiple-choice-form.js') }}"></script>

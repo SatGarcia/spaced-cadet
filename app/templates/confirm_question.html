@@ -37,13 +37,17 @@
 					<div class="form-group ms-1 pt-2 pb-2">
 						{{ form.public(class_="pl-2 form-check-input") }} Public
 					</div>
-					Public questions are available to all users to add to
-					their own courses.
+                    <span class="text-secondary">
+                        <i class="bi-info-circle"></i>
+                        Public questions are available to all users to add to
+                        their own courses.
+                    </span>
                 </div>
 
 				<h5>Confirmation:</h5>
 				<div class="container">
-					Do you want to add this question?
+					Do you want to add this question? Selecting "No" will
+                    delete this question.
 					<div class="pt-2">
 						{{ form.no(class_="btn btn-secondary btn-sm") }}
 						{{ form.yes(class_="btn btn-primary btn-sm") }}

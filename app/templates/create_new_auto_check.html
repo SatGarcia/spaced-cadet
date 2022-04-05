@@ -10,10 +10,18 @@
 				{{ form.csrf_token }}
 				{{ form.course_id }}
 
-                {{ forms.input(form.prompt) }}
-                {{ forms.input(form.answer) }}
+                {{ forms.input(form.prompt, placeholder="Enter the prompt. Markdown formatting is allowed.") }}
+                {{ forms.input(form.answer, placeholder="Enter the exact answer or a regular expression.") }}
+
+                <div class="pb-2 mx-1 text-secondary">
+                    <i class="bi-info-circle"></i>
+                    Student responses will have leading and trailing
+                    whitespace stripped before comparing with the given answer.
+                </div>
+
                 <div class="form-group ms-1 pt-2 pb-2">
-                    {{ form.regex(class_="pl-2 form-check-input") }} {{ form.regex.label }}
+                    {{ form.regex(class_="pl-2 form-check-input") }}
+                    The answer above should be treated as a regular expression
                 </div>
 
                 {{ form.submit(class_="btn btn-primary btn-sm") }}

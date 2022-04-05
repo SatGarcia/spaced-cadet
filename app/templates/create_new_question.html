@@ -10,7 +10,7 @@
 				{{ form.csrf_token }}
 				{{ form.course_id }}
 
-                {{ forms.input(form.prompt) }}
+                {{ forms.input(form.prompt, placeholder="Enter the prompt. Markdown formatting is allowed.") }}
                 {{ forms.input(form.type, form_class="form-select") }}
 
                 {{ form.submit(class_="btn btn-primary btn-sm") }}
