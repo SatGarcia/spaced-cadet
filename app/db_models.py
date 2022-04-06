@@ -121,6 +121,7 @@ class Question(SearchableMixin, db.Model):
     type = db.Column(db.Enum(QuestionType), nullable=False)
 
     prompt = db.Column(db.String, nullable=False)
+    explanation = db.Column(db.String)
     public = db.Column(db.Boolean, default=True, nullable=False)
     enabled = db.Column(db.Boolean, default=False, nullable=False)
 
