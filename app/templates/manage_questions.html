@@ -81,7 +81,7 @@
 				headers: {
 					'X-CSRF-TOKEN': getCookie('csrf_access_token'),
 				},
-			}
+			};
 			const response = await fetch(url, config);
 			if (!response.ok) {
 				return `Error removing question. (HTTP Status: ${response.status})`
