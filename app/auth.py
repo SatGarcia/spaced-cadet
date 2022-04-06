@@ -13,7 +13,7 @@ from wtforms.validators import InputRequired, Email, EqualTo, Length, Regexp
 
 from flask_jwt_extended import (
     JWTManager, create_access_token, decode_token, set_access_cookies,
-    unset_jwt_cookies, get_jwt, get_jwt_identity
+    unset_jwt_cookies, get_jwt, get_jwt_identity, verify_jwt_in_request
 )
 from jwt.exceptions import DecodeError, ExpiredSignatureError
 
@@ -55,8 +55,6 @@ def init_app(app):
 
 @login_manager.user_loader
 def load_user(user_id):
-    current_app.logger.debug(f"loading user: {user_id}")
-
     try:
         user = User.query.filter_by(id=int(user_id)).one()
         return user
@@ -82,23 +80,40 @@ def refresh_expiring_jwts(response):
     """ Creates a new access token if the current one is expired or will
     expire within the next 15 minutes. """
 
-    try:
-        exp_timestamp = get_jwt()["exp"]
-        now = datetime.now(timezone.utc)
-        target_timestamp = datetime.timestamp(now + timedelta(minutes=15))
-
-        if target_timestamp > exp_timestamp:
-            user_id = get_jwt_identity()
-            User.query.filter_by(id=user_id).one()
-            current_app.logger.debug(f"refreshing access token for user {user}")
-            access_token = create_access_token(identity=user)
-            set_access_cookies(response, access_token)
-
+    # Don't try refreshing if user isn't logged in (i.e. authenticated)
+    if current_user.is_authenticated:
+        user = current_user
+    else:
+        current_app.logger.debug("Skipping refresh because user not logged in.")
         return response
+
+    refresh_required = False
+
+    try:
+        verify_jwt_in_request(optional=True)
+        exp_timestamp = get_jwt()["exp"]
+
+    except ExpiredSignatureError:
+        refresh_required = True
 
     except (RuntimeError, KeyError):
         # Case where there is not a valid JWT. Just return the original respone
         return response
+
+    else:
+        # no problem loading timestamp from JWT so see if it's about to expire
+        now = datetime.now(timezone.utc)
+        target_timestamp = datetime.timestamp(now + timedelta(minutes=15))
+
+        if target_timestamp > exp_timestamp:
+            refresh_required = True
+
+    if refresh_required:
+        current_app.logger.debug(f"refreshing access token for user {user}")
+        access_token = create_access_token(identity=user)
+        set_access_cookies(response, access_token)
+
+    return response
 
 
 def post_login_redirect(next_url):
