@@ -130,7 +130,7 @@ def login():
 
     if current_user.is_authenticated:
         flash(f"You are already signed in as {current_user.email}", "warning")
-        post_login_redirect(next_url)
+        return post_login_redirect(next_url)
 
     else:
         form = LoginForm()
