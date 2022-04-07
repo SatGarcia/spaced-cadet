@@ -24,5 +24,5 @@ ENV FLASK_APP cadet.py
 RUN chown -R cadet:cadet ./
 USER cadet
 
-EXPOSE 5000
+EXPOSE 5500
 ENTRYPOINT ["./boot-webapp.sh"]
