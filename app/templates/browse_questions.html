@@ -24,7 +24,7 @@
 									Preview
 								</a>
 								<button type="button" 
-										onclick="addQuestion('{{add_url}}', {{q.id}}, this).then(showMessage)" 
+										onclick="addQuestion('{{add_url}}', {{q.id}}, this, '{{ url_for('auth.refresh_jwts') }}').then(showSnackbarMessage)" 
 										class=" btn btn-sm btn-outline-primary">
 									Add
 								</button>
@@ -39,28 +39,10 @@
 
 	<div id="snackbar">Default message.</div> 
 
+	<script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+
 	<script type="text/javascript">
-		function showMessage(message) {
-			var x = document.getElementById("snackbar");
-			x.innerHTML = message;
-
-			x.classList.add("show");
-
-			// hide after 3 seconds
-			setTimeout(() => x.classList.remove("show"), 3000);
-
-			// TODO: handle case when show snackbar is displayed before the
-			// previous timer went off
-		}
-
-        function getCookie(name) {
-			const value = `; ${document.cookie}`;
-			const parts = value.split(`; ${name}=`);
-			if (parts.length === 2) return parts.pop().split(';').shift();
-		}
-
-		async function addQuestion(url, q_id, add_button) {
-			console.log(url);
+		async function addQuestion(url, q_id, add_button, refresh_url) {
 			const config = {
 				method: 'POST',
                 credentials: 'same-origin',
@@ -70,10 +52,11 @@
                 },
 				body: JSON.stringify({'ids': [q_id]})
 			}
-			const response = await fetch(url, config);
+
+            const response = await fetchOrRefresh(url, 'POST', refresh_url, config);
+
 			if (!response.ok) {
 				return `Error removing question. (HTTP Status: ${response.status})`;
-				//throw new Error(`HTTP error! status: ${response.status}`);
 			}
 
 			// Disable the add button so user can't try adding again.

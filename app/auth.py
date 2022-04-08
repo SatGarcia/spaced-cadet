@@ -1,6 +1,6 @@
 from flask import (
     Blueprint, render_template, abort, current_app, request, redirect, url_for,
-    flash, Markup
+    flash, Markup, jsonify
 )
 
 from flask_login import current_user, login_user, logout_user, LoginManager
@@ -23,6 +23,8 @@ from datetime import datetime, timedelta, timezone
 
 from app import db
 from app.email import send_email
+from flask_login import login_required
+
 
 auth = Blueprint('auth', __name__)
 
@@ -75,43 +77,12 @@ def user_lookup_callback(_jwt_header, jwt_data):
     return User.query.filter_by(id=identity).one_or_none()
 
 
-@auth.after_app_request
-def refresh_expiring_jwts(response):
-    """ Creates a new access token if the current one is expired or will
-    expire within the next 15 minutes. """
-
-    # Don't try refreshing if user isn't logged in (i.e. authenticated)
-    if current_user.is_authenticated:
-        user = current_user
-    else:
-        current_app.logger.debug("Skipping refresh because user not logged in.")
-        return response
-
-    refresh_required = False
-
-    try:
-        verify_jwt_in_request(optional=True)
-        exp_timestamp = get_jwt()["exp"]
-
-    except ExpiredSignatureError:
-        refresh_required = True
-
-    except (RuntimeError, KeyError):
-        # Case where there is not a valid JWT. Just return the original respone
-        return response
-
-    else:
-        # no problem loading timestamp from JWT so see if it's about to expire
-        now = datetime.now(timezone.utc)
-        target_timestamp = datetime.timestamp(now + timedelta(minutes=15))
-
-        if target_timestamp > exp_timestamp:
-            refresh_required = True
-
-    if refresh_required:
-        current_app.logger.debug(f"refreshing access token for user {user}")
-        access_token = create_access_token(identity=user)
-        set_access_cookies(response, access_token)
+@auth.route('/refresh')
+@login_required
+def refresh_jwts():
+    response = jsonify({"message": "refresh successful"})
+    access_token = create_access_token(identity=current_user)
+    set_access_cookies(response, access_token)
 
     return response
 
