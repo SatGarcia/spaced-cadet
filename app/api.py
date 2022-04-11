@@ -42,6 +42,15 @@ class QuestionSchema(Schema):
             raise ValidationError("Invalid question type.") from error
 
 
+class AutoCheckQuestionSchema(QuestionSchema):
+    answer = fields.Str(required=True)
+    regex = fields.Boolean(required=True)
+
+    @post_load
+    def make_ac_question(self, data, **kwargs):
+        return AutoCheckQuestion(**data)
+
+
 class ShortAnswerQuestionSchema(QuestionSchema):
     answer = fields.Str(required=True)
 
@@ -232,6 +241,7 @@ users_schema = UserSchema(many=True)
 course_schema = CourseSchema()
 question_schema = QuestionSchema(unknown=EXCLUDE)
 sa_question_schema = ShortAnswerQuestionSchema()
+ac_question_schema = AutoCheckQuestionSchema()
 mc_question_schema = MultipleChoiceQuestionSchema()
 cj_question_schema = CodeJumbleQuestionSchema()
 textbook_schema = TextbookSchema()
@@ -463,6 +473,8 @@ class QuestionApi(Resource):
     def dump_by_type(question):
         if question.type == QuestionType.SHORT_ANSWER:
             return sa_question_schema.dump(question)
+        if question.type == QuestionType.AUTO_CHECK:
+            return ac_question_schema.dump(question)
         elif question.type == QuestionType.MULTIPLE_CHOICE:
             return mc_question_schema.dump(question)
         elif question.type == QuestionType.CODE_JUMBLE:
@@ -717,6 +729,8 @@ class QuestionsApi(Resource):
         # based on the type of question, pick the schema to load with
         if json_data['type'] == 'short-answer':
             schema = sa_question_schema
+        if json_data['type'] == 'auto-check':
+            schema = ac_question_schema
         elif json_data['type'] == 'multiple-choice':
             schema = mc_question_schema
         elif json_data['type'] == 'code-jumble':
@@ -739,6 +753,6 @@ class QuestionsApi(Resource):
 
 from app.db_models import (
     QuestionType, AnswerOption, Course, ShortAnswerQuestion,
-    MultipleChoiceQuestion, User, Question, JumbleBlock, CodeJumbleQuestion,
-    Textbook, TextbookSection, SourceType
+    AutoCheckQuestion, MultipleChoiceQuestion, User, Question, JumbleBlock,
+    CodeJumbleQuestion, Textbook, TextbookSection, SourceType
 )
