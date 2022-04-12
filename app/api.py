@@ -120,6 +120,8 @@ class LearningObjectiveSchema(Schema):
 
     @validates("description")
     def unique_description(self, description):
+        # TODO: limit this check to objectives that are public or that are
+        # created by the author
         if Objective.query.filter(Objective.description == description).count() > 0:
             raise ValidationError("description must be unique")
 
@@ -246,6 +248,8 @@ mc_question_schema = MultipleChoiceQuestionSchema()
 cj_question_schema = CodeJumbleQuestionSchema()
 textbook_schema = TextbookSchema()
 textbook_section_schema = TextbookSectionSchema()
+objective_schema = LearningObjectiveSchema()
+textbook_section_schema = TextbookSectionSchema()
 
 
 def init_app(flask_app):
@@ -273,11 +277,14 @@ def init_app(flask_app):
 
     rf_api.add_resource(TextbookApi, '/api/textbook/<int:textbook_id>')
     rf_api.add_resource(TextbooksApi, '/api/textbooks')
+    rf_api.add_resource(TextbookSectionsApi, '/api/textbook/<int:textbook_id>/sections')
 
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
     rf_api.add_resource(QuestionsApi, '/api/questions')
 
-    rf_api.add_resource(TextbookSectionsApi, '/api/textbook/<int:textbook_id>/sections')
+    rf_api.add_resource(ObjectiveApi, '/api/objective/<int:objective_id>')
+    rf_api.add_resource(ObjectivesApi, '/api/objectives')
+
 
 
 class TextbookApi(Resource):
@@ -751,8 +758,34 @@ class QuestionsApi(Resource):
         return {"question": schema.dump(obj)}
 
 
+class ObjectiveApi(Resource):
+    @jwt_required()
+    def get(self, objective_id):
+        t = Objective.query.filter_by(id=objective_id).one_or_none()
+        if t:
+            return objective_schema.dump(t)
+        else:
+            return {"message": f"No learning objective found with id {objective_id}"}, 404
+
+
+class ObjectivesApi(Resource):
+    @jwt_required()
+    def get(self):
+        objectives = Objective.query.all()
+        result = objective_schema.dump(objectives, many=True)
+        return {'learning_objectives': result}
+
+    @jwt_required()
+    def post(self):
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
+        return create_and_commit(Objective, objective_schema, request.get_json())
+
+
+
 from app.db_models import (
     QuestionType, AnswerOption, Course, ShortAnswerQuestion,
     AutoCheckQuestion, MultipleChoiceQuestion, User, Question, JumbleBlock,
-    CodeJumbleQuestion, Textbook, TextbookSection, SourceType
+    CodeJumbleQuestion, Textbook, TextbookSection, SourceType, Objective
 )
