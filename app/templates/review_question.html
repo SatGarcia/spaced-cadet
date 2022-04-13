@@ -28,26 +28,58 @@
         <div class="container">
             <h5>Availability:</h5>
             <div class="container pb-2">
-                <span class="text-secondary">
-                    <i class="bi-info-circle"></i>
-                    Public questions are available to all users to add to
-                    their own courses.
-                </span>
                 <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="publicQuestion" checked>
+                    <input class="form-check-input" type="checkbox" id="publicQuestion" checked
+                           onchange="patchBooleanField(this, 'public', {{question.id}}).then(showSnackbarMessage)">
                     <label class="form-check-label" for="publicQuestion">Public</label>
                 </div>
 
 
                 <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="enabledQuestion">
+                    <input class="form-check-input" type="checkbox" id="enabledQuestion"
+                           onchange="patchBooleanField(this, 'enabled', {{question.id}}).then(showSnackbarMessage)">
                     <label class="form-check-label" for="enabledQuestion">Enabled</label>
                 </div>
+
+                <span class="text-secondary">
+                    <i class="bi-info-circle"></i>
+                    Public questions are available to all users to add to
+                    their own courses. Only questions that have been
+                    <em>enabled</em> are available for use.
+                </span>
             </div>
         </div>
     </div>
 
+    <div id="snackbar">Default message.</div> 
+
+    <script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+
 	<script type="text/javascript">
+        async function patchBooleanField(toggle, field_name, question_id) {
+			const config = {
+				method: 'PATCH',
+                credentials: 'same-origin',
+                headers: {
+                    "Content-Type": "application/json",
+					'X-CSRF-TOKEN': getCookie('csrf_access_token'),
+                },
+				body: JSON.stringify({[field_name]: toggle.checked})
+			}
+
+            const url = "{{ url_for('question_api', question_id=question.id) }}";
+            const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
+
+            const response = await fetchOrRefresh(url, 'PATCH', refresh_url, config);
+
+			if (!response.ok) {
+                toggle.checked = !toggle.checked;
+				return `Error updating question. Try again. (HTTP Status: ${response.status})`;
+			}
+
+            return "Question successfully updated.";
+        }
+
 		// Hide the navbar inside the preview
 		function removeNavbar(iframe) {
 			iframe.height = iframe.contentWindow.document.body.scrollHeight;
