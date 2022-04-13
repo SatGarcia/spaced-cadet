@@ -279,7 +279,8 @@ def init_app(flask_app):
     rf_api.add_resource(TextbooksApi, '/api/textbooks')
     rf_api.add_resource(TextbookSectionsApi, '/api/textbook/<int:textbook_id>/sections')
 
-    rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>')
+    rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>',
+                        endpoint='question_api')
     rf_api.add_resource(QuestionsApi, '/api/questions')
 
     rf_api.add_resource(ObjectiveApi, '/api/objective/<int:objective_id>')
@@ -526,6 +527,56 @@ class QuestionApi(Resource):
 
         else:
             return {'message': f"Question {question_id} not found."}, 404
+
+    @jwt_required()
+    def patch(self, question_id):
+        # Limit access to instructors and admins
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
+        q = Question.query.filter_by(id=question_id).first()
+        if not q:
+            return {'message': f"Question {question_id} not found."}, 404
+
+        json_data = request.get_json()
+
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        # check that basic question fields exists
+        errors = question_schema.validate(json_data, partial=True)
+        if errors:
+            return errors, 422
+
+        if json_data.get('type') and q.type.value != json_data['type']:
+            return {"message": "Question type may not be changed."}, 400
+
+        # based on the type of question, pick the schema to load with
+        if q.type == QuestionType.SHORT_ANSWER:
+            schema = sa_question_schema
+        elif q.type == QuestionType.AUTO_CHECK:
+            schema = ac_question_schema
+        elif q.type == QuestionType.MULTIPLE_CHOICE:
+            schema = mc_question_schema
+        elif q.type == QuestionType.CODE_JUMBLE:
+            schema = cj_question_schema
+
+        try:
+            updated_q = schema.load(json_data, partial=True)
+        except ValidationError as err:
+            return err.messages, 422
+
+        # check which fields were updated and copy them over to the original
+        # question
+        for field in schema.fields:
+            updated_val = getattr(updated_q, field, None)
+            if updated_val != None:
+                setattr(q, field, updated_val)
+
+        # persist the changes
+        db.session.commit()
+
+        return {"updated": schema.dump(q)}
 
 class CourseQuestionApi(Resource):
     @jwt_required()
