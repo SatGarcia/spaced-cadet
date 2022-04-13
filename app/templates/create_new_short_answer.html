@@ -6,9 +6,8 @@
         <h4>Create New Question (Self-Graded Short Answer)</h4>
 
 		<div class="row">
-			<form method="POST" action="{{ url_for('instructor.create_short_answer') }}">
+			<form method="POST" action="">
 				{{ form.csrf_token }}
-				{{ form.course_id }}
 
                 {{ forms.input(form.prompt, placeholder="Enter the prompt. Markdown formatting is allowed.") }}
                 {{ forms.input(form.answer, placeholder="Enter the correct answer. Markdown formatting is allowed.") }}

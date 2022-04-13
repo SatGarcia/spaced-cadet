@@ -5,8 +5,7 @@
     <div class="container pt-3">
         <h4>Create New Question (Multiple Choice)</h4>
 
-        <form method="POST"
-            action="{{ url_for('instructor.create_multiple_choice') }}">
+        <form method="POST" action="">
             {{ form.csrf_token }}
             {{ form.course_id }}
 
