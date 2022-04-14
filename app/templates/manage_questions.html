@@ -6,8 +6,22 @@
 		<div class="container row">
 			<h5>Add Questions</h5>
 			<ul class="list-unstyled mx-3">
-				<li><a href="{{ url_for('instructor.add_question', course_name=course.name) }}">Browse Existing Questions</a></li>
-				<li><a href="{{ url_for('instructor.create_new_question', course_name=course.name) }}">Create New Question</a></li>
+                <li>
+                    <a class="btn btn-link text-decoration-none" href="{{ url_for('instructor.add_question', course_name=course.name) }}">Browse Existing Questions</a>
+                </li>
+                <li>
+                    <span class="dropdown">
+                        <button class="btn btn-link dropdown-toggle text-decoration-none" type="button" id="newQuestionButton" data-bs-toggle="dropdown" aria-expanded="false">
+                            Create New Question
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="newQuestionButton">
+                            <li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='short-answer')}}">Short Answer (Self-Graded)</a></li>
+                            <li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='auto-check')}}">Short Answer (Auto-Graded)</a></li>
+                            <li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='multiple-choice')}}">Multiple Choice</a></li>
+                            <li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='code-jumble')}}">Code Jumble</a></li>
+                        </ul>
+                    </span>
+                </li>
 			</ul>
 		</div>
 
