@@ -25,18 +25,105 @@
 			</div>
 		</div>
 
+        <div class="container" id="learningObjective">
+            
+            <h5>Learning Objective:</h5>
+            <div class="container pb-2">
+                {% if question.objective %}
+                    {{ question.objective.description|mdown|safe }}
+                    <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#objectiveModal">
+                        Change
+                    </button>
+                    <button type="button" class="btn btn-error">
+                        Remove
+                    </button>
+                {% else %}
+                    <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#objectiveModal">
+                        Add Objective
+                    </button>
+                {% endif %}
+            </div>
+
+            <!-- Modal for setting the learning objective. -->
+            <div class="modal fade" id="objectiveModal" tabindex="-1" aria-labelledby="setObjectiveModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="setObjectiveModalLabel">
+                                Update Question's Learning Objective
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="row pb-2">
+                                <div class="col-9">
+                                    <label for="searchObjectives"
+                                           class="form-label visually-hidden">
+                                        Search Learning Objectives</label>
+                                    <input 
+                                        id="searchObjectives"
+                                        v-model.trim="search_string" 
+                                        @keyup.enter="searchObjectives()"
+                                        type="text"
+                                        class="form-control"
+                                        placeholder="Search learning objectives (e.g. while loop)"></input>
+                                </div>
+                                <div class="col-2">
+                                    <button 
+                                        class="btn btn-xs btn-primary"
+                                        @click="searchObjectives()">Search</button>
+                                </div>
+                            </div>
+
+                            <strong>Search Results:</strong>
+                            <div class="container" v-if="objectives.length === 0">
+                                <em>No search results.</em>
+                            </div>
+                            <div class="container" v-else>
+                                <ul class="list-unstyled">
+                                    <li v-for="(lo, index) in objectives"
+                                        :key="lo.id"
+                                        class="border rounded p-1 m-2"
+                                        :class="{ 'border-primary': selected_objective_id == lo.id }">
+                                        <input 
+                                            :id="`opt${index}`"
+                                            :value="`${lo.id}`"
+                                            v-model.number="selected_objective_id"
+                                            onchange="console.log(this.value)"
+                                            name="objOptions"
+                                            type="radio"
+                                            class="visually-hidden">
+                                        <label :for="`opt${index}`">[[ lo.description ]]</label>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-primary"
+                                    @click="setObjective()"
+                                    :disabled="selected_objective_id === null"
+                                    >Save Selection</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="container">
             <h5>Availability:</h5>
             <div class="container pb-2">
                 <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="publicQuestion" checked
+                    <input class="form-check-input" type="checkbox" id="publicQuestion" {% if question.public %}checked{% endif %}
                            onchange="patchBooleanField(this, 'public', {{question.id}}).then(showSnackbarMessage)">
                     <label class="form-check-label" for="publicQuestion">Public</label>
                 </div>
 
 
                 <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="enabledQuestion"
+                    <input class="form-check-input" type="checkbox" id="enabledQuestion" {% if question.enabled %}checked{% endif %}
                            onchange="patchBooleanField(this, 'enabled', {{question.id}}).then(showSnackbarMessage)">
                     <label class="form-check-label" for="enabledQuestion">Enabled</label>
                 </div>
@@ -54,6 +141,76 @@
     <div id="snackbar">Default message.</div> 
 
     <script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+
+    <script src="https://unpkg.com/vue@3"></script>
+
+    <script>
+        Vue.createApp({
+            data() {
+                return {
+                    search_string: "",
+                    objectives: [],
+                    selected_objective_id: null,
+                }
+            },
+
+            methods: {
+                async searchObjectives() {
+                    // TODO: use url_for to get the URL
+                    let url = "/api/objectives";
+                    if (this.search_string) {
+                        url = url + "?q=" + encodeURIComponent(this.search_string);
+                    }
+                    let response = await fetch(url);
+                    if (response.ok) {
+                        const foo = await response.json();
+                        this.objectives = foo["learning_objectives"];
+                    }
+                },
+
+                async setObjective() {
+                    console.log(`Selected LO ${this.selected_objective_id}`);
+
+                    if (this.selected_objective_id === null) {
+                        return;
+                    }
+
+                    // TODO: use url_for to get this
+                    const url = "/api/question/{{question.id}}/objective";
+                    const config = {
+                        method: 'PUT',
+                        credentials: 'same-origin',
+                        headers: {
+                            "Content-Type": "application/json",
+                            'X-CSRF-TOKEN': getCookie('csrf_access_token'),
+                        },
+                        body: JSON.stringify({'id': this.selected_objective_id})
+                    };
+
+                    let response = await fetch(url, config);
+                    if (response.ok) {
+                        const foo = await response.json();
+                        //foo["updated"].objective.description
+
+                        showSnackbarMessage("Successfully updated learning objective.");
+
+                        // clear out selected id and search results before closing
+                        this.search_string = "";
+                        this.selected_objective_id = null;
+                        this.objectives = [];
+
+                        const modal_el = document.getElementById('objectiveModal');
+                        const objectives_modal = bootstrap.Modal.getInstance(modal_el);
+                        objectives_modal.hide();
+                    }
+                }
+            },
+
+            compilerOptions: {
+                delimiters: ["[[", "]]"]
+            },
+        }).mount('#learningObjective')
+    </script>
 
 	<script type="text/javascript">
         async function patchBooleanField(toggle, field_name, question_id) {
@@ -85,7 +242,6 @@
 			iframe.height = iframe.contentWindow.document.body.scrollHeight;
 			iframe.style.border = "thin solid #d3d3d3";
 			const navbar = iframe.contentWindow.document.getElementById("navbar");
-			console.log(navbar);
 			navbar.style.display = "none";
 		}
 	</script>
