@@ -29,6 +29,9 @@ class QuestionSchema(Schema):
     author = fields.Nested("UserSchema",
                            only=("first_name", "last_name", "email"),
                            dump_only=True)
+    objective = fields.Nested("LearningObjectiveSchema",
+                              only=('id', 'description'),
+                              dump_only=True)
     public = fields.Boolean()
     enabled = fields.Boolean()
 
@@ -116,7 +119,9 @@ class LearningObjectiveSchema(Schema):
     public = fields.Boolean()
     author = fields.Nested("UserSchema", dump_only=True)
 
-    questions = fields.List(fields.Nested(QuestionSchema), dump_only=True)
+    questions = fields.List(fields.Nested(QuestionSchema,
+                                          only=('id', 'prompt')),
+                            dump_only=True)
 
     @validates("description")
     def unique_description(self, description):
