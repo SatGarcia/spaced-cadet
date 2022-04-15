@@ -822,8 +822,15 @@ class ObjectiveApi(Resource):
 class ObjectivesApi(Resource):
     @jwt_required()
     def get(self):
-        objectives = Objective.query.all()
-        result = objective_schema.dump(objectives, many=True)
+        query_str = request.args.get("q")
+
+        if query_str is None:
+            objectives = Objective.query
+        else:
+            Objective.reindex()
+            objectives = Objective.search(query_str)[0]
+
+        result = objective_schema.dump(objectives.all(), many=True)
         return {'learning_objectives': result}
 
     @jwt_required()
