@@ -29,19 +29,32 @@
             
             <h5>Learning Objective:</h5>
             <div class="container pb-2">
-                {% if question.objective %}
-                    {{ question.objective.description|mdown|safe }}
-                    <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#objectiveModal">
-                        Change
-                    </button>
-                    <button type="button" class="btn btn-error">
-                        Remove
-                    </button>
-                {% else %}
-                    <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#objectiveModal">
-                        Add Objective
-                    </button>
-                {% endif %}
+                <div v-if="objective_text === ''">
+                    <em>None.</em>
+                    <div class="pt-2">
+                        <i class="bi-plus-square"></i>
+                        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#objectiveModal">
+                            Add Objective
+                        </a>
+                    </div>
+                </div>
+                <div v-else>
+                    <span v-html="objective_text"></span>
+                    <div>
+                        <i class="bi-pencil-square"></i>
+                        <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#objectiveModal">
+                            Change Objective
+                        </a>
+                        <br/>
+                        <i class="bi-trash"></i>
+                        <a href="#" 
+                           class="text-decoration-none text-danger"
+                           @click="removeObjective()"
+                           >
+                            Remove Objective
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <!-- Modal for setting the learning objective. -->
@@ -95,7 +108,7 @@
                                             name="objOptions"
                                             type="radio"
                                             class="visually-hidden">
-                                        <label :for="`opt${index}`">[[ lo.description ]]</label>
+                                        <label :for="`opt${index}`" v-html="convertToHtml(lo.description)"></label>
                                     </li>
                                 </ul>
                             </div>
@@ -112,7 +125,7 @@
                 </div>
             </div>
         </div>
-        <div class="container">
+        <div class="container pt-2">
             <h5>Availability:</h5>
             <div class="container pb-2">
                 <div class="form-check form-switch">
@@ -141,42 +154,49 @@
     <div id="snackbar">Default message.</div> 
 
     <script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
 
     <script src="https://unpkg.com/vue@3"></script>
 
     <script>
-        Vue.createApp({
+        const converter = new showdown.Converter();
+        const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
+
+        app = Vue.createApp({
             data() {
                 return {
                     search_string: "",
                     objectives: [],
                     selected_objective_id: null,
+                    objective_text: "",
                 }
             },
 
             methods: {
                 async searchObjectives() {
-                    // TODO: use url_for to get the URL
-                    let url = "/api/objectives";
+                    let url = "{{ url_for('objectives_api') }}";
                     if (this.search_string) {
                         url = url + "?q=" + encodeURIComponent(this.search_string);
                     }
-                    let response = await fetch(url);
+                    const response = await fetchOrRefresh(url, 'GET', refresh_url);
                     if (response.ok) {
                         const foo = await response.json();
                         this.objectives = foo["learning_objectives"];
                     }
+                    else {
+                        const modal_el = document.getElementById('objectiveModal');
+                        const objectives_modal = bootstrap.Modal.getInstance(modal_el);
+                        objectives_modal.hide();
+                        showSnackbarMessage(`Error searching for learning objective. Try again. (HTTP Status: ${response.status})`);
+                    }
                 },
 
                 async setObjective() {
-                    console.log(`Selected LO ${this.selected_objective_id}`);
-
                     if (this.selected_objective_id === null) {
                         return;
                     }
 
-                    // TODO: use url_for to get this
-                    const url = "/api/question/{{question.id}}/objective";
+                    const url = "{{ url_for('question_objective', question_id=question.id) }}";
                     const config = {
                         method: 'PUT',
                         credentials: 'same-origin',
@@ -187,29 +207,57 @@
                         body: JSON.stringify({'id': this.selected_objective_id})
                     };
 
-                    let response = await fetch(url, config);
+                    const response = await fetchOrRefresh(url, 'PUT', refresh_url, config);
                     if (response.ok) {
-                        const foo = await response.json();
-                        //foo["updated"].objective.description
+                        const r = await response.json();
+
+                        const objective_md = r["updated"].objective.description;
+                        const objective_html = converter.makeHtml(objective_md);
+                        this.objective_text = objective_html;
 
                         showSnackbarMessage("Successfully updated learning objective.");
 
-                        // clear out selected id and search results before closing
-                        this.search_string = "";
-                        this.selected_objective_id = null;
-                        this.objectives = [];
-
-                        const modal_el = document.getElementById('objectiveModal');
-                        const objectives_modal = bootstrap.Modal.getInstance(modal_el);
-                        objectives_modal.hide();
                     }
+                    else {
+                        showSnackbarMessage(`Error updating learning objective. Try again. (HTTP Status: ${response.status})`);
+                    }
+
+                    // clear out selected id and search results before closing
+                    this.search_string = "";
+                    this.selected_objective_id = null;
+                    this.objectives = [];
+
+                    const modal_el = document.getElementById('objectiveModal');
+                    const objectives_modal = bootstrap.Modal.getInstance(modal_el);
+                    objectives_modal.hide();
+                },
+
+                async removeObjective() {
+                    const url = "{{ url_for('question_objective', question_id=question.id) }}";
+                    const response = await fetchOrRefresh(url, 'DELETE');
+                    if (response.ok) {
+                        this.objective_text = "";
+                        showSnackbarMessage("Successfully removed learning objective.");
+                    }
+                    else {
+                        showSnackbarMessage(`Error removing learning objective. Try again. (HTTP Status: ${response.status})`);
+                    }
+                },
+
+                convertToHtml(md_text) {
+                    return converter.makeHtml(md_text);
                 }
             },
 
             compilerOptions: {
                 delimiters: ["[[", "]]"]
             },
-        }).mount('#learningObjective')
+        });
+        
+        const vm = app.mount('#learningObjective');
+        {% if question.objective %}
+            vm.objective_text = converter.makeHtml("{{ question.objective.description|trim }}");
+        {% endif %}
     </script>
 
 	<script type="text/javascript">
