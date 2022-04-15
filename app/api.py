@@ -289,7 +289,8 @@ def init_app(flask_app):
     rf_api.add_resource(QuestionsApi, '/api/questions')
 
     rf_api.add_resource(ObjectiveApi, '/api/objective/<int:objective_id>')
-    rf_api.add_resource(ObjectivesApi, '/api/objectives')
+    rf_api.add_resource(ObjectivesApi, '/api/objectives',
+                        endpoint='objectives_api')
     rf_api.add_resource(QuestionObjectiveApi,
                         '/api/question/<int:question_id>/objective',
                         endpoint='question_objective')
@@ -871,12 +872,32 @@ class QuestionObjectiveApi(Resource):
 
         o = Objective.query.filter_by(id=data['id']).first()
         if not o:
-            return {"message": "No learning objective found with id {data['id']}"}, 400
+            return {"message": f"No learning objective found with id {data['id']}"}, 400
 
         q.objective = o
         db.session.commit()
 
         return {'updated': question_schema.dump(q)}
+
+
+    @jwt_required()
+    def delete(self, question_id):
+        q = Question.query.filter_by(id=question_id).one_or_none()
+        if not q:
+            return {"message": f"No question found with id {question_id}"}, 404
+
+        elif (not current_user.admin) and (q.author != current_user):
+            # user needs to be the question's author or an admin to access
+            # this
+            return {'message': "Unauthorized access"}, 401
+
+        elif not q.objective:
+            return {'message': "No learning objective to delete."}, 400
+
+        else:
+            q.objective = None
+            db.session.commit()
+            return {'updated': question_schema.dump(q)}
 
 
 class ObjectivesApi(Resource):
