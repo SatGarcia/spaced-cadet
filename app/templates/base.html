@@ -94,6 +94,21 @@
 						</li>
                     </ul>
                 </div>
+
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarContentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        My Content
+                    </a>
+					<ul class="dropdown-menu"
+						aria-labelledby="navbarTrainingDropdown">
+                        <li>
+                            <a class="dropdown-item"
+                               href="{{ url_for('instructor.user_questions', user_id=current_user.id) }}">
+                                Questions
+                            </a>
+                        </li>
+					</ul>
+                </div>
                 {% endif %}
 
 

@@ -428,6 +428,16 @@ def manage_questions(course_name):
                            questions=all_questions)
 
 
+@instructor.route('/u/<int:user_id>/questions')
+@login_required
+def user_questions(user_id):
+    if not (current_user.admin or current_user.id == user_id):
+        abort(401)
+
+    return render_template("my_questions.html",
+                           page_title="Cadet: My Questions")
+
+
 class DataRequiredIf(DataRequired):
     # a validator which makes a field required if another field is set and has
     # a truthy value

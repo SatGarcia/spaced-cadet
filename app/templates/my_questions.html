@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+        <h4>My Questions</h4>
+
+		<div class="row" id="currentQuestions">
+			<ul class="list-unstyled" v-if="questions.length > 0">
+				<li class="m-2"
+					v-for="(q, index) in questions" :key="q.id">
+					<div class="container row">
+						<div class="col-9 border bg-light p-1" v-html="convertToHtml(q.prompt)">
+						</div>
+						<div class="col-3">
+							<i class="bi-tools"></i>
+							<a class="text-decoration-none text-secondary" :href="'/q/' +  q.id  + '/review'">
+								Settings
+							</a>
+							<br/>
+							<i class="bi-trash"></i>
+							<a href="#" class="text-decoration-none text-danger"
+								@click="deleteQuestion(index)">
+								Delete
+							</a>
+						</div>
+					</div>
+				</li>
+			</ul>
+		</div>
+
+		<div class="row">
+			<span class="dropdown">
+				<button class="btn btn-link dropdown-toggle text-decoration-none" type="button" id="newQuestionButton" data-bs-toggle="dropdown" aria-expanded="false">
+					Create New Question
+				</button>
+				<ul class="dropdown-menu" aria-labelledby="newQuestionButton">
+					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='short-answer')}}">Short Answer (Self-Graded)</a></li>
+					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='auto-check')}}">Short Answer (Auto-Graded)</a></li>
+					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='multiple-choice')}}">Multiple Choice</a></li>
+					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='code-jumble')}}">Code Jumble</a></li>
+				</ul>
+			</span>
+		</div>
+
+	</div>
+
+	<div id="snackbar">Default message.</div> 
+
+	<script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
+
+    <script src="https://unpkg.com/vue@3"></script>
+
+	<script type="text/javascript">
+        const converter = new showdown.Converter();
+        const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
+
+        app = Vue.createApp({
+            data() {
+                return {
+                    questions: [],
+                }
+            },
+
+            methods: {
+                async deleteQuestion(index) {
+					const url = `/api/question/${this.questions[index].id}`
+                    const response = await fetchOrRefresh(url, 'DELETE');
+                    if (response.ok) {
+						this.questions.splice(index, 1);
+
+						// TODO: save the question that was deleted and offer
+						// "undo" option
+
+                        showSnackbarMessage("Successfully deleted question.");
+                    }
+                    else {
+                        showSnackbarMessage(`Error deleting question. Try again. (HTTP Status: ${response.status})`);
+                    }
+                },
+
+                async getQuestions() {
+                    let url = "{{ url_for('questions_api') }}";
+                    const response = await fetchOrRefresh(url, 'GET', refresh_url);
+                    if (response.ok) {
+                        const r = await response.json();
+                        this.questions = r["questions"];
+                    }
+                    else {
+                        showSnackbarMessage(`Error loading questions. Try again. (HTTP Status: ${response.status})`);
+                    }
+                },
+
+                convertToHtml(md_text) {
+                    return converter.makeHtml(md_text);
+                }
+            },
+
+            created() {
+                this.getQuestions();
+            },
+
+            compilerOptions: {
+                delimiters: ["[[", "]]"]
+            },
+        });
+        
+        const vm = app.mount('#currentQuestions');
+
+		async function removeQuestion(url, q_id, refresh_url) {
+            const response = await fetchOrRefresh(url, 'DELETE', refresh_url);
+
+			if (!response.ok) {
+				return `Error removing question. (HTTP Status: ${response.status})`;
+			}
+
+			// remove the question from the list on this page
+			const to_remove = document.getElementById(q_id);
+			to_remove.parentNode.removeChild(to_remove);
+
+			return "Question successfully removed.";
+		}
+	</script>
+{% endblock %}
