@@ -336,9 +336,8 @@ def edit_question(question_id):
 
         db.session.commit()
 
-        # TODO: change this to redirect to user's "my question's" page (once
-        # that is created)
-        return redirect(url_for("user_views.root"))
+        return redirect(url_for("instructor.user_questions",
+                                user_id=current_user.id))
 
 
     return render_template(template,
