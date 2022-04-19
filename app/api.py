@@ -965,13 +965,15 @@ class ObjectivesApi(Resource):
         if query_str is None:
             objectives = Objective.query
         else:
-            Objective.reindex()
             objectives = Objective.search(query_str)[0]
 
-        # limit responses to objectives that are public or that the current
-        # user has authored
-        objectives = objectives.filter(db.or_(Objective.public == True,
-                                              Objective.author == current_user))
+        # limit responses to objectives that the current user has authored AND
+        # those that are public (as long as they didn't specify private only)
+        if request.args.get("private") is not None:
+            objectives = objectives.filter(Objective.author_id == current_user.id)
+        else:
+            objectives = objectives.filter(db.or_(Objective.public == True,
+                                                  Objective.author == current_user))
 
         result = objective_schema.dump(objectives.all(), many=True)
         return {'learning_objectives': result}
