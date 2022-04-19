@@ -274,8 +274,6 @@ def upload_roster(course_name):
         os.remove(file_location)
         return redirect(url_for(f'.manage_roster', course_name=course_name))
 
-    print(roster_upload_form.errors)
-
     return render_template("manage_roster.html",
                            page_title="Cadet: Manage Course Roster",
                            course=course,
@@ -303,6 +301,50 @@ def add_question(course_name):
                            page_title="Cadet: Available Questions",
                            course=course,
                            questions=all_questions)
+
+
+@instructor.route('/q/<int:question_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_question(question_id):
+    question = Question.query.filter_by(id=question_id).first()
+
+    if not question:
+        abort(404)
+    elif not (current_user.admin or question.author == current_user):
+        # only admins and the question's author can edit this question
+        abort(401)
+
+    form_data = request.form if request.method == 'POST' else None
+
+    if question.type == QuestionType.SHORT_ANSWER:
+        form = NewShortAnswerQuestionForm(formdata=form_data, obj=question)
+        template = "create_new_short_answer.html"
+    elif question.type == QuestionType.AUTO_CHECK:
+        form = NewAutoCheckQuestionForm(formdata=form_data, obj=question)
+        template = "create_new_auto_check.html"
+    elif question.type == QuestionType.MULTIPLE_CHOICE:
+        form = NewMultipleChoiceQuestionForm(formdata=form_data, obj=question)
+        template = "create_new_multiple_choice.html"
+    elif question.type == QuestionType.CODE_JUMBLE:
+        form = NewJumbleQuestionForm(formdata=form_data, obj=question)
+        template = "create_new_code_jumble.html"
+    else:
+        abort(400)
+
+    if form.validate_on_submit():
+        form.populate_obj(question)
+
+        db.session.commit()
+
+        # TODO: change this to redirect to user's "my question's" page (once
+        # that is created)
+        return redirect(url_for("user_views.root"))
+
+
+    return render_template(template,
+                           page_title="Cadet: Edit Quesion",
+                           edit_mode=True,
+                           form=form)
 
 
 @instructor.route('/new-question/<question_type>', methods=['GET', 'POST'])

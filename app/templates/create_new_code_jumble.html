@@ -3,7 +3,11 @@
 
 {% block body %}
     <div class="container pt-3">
-        <h4>Create New Question (Code Jumble)</h4>
+        {% if edit_mode %}
+            <h4>Edit Question (Code Jumble)</h4>
+        {% else %}
+            <h4>Create New Question (Code Jumble)</h4>
+        {% endif %}
 
 		<div class="row">
 			<form method="POST" action="">
