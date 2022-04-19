@@ -5,6 +5,7 @@
 
 		<div class="row" id="currentQuestions">
 			<ul class="list-unstyled" v-if="questions.length > 0">
+				WOOT
 				<li class="m-2"
 					v-for="(q, index) in questions" :key="q.id">
 					<div class="container row">
@@ -58,6 +59,7 @@
             data() {
                 return {
                     questions: [],
+					target_user: {{ target_author }},
                 }
             },
 
@@ -80,6 +82,8 @@
 
                 async getQuestions() {
                     let url = "{{ url_for('questions_api') }}";
+					url = url + `?author=${this.target_user}`;
+
                     const response = await fetchOrRefresh(url, 'GET', refresh_url);
                     if (response.ok) {
                         const r = await response.json();

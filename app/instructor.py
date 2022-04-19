@@ -434,8 +434,17 @@ def user_questions(user_id):
     if not (current_user.admin or current_user.id == user_id):
         abort(401)
 
+    elif User.query.filter_by(id=user_id).count() == 0:
+        abort(404)
+
+    if current_user.admin:
+        target_author = user_id
+    else:
+        target_author = 'self'
+
     return render_template("my_questions.html",
-                           page_title="Cadet: My Questions")
+                           page_title="Cadet: My Questions",
+                           target_author=target_author)
 
 
 class DataRequiredIf(DataRequired):
