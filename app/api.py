@@ -968,6 +968,11 @@ class ObjectivesApi(Resource):
             Objective.reindex()
             objectives = Objective.search(query_str)[0]
 
+        # limit responses to objectives that are public or that the current
+        # user has authored
+        objectives = objectives.filter(db.or_(Objective.public == True,
+                                              Objective.author == current_user))
+
         result = objective_schema.dump(objectives.all(), many=True)
         return {'learning_objectives': result}
 
