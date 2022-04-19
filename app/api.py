@@ -19,6 +19,9 @@ class AuthenticationSchema(Schema):
     email = fields.Str(required=True)
     password = fields.Str(required=True)
 
+class ImmutableFieldError(Exception):
+    pass
+
 class QuestionSchema(Schema):
     class Meta:
         ordered = True
@@ -44,22 +47,43 @@ class QuestionSchema(Schema):
         except ValueError as error:
             raise ValidationError("Invalid question type.") from error
 
+    def update_obj(self, question, data):
+        # check that they didn't try to change the type of the question
+        if 'type' in data and data['type'] != question.type:
+            raise ImmutableFieldError('type')
+
+        for field in ['type', 'prompt', 'author', 'public', 'enabled']:
+            if field in data:
+                setattr(question, field, data[field])
+
 
 class AutoCheckQuestionSchema(QuestionSchema):
     answer = fields.Str(required=True)
     regex = fields.Boolean(required=True)
 
-    @post_load
-    def make_ac_question(self, data, **kwargs):
+    def make_obj(self, data):
         return AutoCheckQuestion(**data)
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        for field in ['answer', 'regex']:
+            if field in data:
+                setattr(question, field, data[field])
 
 
 class ShortAnswerQuestionSchema(QuestionSchema):
     answer = fields.Str(required=True)
 
-    @post_load
-    def make_sa_question(self, data, **kwargs):
+    def make_obj(self, data):
         return ShortAnswerQuestion(**data)
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        for field in ['answer']:
+            if field in data:
+                setattr(question, field, data[field])
 
 
 class AnswerOptionSchema(Schema):
@@ -71,19 +95,31 @@ class AnswerOptionSchema(Schema):
 class MultipleChoiceQuestionSchema(QuestionSchema):
     options = fields.List(fields.Nested(AnswerOptionSchema), required=True)
 
-    @post_load
-    def make_mc_question(self, data, **kwargs):
+    def make_obj(self, data):
         answer_options = []
+
         for opt in data['options']:
             ao = AnswerOption(**opt)
             answer_options.append(ao)
             db.session.add(ao)
 
         del data['options']
+
         q = MultipleChoiceQuestion(**data)
         q.options = answer_options
 
         return q
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        if 'options' in data:
+            answer_options = []
+            for opt in data['options']:
+                ao = AnswerOption(**opt)
+                answer_options.append(ao)
+
+            question.options = answer_options
 
 
 class JumbleBlockSchema(Schema):
@@ -95,21 +131,38 @@ class JumbleBlockSchema(Schema):
 
 class CodeJumbleQuestionSchema(QuestionSchema):
     language = fields.Str(required=True)
-    blocks = fields.List(fields.Nested(JumbleBlockSchema))
+    blocks = fields.List(fields.Nested(JumbleBlockSchema), required=True)
 
-    @post_load
-    def make_cj_question(self, data, **kwargs):
+    def make_obj(self, data):
         code_blocks = []
+
         for block in data['blocks']:
             jb = JumbleBlock(**block)
             code_blocks.append(jb)
             db.session.add(jb)
 
         del data['blocks']
+
         q = CodeJumbleQuestion(**data)
         q.blocks = code_blocks
 
         return q
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        for field in ['language']:
+            if field in data:
+                setattr(question, field, data[field])
+
+        if 'blocks' in data:
+            code_blocks = []
+
+            for block in data['blocks']:
+                jb = JumbleBlock(**block)
+                code_blocks.append(jb)
+
+            question.blocks = code_blocks
 
 
 class LearningObjectiveSchema(Schema):
@@ -557,9 +610,6 @@ class QuestionApi(Resource):
         if errors:
             return errors, 422
 
-        if json_data.get('type') and q.type.value != json_data['type']:
-            return {"message": "Question type may not be changed."}, 400
-
         # based on the type of question, pick the schema to load with
         if q.type == QuestionType.SHORT_ANSWER:
             schema = sa_question_schema
@@ -571,21 +621,17 @@ class QuestionApi(Resource):
             schema = cj_question_schema
 
         try:
-            updated_q = schema.load(json_data, partial=True)
+            data = schema.load(json_data, partial=True)
         except ValidationError as err:
             return err.messages, 422
 
-        # check which fields were updated and copy them over to the original
-        # question
-        for field in schema.fields:
-            updated_val = getattr(updated_q, field, None)
-            if updated_val != None:
-                setattr(q, field, updated_val)
-
-        # persist the changes
-        db.session.commit()
-
-        return {"updated": schema.dump(q)}
+        try:
+            schema.update_obj(q, data)
+        except ImmutableFieldError:
+            return {"message": "Question type may not be changed."}, 400
+        else:
+            db.session.commit()
+            return {"updated": schema.dump(q)}
 
 class CourseQuestionApi(Resource):
     @jwt_required()
@@ -806,10 +852,11 @@ class QuestionsApi(Resource):
             schema = cj_question_schema
 
         try:
-            obj = schema.load(json_data)
+            data = schema.load(json_data)
         except ValidationError as err:
             return err.messages, 422
 
+        obj = schema.make_obj(data)
         db.session.add(obj)
 
         author = User.query.filter_by(id=current_user.id).first()
