@@ -339,7 +339,8 @@ def init_app(flask_app):
 
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>',
                         endpoint='question_api')
-    rf_api.add_resource(QuestionsApi, '/api/questions')
+    rf_api.add_resource(QuestionsApi, '/api/questions',
+                        endpoint='questions_api')
 
     rf_api.add_resource(ObjectiveApi, '/api/objective/<int:objective_id>')
     rf_api.add_resource(ObjectivesApi, '/api/objectives',
