@@ -11,6 +11,11 @@
 						<div class="col-9 border bg-light p-1" v-html="convertToHtml(q.prompt)">
 						</div>
 						<div class="col-3">
+							<i class="bi-pencil-square"></i>
+							<a class="text-decoration-none text-secondary" :href="'/q/' +  q.id  + '/edit'">
+								Edit
+							</a>
+							<br/>
 							<i class="bi-tools"></i>
 							<a class="text-decoration-none text-secondary" :href="'/q/' +  q.id  + '/review'">
 								Settings
