@@ -822,9 +822,18 @@ class QuestionsApi(Resource):
         if not (current_user.instructor or current_user.admin):
             return {'message': "Unauthorized access"}, 401
 
-        questions = Question.query.all()
+        if current_user.admin:
+            # admins have access to all questions
+            questions = Question.query.all()
+        else:
+            # instructors can access public questions as well as any they have
+            # authored
+            questions = Question.query.filter(db.or_(Question.author == current_user,
+                                                     Question.public == True)).all()
+
         result = question_schema.dump(questions, many=True)
         return {'questions': result}
+
 
     @jwt_required()
     def post(self):
