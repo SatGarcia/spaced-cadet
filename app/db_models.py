@@ -395,7 +395,7 @@ class User(UserMixin, db.Model):
                                          foreign_keys='Question.author_id',
                                          backref='author', lazy='dynamic')
 
-    authored_objections = db.relationship('Objective',
+    authored_objectives = db.relationship('Objective',
                                           foreign_keys='Objective.author_id',
                                           backref='author', lazy='dynamic')
 
