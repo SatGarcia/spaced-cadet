@@ -822,16 +822,39 @@ class QuestionsApi(Resource):
         if not (current_user.instructor or current_user.admin):
             return {'message': "Unauthorized access"}, 401
 
-        if current_user.admin:
-            # admins have access to all questions
-            questions = Question.query.all()
-        else:
-            # instructors can access public questions as well as any they have
-            # authored
-            questions = Question.query.filter(db.or_(Question.author == current_user,
-                                                     Question.public == True)).all()
+        query_str = request.args.get("q")
 
-        result = question_schema.dump(questions, many=True)
+        if query_str is None:
+            questions = Question.query
+        else:
+            questions = Question.search(query_str)[0]
+
+        target_author = request.args.get('author')
+
+        if target_author == 'self':
+            # restrict results to current user if author=self is specified
+            questions = questions.filter(Question.author_id == current_user.id)
+
+        elif target_author:
+            # Restrict results to specific user id if author is given (and not
+            # it's not 'self'). This option is only available to admins
+            if not current_user.admin:
+                return {'message': "author usage restricted to 'self'"}, 401
+
+            try:
+                target_id = int(target_author)
+            except:
+                return {'message': f"Invalid value for author argument: {target_author}"}, 400
+            else:
+                questions = questions.filter(Question.author_id == target_id)
+
+        elif not current_user.admin:
+            # if no author specified and user isn't an admin, get all public
+            # questions as well as those that are authored by the current user
+            questions = questions.filter(db.or_(Question.public == True,
+                                                Question.author == current_user))
+
+        result = question_schema.dump(questions.all(), many=True)
         return {'questions': result}
 
 
@@ -967,11 +990,28 @@ class ObjectivesApi(Resource):
         else:
             objectives = Objective.search(query_str)[0]
 
-        # limit responses to objectives that the current user has authored AND
-        # those that are public (as long as they didn't specify private only)
-        if request.args.get("private") is not None:
+        target_author = request.args.get('author')
+
+        if target_author == 'self':
+            # restrict results to current user if author=self is specified
             objectives = objectives.filter(Objective.author_id == current_user.id)
-        else:
+
+        elif target_author:
+            # Restrict results to specific user id if author is given (and not
+            # it's not 'self'). This option is only available to admins
+            if not current_user.admin:
+                return {'message': "author usage restricted to 'self'"}, 401
+
+            try:
+                target_id = int(target_author)
+            except:
+                return {'message': f"Invalid value for author argument: {target_author}"}, 400
+            else:
+                objectives = objectives.filter(Objective.author_id == target_id)
+
+        elif not current_user.admin:
+            # if no author specified and user isn't an admin, get all public
+            # objectives as well as those that are authored by the current user
             objectives = objectives.filter(db.or_(Objective.public == True,
                                                   Objective.author == current_user))
 
