@@ -983,7 +983,10 @@ class ObjectivesApi(Resource):
         if not (current_user.instructor or current_user.admin):
             return {'message': "Unauthorized access"}, 401
 
-        return create_and_commit(Objective, objective_schema, request.get_json())
+        return create_and_commit(Objective,
+                                 objective_schema,
+                                 request.get_json(),
+                                 add_to=current_user.authored_objectives)
 
 
 
