@@ -109,19 +109,5 @@
         });
         
         const vm = app.mount('#currentQuestions');
-
-		async function removeQuestion(url, q_id, refresh_url) {
-            const response = await fetchOrRefresh(url, 'DELETE', refresh_url);
-
-			if (!response.ok) {
-				return `Error removing question. (HTTP Status: ${response.status})`;
-			}
-
-			// remove the question from the list on this page
-			const to_remove = document.getElementById(q_id);
-			to_remove.parentNode.removeChild(to_remove);
-
-			return "Question successfully removed.";
-		}
 	</script>
 {% endblock %}
