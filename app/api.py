@@ -909,6 +909,25 @@ class ObjectiveApi(Resource):
         else:
             return {"message": f"No learning objective found with id {objective_id}"}, 404
 
+    @jwt_required()
+    def delete(self, objective_id):
+        lo = Objective.query.filter_by(id=objective_id).one_or_none()
+
+        if lo:
+            # Limit access to admins and the question author.
+            # TODO: restrict removal of public learning objectives
+            if not (current_user.admin or lo.author == current_user):
+                return {'message': "Unauthorized access"}, 401
+
+            deleted_lo = objective_schema.dump(lo)
+            db.session.delete(lo)
+            db.session.commit()
+
+            return {"deleted": deleted_lo}
+
+        else:
+            return {"message": f"No learning objective found with id {objective_id}"}, 404
+
 
 class QuestionObjectiveApi(Resource):
     @jwt_required()
