@@ -74,14 +74,21 @@
 									<li>
 										<a class="dropdown-item" 
 											href="{{ url_for('instructor.manage_questions', course_name=course.name) }}"
-											>Questions</a>
+											>Manage Questions</a>
 									
 									</li>
 
 									<li>
 										<a class="dropdown-item" 
 											href="{{ url_for('instructor.manage_roster', course_name=course.name) }}"
-											>Roster</a>
+											>Manage Roster</a>
+									
+									</li>
+
+									<li>
+										<a class="dropdown-item" 
+											href="{{ url_for('instructor.edit_course', course_name=course.name) }}"
+											>Edit Settings</a>
 									
 									</li>
 								</ul>

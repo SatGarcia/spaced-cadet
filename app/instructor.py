@@ -29,7 +29,7 @@ from app.auth import AuthorizationError, check_authorization
 
 instructor = Blueprint('instructor', __name__)
 
-@instructor.route('/courses/create', methods=["GET", "POST"])
+@instructor.route('/new-course', methods=["GET", "POST"])
 @login_required
 def create_course():
     try:
@@ -37,7 +37,7 @@ def create_course():
     except AuthorizationError:
         abort(401)
 
-    form = NewCourseForm()
+    form = CourseDetailsForm()
 
     if form.validate_on_submit():
         course = Course(name=form.name.data,
@@ -56,6 +56,45 @@ def create_course():
                            page_title="Cadet: Create Course",
                            form=form)
 
+
+@instructor.route('/c/<course_name>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_course(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+
+    if not course:
+        abort(404)
+
+    if not current_user.admin:
+        try:
+            check_authorization(current_user, course=course, instructor=True)
+        except AuthorizationError:
+            abort(401)
+
+    form_data = request.form if request.method == 'POST' else None
+
+    form = CourseDetailsForm(formdata=form_data, obj=course)
+
+    # remove name field, which is an immutable field
+    del form.name
+
+    # relabel the submit button to avoid confusion
+    form.submit.label.text = "Save Changes"
+
+    if form.validate_on_submit():
+        form.populate_obj(course)
+
+        db.session.commit()
+
+        flash("Course successfully updated.", "success")
+        return redirect(url_for("user_views.root"))
+
+
+    return render_template("create_course.html",
+                           page_title="Cadet: Edit Course",
+                           edit_mode=True,
+                           course_name=course.name,
+                           form=form)
 
 @instructor.route('/q/<int:question_id>/review')
 @login_required
@@ -341,7 +380,7 @@ def edit_question(question_id):
 
 
     return render_template(template,
-                           page_title="Cadet: Edit Quesion",
+                           page_title="Cadet: Edit Question",
                            edit_mode=True,
                            form=form)
 
@@ -398,7 +437,7 @@ def edit_learning_objective(objective_id):
 
 
     return render_template("edit_learning_objective.html",
-                           page_title="Cadet: Edit Quesion",
+                           page_title="Cadet: Edit Question",
                            edit_mode=True,
                            form=form)
 
@@ -440,7 +479,7 @@ def create_new_question(question_type):
 
 
     return render_template(template,
-                           page_title="Cadet: Create New Quesion",
+                           page_title="Cadet: Create New Question",
                            form=form)
 
 
@@ -538,7 +577,7 @@ class DataRequiredIf(DataRequired):
             super(DataRequiredIf, self).__call__(form, field)
 
 
-class NewCourseForm(FlaskForm):
+class CourseDetailsForm(FlaskForm):
     name = StringField("Name", [DataRequired(), Length(min=5, max=64),
                                 Regexp("^[a-z].*[a-z0-9]$",
                                        flags=re.IGNORECASE,
