@@ -63,7 +63,7 @@
 				{% if current_user.is_authenticated and current_user.instructor %}
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarInstructorDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Manage Courses
+                        Courses
                     </a>
                     <ul class="dropdown-menu"
 						aria-labelledby="navbarInstructorDropdown">
@@ -105,6 +105,12 @@
                             <a class="dropdown-item"
                                href="{{ url_for('instructor.user_questions', user_id=current_user.id) }}">
                                 Questions
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item"
+                               href="{{ url_for('instructor.user_objectives', user_id=current_user.id) }}">
+                                Learning Objectives
                             </a>
                         </li>
 					</ul>

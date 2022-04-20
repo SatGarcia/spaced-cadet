@@ -346,6 +346,63 @@ def edit_question(question_id):
                            form=form)
 
 
+@instructor.route('/new-objective', methods=['GET', 'POST'])
+@login_required
+def create_new_objective():
+    try:
+        check_authorization(current_user, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    form = LearningObjectiveForm()
+
+    if form.validate_on_submit():
+        new_objective = Objective()
+        form.populate_obj(new_objective)
+
+        current_user.authored_objectives.append(new_objective)
+        db.session.commit()
+
+        flash("Successfully created new learning objective.", "success")
+        return redirect(url_for("instructor.user_objectives",
+                                user_id=current_user.id))
+
+
+    return render_template("edit_learning_objective.html",
+                           page_title="Cadet: Create New Learning Objective",
+                           form=form)
+
+
+@instructor.route('/lo/<int:objective_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_learning_objective(objective_id):
+    objective = Objective.query.filter_by(id=objective_id).first()
+
+    if not objective:
+        abort(404)
+    elif not (current_user.admin or objective.author == current_user):
+        # only admins and the objective's author can edit this objective
+        abort(401)
+
+    form_data = request.form if request.method == 'POST' else None
+    form = LearningObjectiveForm(formdata=form_data, obj=objective)
+
+    if form.validate_on_submit():
+        form.populate_obj(objective)
+
+        db.session.commit()
+
+        flash("Learning objective successfully updated.", "success")
+        return redirect(url_for("instructor.user_objectives",
+                                user_id=current_user.id))
+
+
+    return render_template("edit_learning_objective.html",
+                           page_title="Cadet: Edit Quesion",
+                           edit_mode=True,
+                           form=form)
+
+
 @instructor.route('/new-question/<question_type>', methods=['GET', 'POST'])
 @login_required
 def create_new_question(question_type):
@@ -446,6 +503,25 @@ def user_questions(user_id):
                            target_author=target_author)
 
 
+@instructor.route('/u/<int:user_id>/objectives')
+@login_required
+def user_objectives(user_id):
+    if not (current_user.admin or current_user.id == user_id):
+        abort(401)
+
+    elif User.query.filter_by(id=user_id).count() == 0:
+        abort(404)
+
+    if current_user.admin:
+        target_author = user_id
+    else:
+        target_author = 'self'
+
+    return render_template("my_objectives.html",
+                           page_title="Cadet: My Objectives",
+                           target_author=target_author)
+
+
 class DataRequiredIf(DataRequired):
     # a validator which makes a field required if another field is set and has
     # a truthy value
@@ -484,6 +560,11 @@ class NewCourseForm(FlaskForm):
         if Course.query.filter_by(name=field.data).count() != 0:
             raise ValidationError("A course with that name already exists")
 
+
+class LearningObjectiveForm(FlaskForm):
+    description = TextAreaField("Question Prompt", [DataRequired()])
+    public = BooleanField("Public", default="checked")
+    submit = SubmitField("Submit")
 
 class NewShortAnswerQuestionForm(FlaskForm):
     prompt = TextAreaField("Question Prompt", [DataRequired()])
@@ -565,5 +646,5 @@ class RosterUploadForm(FlaskForm):
 from app.db_models import (
     AnswerOption, CodeJumbleQuestion, JumbleBlock, Course,
     ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, Question,
-    QuestionType, User
+    QuestionType, User, Objective
 )

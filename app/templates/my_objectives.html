@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+        <h4>My Objectives</h4>
+
+		<div class="row" id="currentObjectives">
+			<ul class="list-unstyled" v-if="objectives.length > 0">
+				<li class="m-2"
+					v-for="(lo, index) in objectives" :key="lo.id">
+					<div class="container row">
+						<div class="col-9 border bg-light p-1 clippy" v-html="convertToHtml(lo.description)">
+						</div>
+						<div class="col-3">
+							<i class="bi-pencil-square"></i>
+							<a class="text-decoration-none text-secondary" :href="'/lo/' +  lo.id  + '/edit'">
+								Edit
+							</a>
+							<br/>
+							<i class="bi-trash"></i>
+							<a href="#" class="text-decoration-none text-danger"
+								@click="deleteObjective(index)">
+								Delete
+							</a>
+						</div>
+					</div>
+				</li>
+			</ul>
+		</div>
+
+		<div class="row">
+			<a href="{{ url_for('instructor.create_new_objective') }}"
+                class="text-decoration-none">
+                <i class="bi-plus-circle"></i>
+				Create New Objective
+			</a>
+		</div>
+
+	</div>
+
+	<div id="snackbar">Default message.</div> 
+
+	<script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
+
+    <script src="https://unpkg.com/vue@3"></script>
+
+	<script type="text/javascript">
+        const converter = new showdown.Converter();
+        const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
+
+        app = Vue.createApp({
+            data() {
+                return {
+                    objectives: [],
+					target_user: {{ target_author }},
+                }
+            },
+
+            methods: {
+                async deleteObjective(index) {
+					const url = `/api/objective/${this.objectives[index].id}`
+                    const response = await fetchOrRefresh(url, 'DELETE');
+                    if (response.ok) {
+						this.objectives.splice(index, 1);
+
+						// TODO: save the objective that was deleted and offer
+						// "undo" option
+
+                        showSnackbarMessage("Successfully deleted objective.");
+                    }
+                    else {
+                        showSnackbarMessage(`Error deleting objective. Try again. (HTTP Status: ${response.status})`);
+                    }
+                },
+
+                async getObjectives() {
+                    let url = "{{ url_for('objectives_api') }}";
+					url = url + `?author=${this.target_user}`;
+
+                    const response = await fetchOrRefresh(url, 'GET', refresh_url);
+                    if (response.ok) {
+                        const r = await response.json();
+                        this.objectives = r["learning_objectives"];
+                    }
+                    else {
+                        showSnackbarMessage(`Error loading objectives. Try again. (HTTP Status: ${response.status})`);
+                    }
+                },
+
+                convertToHtml(md_text) {
+                    return converter.makeHtml(md_text);
+                }
+            },
+
+            created() {
+                this.getObjectives();
+            },
+
+            compilerOptions: {
+                delimiters: ["[[", "]]"]
+            },
+        });
+        
+        const vm = app.mount('#currentObjectives');
+	</script>
+{% endblock %}
