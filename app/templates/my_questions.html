@@ -11,116 +11,130 @@
 				<strong>This action cannot be undone.</strong>
 			</confirmation-dialog>
 
-			<div class="container" v-if="selected_indices.length > 0">
-				<span class="mx-2">
-					<strong>Selected ([[ selected_indices.length ]])</strong>
-				</span>
-
-				<button type="button" class="btn btn-sm btn-secondary">
-					<i class="bi-tag"></i>
-					Learning Objective
-				</button>
-
-				<div class="btn-group mx-2">
-					<button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-						<i class="bi-tools"></i>
-						Settings
-					</button>
-					<ul class="dropdown-menu">
-						<li><button class="dropdown-item" type="button"
-										@click="updateQuestions('public', true)">
-								<i class="bi-people"></i>
-								Mark as Public</button></li>
-						<li><button class="dropdown-item" type="button"
-										@click="updateQuestions('public', false)">
-								<i class="bi-person"></i>
-								Mark as Private</button></li>
-						<li><hr class="dropdown-divider"></li>
-						<li><button class="dropdown-item" type="button"
-										@click="updateQuestions('enabled', true)">
-								<i class="bi-eye"></i>
-								Mark as Enabled</button></li>
-						<li><button class="dropdown-item" type="button"
-										@click="updateQuestions('enabled', false)">
-								<i class="bi-eye-slash"></i>
-								Mark as Disabled</button></li>
-					</ul>
-				</div>
-
-				<button type="button" class="btn btn-sm btn-danger" @click="deleteSelected">
-					<i class="bi-trash"></i>
-					Delete
-				</button>
-			</div>
 
 			<ul class="list-unstyled" v-if="questions.length > 0">
-				<li class="m-2"
-					v-for="(q, index) in questions" :key="q.id">
-						<div class="container row">
-							<div class="col-auto pt-2 border"
-								:class="{'bg-light': !selected_indices.includes(index), 'bg-primary bg-gradient': selected_indices.includes(index)}">
-								<input 
-										:id="`q${index}`" :value=index v-model.number="selected_indices"
-										name="aQuestion" type="checkbox">
-								<label :for="`q${index}`" class="visually-hidden">Question with ID [[q.id]]</label>
-							</div>
-							<div class="col-10 p-1 border-top border-bottom">
+				<li class="m-2">
+					<div class="container row">
+						<div class="col-auto border pt-2"
+							:class="{'bg-light': selected_indices.length !== questions.length, 'bg-primary bg-gradient': selected_indices.length === questions.length}">
+							<input id="massSelect" type="checkbox"
+								v-model="mass_select"
+								:checked="selected_indices.length === questions.length">
+							<label for="massSelect" class="visually-hidden">Select All/None</label>
+						</div>
 
-								<table class="table table-borderless table-sm">
-									<tbody>
-										<tr>
-											<th scope="row" class="col-1">Type:</th>
-											<td>[[ typeStrings[index] ]]</td>
-										</tr>
-										<tr>
-											<th scope="row">Prompt:</th>
-											<td>
-												<div class="clippy" v-html="convertToHtml(q.prompt)"></div>
-											</td>
-										</tr>
-										<tr>
-											<th scope="row">Learning Objective:</th>
-											<td>
-												[[ q.objective ? q.objective["description"] : "None" ]]
-											</td>
-										</tr>
-										<tr>
-											<th scope="row">Public:</th>
-											<td>
-												<span class="text-success" v-if="q.public">
-													<i class="bi-check-circle"></i>
-												</span>
-												<span class="text-danger" v-else>
-													<i class="bi-x-circle"></i>
-												</span>
-											</td>
-										</tr>
-										<tr>
-											<th scope="row">Enabled:</th>
-											<td>
-												<span class="text-success" v-if="q.enabled">
-													<i class="bi-check-circle"></i>
-												</span>
-												<span class="text-danger" v-else>
-													<i class="bi-x-circle"></i>
-												</span>
-											</td>
-										</tr>
-									</tbody>
-								</table>
-							</div>
-							<div class="col-auto pt-2 border border-start-0">
-								<i class="bi-pencil-square"></i>
-								<a class="text-decoration-none text-secondary" :href="'/q/' +  q.id  + '/edit'">
-									Edit
-								</a>
-								<br/>
-								<i class="bi-eye"></i>
-								<a class="text-decoration-none text-secondary" :href="'/q/' +  q.id  + '/preview'">
-									Preview
-								</a>
+						<div class="col-10 p-1 border-top border-bottom d-flex align-items-center"
+							style="min-height: 2.75rem">
+							<div v-if="selected_indices.length > 0" class="mx-2">
+								<button type="button" class="btn btn-sm btn-secondary">
+									<i class="bi-tag"></i>
+									Learning Objective
+								</button>
+
+								<div class="btn-group mx-2">
+									<button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+										<i class="bi-tools"></i>
+										Settings
+									</button>
+									<ul class="dropdown-menu">
+										<li><button class="dropdown-item" type="button"
+														@click="updateQuestions('public', true)">
+												<i class="bi-people"></i>
+												Mark as Public</button></li>
+										<li><button class="dropdown-item" type="button"
+														@click="updateQuestions('public', false)">
+												<i class="bi-person"></i>
+												Mark as Private</button></li>
+										<li><hr class="dropdown-divider"></li>
+										<li><button class="dropdown-item" type="button"
+														@click="updateQuestions('enabled', true)">
+												<i class="bi-eye"></i>
+												Mark as Enabled</button></li>
+										<li><button class="dropdown-item" type="button"
+														@click="updateQuestions('enabled', false)">
+												<i class="bi-eye-slash"></i>
+												Mark as Disabled</button></li>
+									</ul>
+								</div>
+
+								<button type="button" class="btn btn-sm btn-danger" @click="deleteSelected">
+									<i class="bi-trash"></i>
+									Delete
+								</button>
 							</div>
 						</div>
+						<div class="col-1 pt-2 border border-start-0">
+						</div>
+					</div>
+				</li>
+
+				<li class="m-2"
+					v-for="(q, index) in questions" :key="q.id">
+					<div class="container row">
+						<div class="col-auto pt-2 border"
+							:class="{'bg-light': !selected_indices.includes(index), 'bg-primary bg-gradient': selected_indices.includes(index)}">
+							<input 
+									:id="`q${index}`" :value=index v-model.number="selected_indices"
+									name="aQuestion" type="checkbox">
+							<label :for="`q${index}`" class="visually-hidden">Question with ID [[q.id]]</label>
+						</div>
+						<div class="col-10 p-1 border-top border-bottom">
+
+							<table class="table table-borderless table-sm">
+								<tbody>
+									<tr>
+										<th scope="row" class="col-1">Type:</th>
+										<td>[[ typeStrings[index] ]]</td>
+									</tr>
+									<tr>
+										<th scope="row">Prompt:</th>
+										<td>
+											<div class="clippy" v-html="convertToHtml(q.prompt)"></div>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row">Learning Objective:</th>
+										<td>
+											[[ q.objective ? q.objective["description"] : "None" ]]
+										</td>
+									</tr>
+									<tr>
+										<th scope="row">Public:</th>
+										<td>
+											<span class="text-success" v-if="q.public">
+												<i class="bi-check-circle"></i>
+											</span>
+											<span class="text-danger" v-else>
+												<i class="bi-x-circle"></i>
+											</span>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row">Enabled:</th>
+										<td>
+											<span class="text-success" v-if="q.enabled">
+												<i class="bi-check-circle"></i>
+											</span>
+											<span class="text-danger" v-else>
+												<i class="bi-x-circle"></i>
+											</span>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<div class="col-auto pt-2 border border-start-0">
+							<i class="bi-pencil-square"></i>
+							<a class="text-decoration-none text-secondary" :href="'/q/' +  q.id  + '/edit'">
+								Edit
+							</a>
+							<br/>
+							<i class="bi-eye"></i>
+							<a class="text-decoration-none text-secondary" :href="'/q/' +  q.id  + '/preview'">
+								Preview
+							</a>
+						</div>
+					</div>
 				</li>
 			</ul>
 		</div>
@@ -159,6 +173,7 @@
                     questions: [],
 					target_user: {{ target_author }},
 					selected_indices: [],
+					mass_select: false,
 					resolveConfirmation: undefined,
                 }
             },
@@ -170,6 +185,17 @@
 			computed: {
 				typeStrings() {
 					return this.questions.map(this.getTypeString);
+				},
+			},
+
+			watch: {
+				mass_select(checkedNow, wasChecked) {
+					this.selected_indices = [];
+					if (checkedNow) {
+						for (let i = 0; i < this.questions.length; i++) {
+							this.selected_indices.push(i);
+						}
+					}
 				},
 			},
 
