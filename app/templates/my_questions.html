@@ -174,22 +174,6 @@
 			},
 
             methods: {
-                async deleteQuestion(index) {
-					const url = `/api/question/${this.questions[index].id}`;
-                    const response = await fetchOrRefresh(url, 'DELETE');
-                    if (response.ok) {
-						this.questions.splice(index, 1);
-
-						// TODO: save the question that was deleted and offer
-						// "undo" option
-
-                        showSnackbarMessage("Successfully deleted question.");
-                    }
-                    else {
-                        showSnackbarMessage(`Error deleting question. Try again. (HTTP Status: ${response.status})`);
-                    }
-                },
-
                 async updateQuestions(field_name, field_value) {
 					for (let i = 0; i <  this.selected_indices.length; i++) {
 						const index = this.selected_indices[i];
@@ -233,16 +217,42 @@
 					});
 				},
 
+                async deleteQuestion(index) {
+					const url = `/api/question/${this.questions[index].id}`;
+                    const response = await fetchOrRefresh(url, 'DELETE');
+                    if (response.ok) {
+						this.questions.splice(index, 1);
+					}
+
+					return response.ok;
+                },
+
 				async deleteSelected() {
 					// get confirmation first
 					const confirmation = await this.getConfirmation();
 
 					// if resolved to true, then we can delete
 					if (confirmation) {
-						for (let i = 0; i <  this.selected_indices.length; i++) {
-							const index = this.selected_indices[i];
-							await this.deleteQuestion(index);
+						let deleted_indices = [];
+						let failed_indices = [];
+						const original_indices = [...this.selected_indices];
+
+						// TRICKY: sort indices in reverse order so indices
+						// don't get thrown off when removing from this.questinos
+						original_indices.sort( (a,b) => { return b - a; } );
+
+						for (const index of original_indices) {
+							const ok = await this.deleteQuestion(index);
+							if (ok) {
+								deleted_indices.push(index);
+							}
+							else {
+								failed_indices.push(index);
+							}
 						}
+
+						showSnackbarMessage(`Successfully deleted ${deleted_indices.length} questions. Failures: ${failed_indices.length}`);
+						this.selected_indices = failed_indices;
 					}
 				},
 
