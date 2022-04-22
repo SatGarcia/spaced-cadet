@@ -201,19 +201,23 @@
 
             methods: {
                 async updateQuestions(field_name, field_value) {
-					for (let i = 0; i <  this.selected_indices.length; i++) {
-						const index = this.selected_indices[i];
-						const q_id = this.questions[index].id;
-						const response = await this.updateQuestion(field_name, field_value, q_id);
+					let updated_indices = [];
+					let failed_indices = [];
 
-						if (response.ok) {
-							showSnackbarMessage("Successfully updated question.");
+					for (const index of this.selected_indices) {
+						const q_id = this.questions[index].id;
+						const ok = await this.updateQuestion(field_name, field_value, q_id);
+
+						if (ok) {
+							updated_indices.push(index);
 							this.questions[index][field_name] = field_value;
 						}
 						else {
-							showSnackbarMessage(`Error updating question. Try again. (HTTP Status: ${response.status})`);
+							failed_indices.push(index);
 						}
 					}
+
+					showSnackbarMessage(`Successfully updated ${updated_indices.length} questions. Failures: ${failed_indices.length}`);
                 },
 
 				async updateQuestion(field_name, field_value, question_id) {
@@ -230,7 +234,7 @@
 					const url = `/api/question/${question_id}`;
 					const response = await fetchOrRefresh(url, 'PATCH', refresh_url, config);
 
-					return response;
+					return response.ok;
 				},
 
 				getConfirmation() {
