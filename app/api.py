@@ -14,6 +14,19 @@ from enum import Enum
 import secrets
 
 from app import db
+from app.user_views import markdown_to_html
+
+def markdown_field(attr_name):
+    def markdown_or_html(obj, context):
+        raw_md = getattr(obj, attr_name)
+
+        html_context = context.get("html")
+        if html_context == True:
+            return markdown_to_html(raw_md)
+        else:
+            return raw_md
+
+    return markdown_or_html
 
 class AuthenticationSchema(Schema):
     email = fields.Str(required=True)
@@ -28,7 +41,7 @@ class QuestionSchema(Schema):
 
     id = fields.Int(dump_only=True)
     type = fields.Method("get_type", required=True, deserialize="create_type")
-    prompt = fields.Str(required=True)
+    prompt = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
     author = fields.Nested("UserSchema",
                            only=("first_name", "last_name", "email"),
                            dump_only=True)
@@ -58,7 +71,7 @@ class QuestionSchema(Schema):
 
 
 class AutoCheckQuestionSchema(QuestionSchema):
-    answer = fields.Str(required=True)
+    answer = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
     regex = fields.Boolean(required=True)
 
     def make_obj(self, data):
@@ -73,7 +86,7 @@ class AutoCheckQuestionSchema(QuestionSchema):
 
 
 class ShortAnswerQuestionSchema(QuestionSchema):
-    answer = fields.Str(required=True)
+    answer = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
 
     def make_obj(self, data):
         return ShortAnswerQuestion(**data)
@@ -88,7 +101,7 @@ class ShortAnswerQuestionSchema(QuestionSchema):
 
 class AnswerOptionSchema(Schema):
     id = fields.Int(dump_only=True)
-    text = fields.Str(required=True)
+    text = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
     correct = fields.Boolean(required=True)
 
 
@@ -124,7 +137,7 @@ class MultipleChoiceQuestionSchema(QuestionSchema):
 
 class JumbleBlockSchema(Schema):
     id = fields.Int(dump_only=True)
-    code = fields.Str(required=True)
+    code = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
     correct_index = fields.Int(required=True, data_key='correct-index')
     correct_indent = fields.Int(required=True, data_key='correct-indent')
 
@@ -167,7 +180,7 @@ class CodeJumbleQuestionSchema(QuestionSchema):
 
 class LearningObjectiveSchema(Schema):
     id = fields.Int(dump_only=True)
-    description = fields.Str(required=True)
+    description = fields.Function(markdown_field('description'), required=True)
 
     public = fields.Boolean()
     author = fields.Nested("UserSchema", dump_only=True)
@@ -307,6 +320,7 @@ cj_question_schema = CodeJumbleQuestionSchema()
 textbook_schema = TextbookSchema()
 textbook_section_schema = TextbookSectionSchema()
 objective_schema = LearningObjectiveSchema()
+objectives_schema = LearningObjectiveSchema(many=True)
 textbook_section_schema = TextbookSectionSchema()
 
 
@@ -905,7 +919,13 @@ class ObjectiveApi(Resource):
     def get(self, objective_id):
         t = Objective.query.filter_by(id=objective_id).one_or_none()
         if t:
-            return objective_schema.dump(t)
+            if request.args.get("html") is not None:
+                schema = LearningObjectiveSchema()
+                schema.context = {"html": True}
+            else:
+                schema = objective_schema
+
+            return schema.dump(t)
         else:
             return {"message": f"No learning objective found with id {objective_id}"}, 404
 
@@ -945,7 +965,13 @@ class QuestionObjectiveApi(Resource):
             return {"message": f"No learning objective found for question with id {question_id}"}, 404
 
         else:
-            return objective_schema.dump(q.objective)
+            if request.args.get("html") is not None:
+                schema = LearningObjectiveSchema()
+                schema.context = {"html": True}
+            else:
+                schema = objective_schema
+
+            return schema.dump(q.objective)
 
     @jwt_required()
     def put(self, question_id):
@@ -1034,7 +1060,14 @@ class ObjectivesApi(Resource):
             objectives = objectives.filter(db.or_(Objective.public == True,
                                                   Objective.author == current_user))
 
-        result = objective_schema.dump(objectives.all(), many=True)
+        # if they used the 'html' argument, get the HTML version of the field
+        if request.args.get("html") is not None:
+            schema = LearningObjectiveSchema(many=True)
+            schema.context = {"html": True}
+        else:
+            schema = objectives_schema
+
+        result = schema.dump(objectives.all())
         return {'learning_objectives': result}
 
     @jwt_required()
