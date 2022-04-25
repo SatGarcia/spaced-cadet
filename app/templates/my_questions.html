@@ -155,7 +155,10 @@
 
 			<set-objective-modal 
 			   name="setObjectiveModal"
-			   @objective-set="setObjectiveInSelected">
+				  @objective-set="setObjectiveInSelected"
+				  @created-new-objective="displayMessage('Successfully created a new objective.')"
+				  @failed-to-create="displayMessage('Failed to create objective.')"
+                  @failed-to-search="displayMessage('Failed to obtain search results.')">
 			</set-objective-modal>
 		</div>
 
@@ -228,6 +231,10 @@
 			},
 
             methods: {
+				displayMessage(msg) {
+					showSnackbarMessage(msg);
+				},
+
 				async setObjectiveInSelected(objective_id) {
 					let updated_indices = [];
 					let failed_indices = [];

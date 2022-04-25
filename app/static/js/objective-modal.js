@@ -1,6 +1,8 @@
 import { showSnackbarMessage, fetchOrRefresh } from './helpers.js';
 import { createNewObjective } from './cadet-api.js';
 
+const refresh_url = '/auth/refresh';
+
 export default {
   compilerOptions: {
     delimiters: ["[[", "]]"]
@@ -10,22 +12,20 @@ export default {
     name: String,
   },
 
-  emits: ['objectiveSet', 'cancelled'],
+  emits: ['objectiveSet', 'createdNewObjective', 'failedToCreate', 'failedToSearch'],
 
   data() {
     return {
       search_string: "",
       objectives: null,
       selected_objective_id: null,
-      objective_text: "", // TODO: make this come from emitting event
       new_objective_description: "",
       new_objective_public: true,
-      refresh_url: "/auth/refresh", // FIXME: make this a prop (or some other way to get this info)
     }
   },
 
   methods: {
-    async setObjective() {
+    setObjective() {
       /**
        * If something is selected, emit an event with the selected objective
        * ID so the parent can set the objective in whatever question(s) it
@@ -49,36 +49,35 @@ export default {
     },
 
     async searchObjectives() {
-      let url = "/api/objectives?html";  // FIXME "{{ url_for('objectives_api') }}";
+      let url = "/booger/api/objectives?html";  // FIXME "{{ url_for('objectives_api') }}";
       if (this.search_string) {
         url = url + "&q=" + encodeURIComponent(this.search_string);
       }
-      const response = await fetchOrRefresh(url, 'GET', this.refresh_url);
+      const response = await fetchOrRefresh(url, 'GET', refresh_url);
       if (response.ok) {
-        const foo = await response.json();
-        this.objectives = foo["learning_objectives"];
+        const r = await response.json();
+        this.objectives = r["learning_objectives"];
       }
       else {
         const modal_el = document.getElementById('setObjectiveModal');
         const objectives_modal = bootstrap.Modal.getInstance(modal_el);
         objectives_modal.hide();
-        showSnackbarMessage(`Error searching for learning objective. Try again. (HTTP Status: ${response.status})`);
+        this.$emit('failedToSearch');
       }
     },
 
     async addObjective() {
       const response = await createNewObjective(this.new_objective_description, this.new_objective_public);
       if (response.ok) {
+        this.$emit('createdNewObjective');
+
         const r = await response.json();
 
-        this.objective_text = r["objective"].description;
         this.selected_objective_id = r["objective"].id;
-        await this.setObjective();
-
-        showSnackbarMessage("Successfully created and set learning objective.");
+        this.setObjective();
       }
       else {
-        showSnackbarMessage(`Error creating learning objective. Try again. (HTTP Status: ${response.status})`);
+        this.$emit('failedToCreate');
       }
 
       this.new_objective_description = "";
