@@ -105,7 +105,6 @@
                                                 :id="`opt${index}`"
                                                 :value="`${lo.id}`"
                                                 v-model.number="selected_objective_id"
-                                                onchange="console.log(this.value)"
                                                 name="objOptions"
                                                 type="radio"
                                                 class="visually-hidden">
@@ -184,14 +183,14 @@
             <div class="container pb-2">
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="publicQuestion" {% if question.public %}checked{% endif %}
-                           onchange="patchBooleanField(this, 'public', {{question.id}}).then(showSnackbarMessage)">
+                           onchange="patchBooleanField(this, 'public', {{question.id}})">
                     <label class="form-check-label" for="publicQuestion">Public</label>
                 </div>
 
 
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="enabledQuestion" {% if question.enabled %}checked{% endif %}
-                           onchange="patchBooleanField(this, 'enabled', {{question.id}}).then(showSnackbarMessage)">
+                           onchange="patchBooleanField(this, 'enabled', {{question.id}})">
                     <label class="form-check-label" for="enabledQuestion">Enabled</label>
                 </div>
 
@@ -207,16 +206,19 @@
 
     <div id="snackbar">Default message.</div> 
 
-    <script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
     <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
-
     <script src="https://unpkg.com/vue@3"></script>
 
-    <script>
+    <script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
+
+    <script type="module">
+		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+        import * as CadetApi from '/static/js/cadet-api.js';
+
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
 
-        app = Vue.createApp({
+        const app = Vue.createApp({
             data() {
                 return {
                     search_string: "",
@@ -358,35 +360,21 @@
         {% if question.objective %}
             vm.objective_text = converter.makeHtml("{{ question.objective.description|trim }}");
         {% endif %}
-    </script>
 
-	<script type="text/javascript">
-        async function patchBooleanField(toggle, field_name, question_id) {
-			const config = {
-				method: 'PATCH',
-                credentials: 'same-origin',
-                headers: {
-                    "Content-Type": "application/json",
-					'X-CSRF-TOKEN': getCookie('csrf_access_token'),
-                },
-				body: JSON.stringify({[field_name]: toggle.checked})
-			}
-
-            const url = "{{ url_for('question_api', question_id=question.id) }}";
-            const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
-
-            const response = await fetchOrRefresh(url, 'PATCH', refresh_url, config);
+        window.patchBooleanField = async function patchBooleanField(toggle, field_name, question_id) {
+            const response = await CadetApi.updateQuestionField(field_name, toggle.checked, question_id);
 
 			if (!response.ok) {
                 toggle.checked = !toggle.checked;
-				return `Error updating question. Try again. (HTTP Status: ${response.status})`;
+				showSnackbarMessage(`Error updating question. Try again. (HTTP Status: ${response.status})`);
+                return;
 			}
 
-            return "Question successfully updated.";
+            showSnackbarMessage("Question successfully updated.");
         }
 
 		// Hide the navbar inside the preview
-		function removeNavbar(iframe) {
+		window.removeNavbar = function removeNavbar(iframe) {
 			iframe.height = iframe.contentWindow.document.body.scrollHeight;
 			iframe.style.border = "thin solid #d3d3d3";
 			const navbar = iframe.contentWindow.document.getElementById("navbar");

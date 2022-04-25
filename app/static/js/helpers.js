@@ -1,4 +1,4 @@
-function showSnackbarMessage(message) {
+export function showSnackbarMessage(message) {
     var x = document.getElementById("snackbar");
     x.innerHTML = message;
 
@@ -11,13 +11,13 @@ function showSnackbarMessage(message) {
     // previous timer went off
 }
 
-function getCookie(name) {
+export function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
-async function fetchOrRefresh(url, http_method, refresh_url, config) {
+export async function fetchOrRefresh(url, http_method, refresh_url, config) {
     config = (typeof config !== 'undefined') ? config : {
         method: http_method,
         credentials: 'same-origin',

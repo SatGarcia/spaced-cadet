@@ -24,7 +24,7 @@
 									Preview
 								</a>
 								<button type="button" 
-										onclick="addQuestion('{{add_url}}', {{q.id}}, this, '{{ url_for('auth.refresh_jwts') }}').then(showSnackbarMessage)" 
+										onclick="addQuestion('{{add_url}}', {{q.id}}, this, '{{ url_for('auth.refresh_jwts') }}')" 
 										class=" btn btn-sm btn-outline-primary">
 									Add
 								</button>
@@ -39,10 +39,12 @@
 
 	<div id="snackbar">Default message.</div> 
 
-	<script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
 
-	<script type="text/javascript">
-		async function addQuestion(url, q_id, add_button, refresh_url) {
+	<script type="module">
+		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+
+		window.addQuestion = async function addQuestion(url, q_id, add_button, refresh_url) {
 			const config = {
 				method: 'POST',
                 credentials: 'same-origin',
@@ -56,14 +58,15 @@
             const response = await fetchOrRefresh(url, 'POST', refresh_url, config);
 
 			if (!response.ok) {
-				return `Error removing question. (HTTP Status: ${response.status})`;
+				showSnackbarMessage(`Error removing question. (HTTP Status: ${response.status})`);
+				return;
 			}
 
 			// Disable the add button so user can't try adding again.
 			// TODO: make this toggle add/remove
 			add_button.disabled = true;
 
-			return "Question successfully added.";
+			showSnackbarMessage("Question successfully added.");
 		}
 	</script>
 {% endblock %}

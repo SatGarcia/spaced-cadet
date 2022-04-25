@@ -28,6 +28,14 @@ def markdown_field(attr_name):
 
     return markdown_or_html
 
+def deserialize_str(s):
+    if type(s) != str:
+        raise ValidationError("Value must be a string.")
+    elif len(s) == 0:
+        raise ValidationError("String must be non-zero length.")
+
+    return s
+
 class AuthenticationSchema(Schema):
     email = fields.Str(required=True)
     password = fields.Str(required=True)
@@ -180,7 +188,8 @@ class CodeJumbleQuestionSchema(QuestionSchema):
 
 class LearningObjectiveSchema(Schema):
     id = fields.Int(dump_only=True)
-    description = fields.Function(markdown_field('description'), required=True)
+    description = fields.Function(markdown_field('description'),
+                                  deserialize=deserialize_str, required=True)
 
     public = fields.Boolean()
     author = fields.Nested("UserSchema", dump_only=True)

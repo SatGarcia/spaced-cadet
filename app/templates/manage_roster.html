@@ -29,7 +29,7 @@
 							<td>
 								{% set remove_url = url_for('enrolled_student', course_id=course.id, student_id=s.id, _external=True) %}
 								<button type="button" 
-										onclick="removeUser('{{remove_url}}', '{{s_id}}', '{{s.email}}', '{{ url_for('auth.refresh_jwts') }}').then(showSnackbarMessage)" 
+										onclick="removeUser('{{remove_url}}', '{{s_id}}', '{{s.email}}', '{{ url_for('auth.refresh_jwts') }}')" 
 										class=" btn btn-sm btn-outline-danger">
 									Remove
 								</button>
@@ -85,9 +85,11 @@
 
 	<div id="snackbar">Default message.</div> 
 
-	<script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
 
-	<script type="text/javascript">
+	<script type="module">
+		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+
 		const roster_file_input = document.getElementById("roster_file");
 		roster_file_input.addEventListener("change", handleFiles, false);
 
@@ -167,7 +169,7 @@
 			}
 		}
 		
-		async function removeUser(url, s_id, email, refresh_url) {
+		window.removeUser = async function removeUser(url, s_id, email, refresh_url) {
             const response = await fetchOrRefresh(url, 'DELETE', refresh_url);
 
 			if (!response.ok) {
@@ -178,7 +180,7 @@
 			const to_remove = document.getElementById(s_id);
 			to_remove.parentNode.removeChild(to_remove);
 
-			return `${email} successfully removed.`;
+			showSnackbarMessage(`${email} successfully removed.`);
 		}
 	</script>
 

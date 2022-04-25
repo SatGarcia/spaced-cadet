@@ -26,11 +26,23 @@
 						<div class="col-10 p-1 border-top border-bottom d-flex align-items-center"
 							style="min-height: 2.75rem">
 							<div v-if="selected_indices.length > 0" class="mx-2">
-								<button type="button" class="btn btn-sm btn-secondary">
-									<i class="bi-tag"></i>
-									Learning Objective
-								</button>
-
+								<div class="btn-group mx-2">
+									<button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+										<i class="bi-tag"></i>
+										Learning Objective
+									</button>
+									<ul class="dropdown-menu">
+										<li><button class="dropdown-item" type="button"
+													data-bs-toggle="modal" data-bs-target="#setObjectiveModal">
+												<i class="bi-plus-circle"></i>
+												Set Objective</button>
+										</li>
+										<li><button class="dropdown-item" type="button" @click="removeObjectiveFromSelected">
+												<i class="bi-x-circle"></i>
+												Remove Objective</button>
+										</li>
+									</ul>
+								</div>
 								<div class="btn-group mx-2">
 									<button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
 										<i class="bi-tools"></i>
@@ -38,20 +50,20 @@
 									</button>
 									<ul class="dropdown-menu">
 										<li><button class="dropdown-item" type="button"
-														@click="updateQuestions('public', true)">
+														@click="updateSelectedQuestions('public', true)">
 												<i class="bi-people"></i>
 												Mark as Public</button></li>
 										<li><button class="dropdown-item" type="button"
-														@click="updateQuestions('public', false)">
+														@click="updateSelectedQuestions('public', false)">
 												<i class="bi-person"></i>
 												Mark as Private</button></li>
 										<li><hr class="dropdown-divider"></li>
 										<li><button class="dropdown-item" type="button"
-														@click="updateQuestions('enabled', true)">
+														@click="updateSelectedQuestions('enabled', true)">
 												<i class="bi-eye"></i>
 												Mark as Enabled</button></li>
 										<li><button class="dropdown-item" type="button"
-														@click="updateQuestions('enabled', false)">
+														@click="updateSelectedQuestions('enabled', false)">
 												<i class="bi-eye-slash"></i>
 												Mark as Disabled</button></li>
 									</ul>
@@ -94,8 +106,11 @@
 									</tr>
 									<tr>
 										<th scope="row">Learning Objective:</th>
-										<td>
-											[[ q.objective ? q.objective["description"] : "None" ]]
+										<td v-if="q.objective"
+											v-html="convertToHtml(q.objective['description'])">
+										</td>
+										<td v-else>
+											None
 										</td>
 									</tr>
 									<tr>
@@ -137,6 +152,11 @@
 					</div>
 				</li>
 			</ul>
+
+			<set-objective-modal 
+			   name="setObjectiveModal"
+			   @objective-set="setObjectiveInSelected">
+			</set-objective-modal>
 		</div>
 
 		<div class="row">
@@ -157,17 +177,24 @@
 
 	<div id="snackbar">Default message.</div> 
 
-	<script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
     <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
-	<script src="{{ url_for('static', filename='js/confirmation-dialog.js') }}"></script>
-
     <script src="https://unpkg.com/vue@3"></script>
 
-	<script type="text/javascript">
+	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
+	<script src="{{ url_for('static', filename='js/cadet-api.js') }}" type="module"></script>
+	<script src="{{ url_for('static', filename='js/confirmation-dialog.js') }}" type="module"></script>
+
+
+	<script type="module">
+		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+		import * as CadetApi from '/static/js/cadet-api.js';
+		import ConfirmationDialog from '/static/js/confirmation-dialog.js';
+		import SetObjectiveModal from '/static/js/objective-modal.js';
+
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
 
-        app = Vue.createApp({
+        const app = Vue.createApp({
             data() {
                 return {
                     questions: [],
@@ -179,7 +206,8 @@
             },
 
 			components: {
-				ConfirmationDialog
+				ConfirmationDialog,
+				SetObjectiveModal,
 			},
 
 			computed: {
@@ -200,15 +228,68 @@
 			},
 
             methods: {
-                async updateQuestions(field_name, field_value) {
+				async setObjectiveInSelected(objective_id) {
 					let updated_indices = [];
 					let failed_indices = [];
 
 					for (const index of this.selected_indices) {
 						const q_id = this.questions[index].id;
-						const ok = await this.updateQuestion(field_name, field_value, q_id);
+						const response = await CadetApi.setQuestionObjective(q_id, objective_id);
 
-						if (ok) {
+						if (response.ok) {
+							updated_indices.push(index);
+							const r = await response.json()
+							this.questions[index].objective = r["updated"].objective;
+						}
+						else {
+							failed_indices.push(index);
+						}
+					}
+
+					showSnackbarMessage(`Successfully updated ${updated_indices.length} questions. Failures: ${failed_indices.length}`);
+				},
+
+				async removeObjectiveFromSelected() {
+					let updated_indices = [];
+					let failed_indices = [];
+
+					for (const index of this.selected_indices) {
+						if (this.questions[index].objective === null) {
+							updated_indices.push(index);
+							continue;
+						}
+
+						const q_id = this.questions[index].id;
+						const response = await CadetApi.removeQuestionObjective(q_id);
+
+						if (response.ok) {
+							updated_indices.push(index);
+							this.questions[index].objective = null;
+						}
+						else {
+							failed_indices.push(index);
+						}
+					}
+
+					showSnackbarMessage(`Successfully removed objective from ${updated_indices.length} questions. Failures: ${failed_indices.length}`);
+				},
+
+                async updateSelectedQuestions(field_name, field_value) {
+					let updated_indices = [];
+					let failed_indices = [];
+
+					for (const index of this.selected_indices) {
+						if (this.questions[index][field_name] === field_value) {
+							// skip updating those questions whose field value is
+							// already set to the desired value
+							updated_indices.push(index);
+							continue;
+						}
+
+						const q_id = this.questions[index].id;
+						const response = await CadetApi.updateQuestionField(field_name, field_value, q_id);
+
+						if (response.ok) {
 							updated_indices.push(index);
 							this.questions[index][field_name] = field_value;
 						}
@@ -220,23 +301,6 @@
 					showSnackbarMessage(`Successfully updated ${updated_indices.length} questions. Failures: ${failed_indices.length}`);
                 },
 
-				async updateQuestion(field_name, field_value, question_id) {
-					const config = {
-						method: 'PATCH',
-						credentials: 'same-origin',
-						headers: {
-							"Content-Type": "application/json",
-							'X-CSRF-TOKEN': getCookie('csrf_access_token'),
-						},
-						body: JSON.stringify({[field_name]: field_value})
-					}
-
-					const url = `/api/question/${question_id}`;
-					const response = await fetchOrRefresh(url, 'PATCH', refresh_url, config);
-
-					return response.ok;
-				},
-
 				getConfirmation() {
 					const modal_el = document.getElementById('confirmationModal');
 					const confirmation_modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
@@ -246,16 +310,6 @@
 						this.resolveConfirmation = resolve
 					});
 				},
-
-                async deleteQuestion(index) {
-					const url = `/api/question/${this.questions[index].id}`;
-                    const response = await fetchOrRefresh(url, 'DELETE');
-                    if (response.ok) {
-						this.questions.splice(index, 1);
-					}
-
-					return response.ok;
-                },
 
 				async deleteSelected() {
 					// get confirmation first
@@ -268,13 +322,15 @@
 						const original_indices = [...this.selected_indices];
 
 						// TRICKY: sort indices in reverse order so indices
-						// don't get thrown off when removing from this.questinos
+						// don't get thrown off when removing from this.questions
 						original_indices.sort( (a,b) => { return b - a; } );
 
 						for (const index of original_indices) {
-							const ok = await this.deleteQuestion(index);
-							if (ok) {
+							const q_id = this.questions[index].id;
+							const response = await CadetApi.deleteQuestion(q_id);
+							if (response.ok) {
 								deleted_indices.push(index);
+								this.questions.splice(index, 1);
 							}
 							else {
 								failed_indices.push(index);

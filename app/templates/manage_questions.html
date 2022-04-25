@@ -53,7 +53,7 @@
 									Preview
 								</a>
 								<button type="button" 
-                                        onclick="removeQuestion('{{remove_url}}', '{{q_id}}', '{{ url_for('auth.refresh_jwts') }}').then(showSnackbarMessage)" 
+                                        onclick="removeQuestion('{{remove_url}}', '{{q_id}}', '{{ url_for('auth.refresh_jwts') }}')" 
 										class=" btn btn-sm btn-outline-danger">
 									Remove
 								</button>
@@ -67,21 +67,24 @@
 
 	<div id="snackbar">Default message.</div> 
 
-	<script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
 
-	<script type="text/javascript">
-		async function removeQuestion(url, q_id, refresh_url) {
+	<script type="module">
+		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+
+		window.removeQuestion = async function removeQuestion(url, q_id, refresh_url) {
             const response = await fetchOrRefresh(url, 'DELETE', refresh_url);
 
 			if (!response.ok) {
-				return `Error removing question. (HTTP Status: ${response.status})`;
+				showSnackbarMessage(`Error removing question. (HTTP Status: ${response.status})`);
+				return
 			}
 
 			// remove the question from the list on this page
 			const to_remove = document.getElementById(q_id);
 			to_remove.parentNode.removeChild(to_remove);
 
-			return "Question successfully removed.";
+			showSnackbarMessage("Question successfully removed.");
 		}
 	</script>
 {% endblock %}

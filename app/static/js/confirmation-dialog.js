@@ -1,4 +1,4 @@
-const ConfirmationDialog = {
+export default {
   compilerOptions: {
     delimiters: ["[[", "]]"]
   },
