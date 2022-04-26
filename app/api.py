@@ -391,6 +391,12 @@ def init_app(flask_app):
     rf_api.add_resource(TopicApi, '/api/topic/<int:topic_id>')
     rf_api.add_resource(TopicsApi, '/api/topics',
                         endpoint='topics_api')
+    rf_api.add_resource(ObjectiveTopicApi,
+                        '/api/objective/<int:objective_id>/topic',
+                        endpoint='object_topic')
+    rf_api.add_resource(SourceTopicsApi,
+                        '/api/source/<int:source_id>/topics',
+                        endpoint='source_topics')
 
     rf_api.add_resource(TextbookApi, '/api/textbook/<int:textbook_id>')
     rf_api.add_resource(TextbooksApi, '/api/textbooks')
@@ -612,10 +618,18 @@ class TopicsApi(Resource):
         if not (current_user.admin or current_user.instructor):
             return {'message': "Unauthorized access"}, 401
 
-        topics = Topic.query.all()
+        query_str = request.args.get("q")
+
+        if query_str is None:
+            topics = Topic.query
+        else:
+            topics = Topic.search(query_str)[0]
+
+        topics = topics.order_by(Topic.text)
+
 
         schema = TopicSchema(many=True, exclude=('sources', 'objectives'))
-        result = schema.dump(topics)
+        result = schema.dump(topics.all())
         return {'topics': result}
 
     @jwt_required()
@@ -625,6 +639,137 @@ class TopicsApi(Resource):
             return {'message': "Unauthorized access"}, 401
 
         return create_and_commit(Topic, topic_schema, request.get_json())
+
+
+class ObjectiveTopicApi(Resource):
+    @jwt_required()
+    def get(self, objective_id):
+        o = Objective.query.filter_by(id=objective_id).one_or_none()
+        if not o:
+            return {"message": f"No objective found with id {objective_id}"}, 404
+
+        elif not (o.public or current_user.admin or o.author == current_user):
+            # has to be a public question or user needs to be the question's
+            # author or an admin to access this
+            return {'message': "Unauthorized access"}, 401
+
+        elif not o.topic:
+            return {"message": f"No topic found for objective with id {objective_id}"}, 404
+
+        return topic_schema.dump(o.topic)
+
+
+    @jwt_required()
+    def put(self, objective_id):
+        o = Objective.query.filter_by(id=objective_id).one_or_none()
+        if not o:
+            return {"message": f"No objective found with id {objective_id}"}, 404
+
+        elif not (current_user.admin or o.author == current_user):
+            # user needs to be the objective's author or an admin to access
+            # this
+            return {'message': "Unauthorized access"}, 401
+
+
+        json_data = request.get_json()
+
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        try:
+            data = SingleIdSchema().load(json_data)
+        except ValidationError as err:
+            return err.messages, 422
+
+        t = Topic.query.filter_by(id=data['id']).first()
+        if not t:
+            return {"message": f"No topic found with id {data['id']}"}, 400
+
+        o.topic = t
+        db.session.commit()
+
+        return {'updated': objective_schema.dump(o)}
+
+
+    @jwt_required()
+    def delete(self, objective_id):
+        o = Objective.query.filter_by(id=objective_id).one_or_none()
+        if not o:
+            return {"message": f"No objective found with id {objective_id}"}, 404
+
+        elif not (current_user.admin or o.author == current_user):
+            return {'message': "Unauthorized access"}, 401
+
+        elif not o.topic:
+            return {'message': "No topic to delete."}, 400
+
+        else:
+            o.topic = None
+            db.session.commit()
+            return {'updated': objective_schema.dump(o)}
+
+
+class SourceTopicsApi(Resource):
+    @jwt_required()
+    def get(self, source_id):
+        s = Source.query.filter_by(id=source_id).one_or_none()
+        if s:
+            # Limit access to admins and source author
+            if not (current_user.admin or current_user == s.author):
+                return {'message': 'Unauthorized access.'}, 401
+
+            result = TopicSchema(only=('id', 'text'), many=True).dump(s.topics)
+            return {"source-topics": result}
+
+        else:
+            return {'message': f"Source {source_id} not found."}, 404
+
+    @jwt_required()
+    def post(self, source_id):
+        source = Source.query.filter_by(id=source_id).one_or_none()
+        if not source:
+            return {'message': f"Source {source_id} not found."}, 404
+
+        # Limit access to admins and source author
+        if not (current_user.admin or current_user == source.author):
+            return {'message': 'Unauthorized access.'}, 401
+
+        json_data = request.get_json()
+
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        # validate and load the list of question IDs
+        try:
+            data = IdListSchema().load(json_data)
+        except ValidationError as err:
+            return err.messages, 422
+
+        duplicate_topics = []
+        new_topics = []
+        invalid_ids = []
+
+        for topic_id in data['ids']:
+            topic = Topic.query.filter_by(id=topic_id).one_or_none()
+
+            if topic:
+                if topic in source.topics:
+                    duplicate_topics.append(topic)
+                else:
+                    new_topics.append(topic)
+                    source.topics.append(topic)
+
+            else:
+                invalid_ids.append(topic_id)
+
+        db.session.commit()
+
+        return {
+            "added-topics": TopicSchema(many=True, only=("id", "text")).dump(new_topics),
+            "duplicates": TopicSchema(many=True, only=("id", "text")).dump(duplicate_topics),
+            "invalid-ids": invalid_ids
+        }
+
 
 
 class LogoutApi(Resource):
