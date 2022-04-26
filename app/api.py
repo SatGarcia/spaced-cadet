@@ -226,6 +226,12 @@ class LearningObjectiveSchema(Schema):
             raise ValidationError("description must be unique")
 
 
+    def update_obj(self, objective, data):
+        for field in ['description', 'public']:
+            if field in data:
+                setattr(objective, field, data[field])
+
+
 class SourceSchema(Schema):
     class Meta:
         ordered = True
@@ -1021,6 +1027,31 @@ class ObjectiveApi(Resource):
 
         else:
             return {"message": f"No learning objective found with id {objective_id}"}, 404
+
+    @jwt_required()
+    def patch(self, objective_id):
+        o = Objective.query.filter_by(id=objective_id).first()
+        if not o:
+            return {'message': f"Objective {objective_id} not found."}, 404
+
+        # Limit access to admins and objective author
+        if not (current_user.admin or o.author == current_user):
+            return {'message': "Unauthorized access"}, 401
+
+        json_data = request.get_json()
+
+        if not json_data:
+            return {"message": "No input data provided"}, 400
+
+        try:
+            data = objective_schema.load(json_data, partial=True)
+        except ValidationError as err:
+            return err.messages, 422
+
+        objective_schema.update_obj(o, data)
+        db.session.commit()
+
+        return {"updated": objective_schema.dump(o)}
 
 
 class QuestionObjectiveApi(Resource):
