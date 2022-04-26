@@ -43,6 +43,25 @@ class AuthenticationSchema(Schema):
 class ImmutableFieldError(Exception):
     pass
 
+
+class TopicSchema(Schema):
+    id = fields.Int(dump_only=True)
+    text = fields.Str(required=True)
+
+    sources = fields.List(fields.Nested("SourceSchema",
+                                          only=('id', 'title')),
+                            dump_only=True)
+
+    objectives = fields.List(fields.Nested("LearningObjectiveSchema",
+                                           only=('id', 'description')),
+                             dump_only=True)
+
+    @validates("text")
+    def unique_text(self, text):
+        if Topic.query.filter_by(text=text).count() > 0:
+            raise ValidationError("text must be unique")
+
+
 class QuestionSchema(Schema):
     class Meta:
         ordered = True
@@ -192,7 +211,8 @@ class LearningObjectiveSchema(Schema):
                                   deserialize=deserialize_str, required=True)
 
     public = fields.Boolean()
-    author = fields.Nested("UserSchema", dump_only=True)
+    author = fields.Nested("UserSchema", only=('email',), dump_only=True)
+    topic = fields.Nested(TopicSchema, only=('id', 'text'), dump_only=True)
 
     questions = fields.List(fields.Nested(QuestionSchema,
                                           only=('id', 'prompt')),
@@ -214,10 +234,14 @@ class SourceSchema(Schema):
     type = fields.Method("get_type", required=True, deserialize="create_type")
     title = fields.Str()
     public = fields.Boolean()
-    author = fields.Nested("UserSchema", dump_only=True)
+    author = fields.Nested("UserSchema", only=('email',), dump_only=True)
 
     objectives = fields.List(fields.Nested(LearningObjectiveSchema),
                              dump_only=True)
+
+    topics = fields.List(fields.Nested(TopicSchema,
+                                       only=('id', 'text')),
+                            dump_only=True)
 
     def get_type(self, obj):
         return obj.type.value
@@ -321,6 +345,8 @@ class CourseSchema(Schema):
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 course_schema = CourseSchema()
+topic_schema = TopicSchema()
+topics_schema = TopicSchema(many=True)
 question_schema = QuestionSchema(unknown=EXCLUDE)
 sa_question_schema = ShortAnswerQuestionSchema()
 ac_question_schema = AutoCheckQuestionSchema()
@@ -355,6 +381,10 @@ def init_app(flask_app):
     rf_api.add_resource(CourseQuestionApi,
                         '/api/course/<int:course_id>/question/<int:question_id>',
                         endpoint='course_question')
+
+    rf_api.add_resource(TopicApi, '/api/topic/<int:topic_id>')
+    rf_api.add_resource(TopicsApi, '/api/topics',
+                        endpoint='topics_api')
 
     rf_api.add_resource(TextbookApi, '/api/textbook/<int:textbook_id>')
     rf_api.add_resource(TextbooksApi, '/api/textbooks')
@@ -554,6 +584,41 @@ class LoginApi(Resource):
         access_token = create_access_token(identity=user)
         set_access_cookies(response, access_token)
         return response
+
+
+class TopicApi(Resource):
+    @jwt_required()
+    def get(self, topic_id):
+        t = Topic.query.filter_by(id=topic_id).one_or_none()
+        if t:
+            # Limit access to admins and instructors
+            if not (current_user.admin or current_user.instructor):
+                return {'message': "Unauthorized access"}, 401
+
+            return topic_schema.dump(t)
+        else:
+            return {'message': f"Topic {topic_id} not found."}, 404
+
+
+class TopicsApi(Resource):
+    @jwt_required()
+    def get(self):
+        if not (current_user.admin or current_user.instructor):
+            return {'message': "Unauthorized access"}, 401
+
+        topics = Topic.query.all()
+
+        schema = TopicSchema(many=True, exclude=('sources', 'objectives'))
+        result = schema.dump(topics)
+        return {'topics': result}
+
+    @jwt_required()
+    def post(self):
+        # Only instructors and admins are allowed to create topics
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
+        return create_and_commit(Topic, topic_schema, request.get_json())
 
 
 class LogoutApi(Resource):
@@ -1094,5 +1159,6 @@ class ObjectivesApi(Resource):
 from app.db_models import (
     QuestionType, AnswerOption, Course, ShortAnswerQuestion,
     AutoCheckQuestion, MultipleChoiceQuestion, User, Question, JumbleBlock,
-    CodeJumbleQuestion, Textbook, TextbookSection, SourceType, Objective
+    CodeJumbleQuestion, Textbook, TextbookSection, SourceType, Objective,
+    Topic
 )
