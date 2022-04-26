@@ -49,7 +49,7 @@ export default {
     },
 
     async searchObjectives() {
-      let url = "/booger/api/objectives?html";  // FIXME "{{ url_for('objectives_api') }}";
+      let url = "/api/objectives?html";  // FIXME "{{ url_for('objectives_api') }}";
       if (this.search_string) {
         url = url + "&q=" + encodeURIComponent(this.search_string);
       }

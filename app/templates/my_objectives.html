@@ -1,30 +1,142 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
-        <h4>My Objectives</h4>
+        <h4>My Learning Objectives</h4>
 
 		<div class="row" id="currentObjectives">
+			<confirmation-dialog name="confirmationModal"
+				 @confirmed="resolveConfirmation(true)"
+				 @cancelled="resolveConfirmation(false)">
+				Are you sure you want to delete these objectives.
+				<strong>This action cannot be undone.</strong>
+			</confirmation-dialog>
+
+
 			<ul class="list-unstyled" v-if="objectives.length > 0">
-				<li class="m-2"
-					v-for="(lo, index) in objectives" :key="lo.id">
+				<li class="m-2">
 					<div class="container row">
-						<div class="col-9 border bg-light p-1 clippy" v-html="convertToHtml(lo.description)">
+						<div class="col-auto border pt-2"
+							:class="{'bg-light': selected_indices.length !== objectives.length, 'bg-primary bg-gradient': selected_indices.length === objectives.length}">
+							<input id="massSelect" type="checkbox"
+								v-model="mass_select"
+								:checked="selected_indices.length === objectives.length">
+							<label for="massSelect" class="visually-hidden">Select All/None</label>
 						</div>
-						<div class="col-3">
-							<i class="bi-pencil-square"></i>
-							<a class="text-decoration-none text-secondary" :href="'/lo/' +  lo.id  + '/edit'">
-								Edit
-							</a>
-							<br/>
-							<i class="bi-trash"></i>
-							<a href="#" class="text-decoration-none text-danger"
-								@click="deleteObjective(index)">
-								Delete
-							</a>
+
+						<div class="col-10 p-1 border-top border-bottom d-flex align-items-center"
+							style="min-height: 2.75rem">
+							<div v-if="selected_indices.length > 0" class="mx-2">
+								<div class="btn-group mx-2">
+									<button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+										<i class="bi-tag"></i>
+										Topic
+									</button>
+									<ul class="dropdown-menu">
+										<li><button class="dropdown-item" type="button"
+													data-bs-toggle="modal" data-bs-target="#setTopicModal">
+												<i class="bi-plus-circle"></i>
+												Set Topic</button>
+										</li>
+										<li><button class="dropdown-item" type="button" @click="removeTopicFromSelected">
+												<i class="bi-x-circle"></i>
+												Remove Topic</button>
+										</li>
+									</ul>
+								</div>
+
+								<div class="btn-group mx-2">
+									<button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+										<i class="bi-tools"></i>
+										Settings
+									</button>
+									<ul class="dropdown-menu">
+										<li><button class="dropdown-item" type="button"
+														@click="updateSelectedQuestions('public', true)">
+												<i class="bi-people"></i>
+												Mark as Public</button></li>
+										<li><button class="dropdown-item" type="button"
+														@click="updateSelectedQuestions('public', false)">
+												<i class="bi-person"></i>
+												Mark as Private</button></li>
+									</ul>
+								</div>
+
+								<button type="button" class="btn btn-sm btn-danger" @click="deleteSelected">
+									<i class="bi-trash"></i>
+									Delete
+								</button>
+							</div>
+						</div>
+						<div class="col-1 pt-2 border border-start-0">
 						</div>
 					</div>
 				</li>
+
+				<li class="m-2"
+					v-for="(objective, index) in objectives" :key="objective.id">
+					<div class="container row">
+						<!-- Column with checkbox -->
+						<div class="col-auto pt-2 border"
+							:class="{'bg-light': !selected_indices.includes(index), 'bg-primary bg-gradient': selected_indices.includes(index)}">
+							<input 
+									:id="`o${index}`" :value=index v-model.number="selected_indices"
+									name="anObjective" type="checkbox">
+							<label :for="`o${index}`" class="visually-hidden">Objective with ID [[objective.id]]</label>
+						</div>
+
+						<!-- Column with table of objective info -->
+						<div class="col-10 p-1 border-top border-bottom">
+							<table class="table table-borderless table-sm">
+								<tbody>
+									<tr>
+										<th scope="row">Topic:</th>
+										<td v-if="objective.topic">
+											[[ objective.topic.text ]]
+										</td>
+										<td v-else>
+											<em>None</em>
+										</td>
+									</tr>
+
+									<tr>
+										<th scope="row" class="col-1">Description:</th>
+										<td v-html="convertToHtml(objective.description)"></td>
+									</tr>
+
+									<tr>
+										<th scope="row">Public:</th>
+										<td>
+											<span class="text-success" v-if="objective.public">
+												<i class="bi-check-circle"></i>
+											</span>
+											<span class="text-danger" v-else>
+												<i class="bi-x-circle"></i>
+											</span>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+
+						<!-- Column with actions only for individual objectives -->
+						<div class="col-1 pt-2 border border-start-0">
+							<i class="bi-pencil-square"></i>
+							<a class="text-decoration-none text-secondary" :href="'/lo/' +  objective.id  + '/edit'">
+								Edit
+							</a>
+						</div>
+
+					</div>
+				</li>
 			</ul>
+
+			<set-topic-modal 
+			   name="setTopicModal"
+				  @topic-set="setTopicInSelected"
+				  @created-new-topic="displayMessage('Successfully created a new topic.')"
+				  @failed-to-create="displayMessage('Failed to create topic.')"
+                  @failed-to-search="displayMessage('Failed to obtain search results.')">
+			</set-objective-modal>
 		</div>
 
 		<div class="row">
@@ -34,7 +146,6 @@
 				Create New Objective
 			</a>
 		</div>
-
 	</div>
 
 	<div id="snackbar">Default message.</div> 
@@ -43,9 +154,15 @@
     <script src="https://unpkg.com/vue@3"></script>
 
 	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
+	<script src="{{ url_for('static', filename='js/cadet-api.js') }}" type="module"></script>
+	<script src="{{ url_for('static', filename='js/confirmation-dialog.js') }}" type="module"></script>
+
 
 	<script type="module">
-		import { fetchOrRefresh, showSnackbarMessage } from '/static/js/helpers.js';
+		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+		import * as CadetApi from '/static/js/cadet-api.js';
+		import ConfirmationDialog from '/static/js/confirmation-dialog.js';
+		import SetTopicModal from '/static/js/topic-modal.js';
 
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
@@ -55,27 +172,148 @@
                 return {
                     objectives: [],
 					target_user: {{ target_author }},
+					selected_indices: [],
+					mass_select: false,
+					resolveConfirmation: undefined,
                 }
             },
 
+			components: {
+				ConfirmationDialog,
+				SetTopicModal,
+			},
+
+			watch: {
+				mass_select(checkedNow, wasChecked) {
+					this.selected_indices = [];
+					if (checkedNow) {
+						for (let i = 0; i < this.objectives.length; i++) {
+							this.selected_indices.push(i);
+						}
+					}
+				},
+			},
+
             methods: {
-                async deleteObjective(index) {
-					const url = `/api/objective/${this.objectives[index].id}`
-                    const response = await fetchOrRefresh(url, 'DELETE');
-                    if (response.ok) {
-						this.objectives.splice(index, 1);
+				displayMessage(msg) {
+					showSnackbarMessage(msg);
+				},
 
-						// TODO: save the objective that was deleted and offer
-						// "undo" option
+				async setTopicInSelected(topic_id) {
+					let updated_indices = [];
+					let failed_indices = [];
 
-                        showSnackbarMessage("Successfully deleted objective.");
-                    }
-                    else {
-                        showSnackbarMessage(`Error deleting objective. Try again. (HTTP Status: ${response.status})`);
-                    }
+					for (const index of this.selected_indices) {
+						const o_id = this.objectives[index].id;
+						const response = await CadetApi.setObjectiveTopic(o_id, topic_id);
+
+						if (response.ok) {
+							updated_indices.push(index);
+							const r = await response.json()
+							this.objectives[index].topic = r["updated"].topic;
+						}
+						else {
+							failed_indices.push(index);
+						}
+					}
+
+					showSnackbarMessage(`Successfully updated ${updated_indices.length} topics. Failures: ${failed_indices.length}`);
+				},
+
+				async removeTopicFromSelected() {
+					let updated_indices = [];
+					let failed_indices = [];
+
+					for (const index of this.selected_indices) {
+						if (this.objectives[index].topic === null) {
+							updated_indices.push(index);
+							continue;
+						}
+
+						const o_id = this.objectives[index].id;
+						const response = await CadetApi.removeObjectiveTopic(o_id);
+
+						if (response.ok) {
+							updated_indices.push(index);
+							this.objectives[index].topic = null;
+						}
+						else {
+							failed_indices.push(index);
+						}
+					}
+
+					showSnackbarMessage(`Successfully removed topic from ${updated_indices.length} objectives. Failures: ${failed_indices.length}`);
+				},
+
+                async updateSelectedQuestions(field_name, field_value) {
+					let updated_indices = [];
+					let failed_indices = [];
+
+					for (const index of this.selected_indices) {
+						if (this.objectives[index][field_name] === field_value) {
+							// skip updating those objectives whose field value is
+							// already set to the desired value
+							updated_indices.push(index);
+							continue;
+						}
+
+						const o_id = this.objectives[index].id;
+						const response = await CadetApi.updateObjectiveField(field_name, field_value, o_id);
+
+						if (response.ok) {
+							updated_indices.push(index);
+							this.objectives[index][field_name] = field_value;
+						}
+						else {
+							failed_indices.push(index);
+						}
+					}
+
+					showSnackbarMessage(`Successfully updated ${updated_indices.length} objectives. Failures: ${failed_indices.length}`);
                 },
 
-                async getObjectives() {
+				getConfirmation() {
+					const modal_el = document.getElementById('confirmationModal');
+					const confirmation_modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+					confirmation_modal.show();
+
+					return new Promise((resolve, reject) => {
+						this.resolveConfirmation = resolve
+					});
+				},
+
+				async deleteSelected() {
+					// get confirmation first
+					const confirmation = await this.getConfirmation();
+
+					// if resolved to true, then we can delete
+					if (confirmation) {
+						let deleted_indices = [];
+						let failed_indices = [];
+						const original_indices = [...this.selected_indices];
+
+						// TRICKY: sort indices in reverse order so indices
+						// don't get thrown off when removing from this.objectives
+						original_indices.sort( (a,b) => { return b - a; } );
+
+						for (const index of original_indices) {
+							const o_id = this.objectives[index].id;
+							const response = await CadetApi.deleteObjective(o_id);
+							if (response.ok) {
+								deleted_indices.push(index);
+								this.objectives.splice(index, 1);
+							}
+							else {
+								failed_indices.push(index);
+							}
+						}
+
+						showSnackbarMessage(`Successfully deleted ${deleted_indices.length} objectives. Failures: ${failed_indices.length}`);
+						this.selected_indices = failed_indices;
+					}
+				},
+
+                async getQuestions() {
                     let url = "{{ url_for('objectives_api') }}";
 					url = url + `?author=${this.target_user}`;
 
@@ -85,17 +323,17 @@
                         this.objectives = r["learning_objectives"];
                     }
                     else {
-                        showSnackbarMessage(`Error loading objectives. Try again. (HTTP Status: ${response.status})`);
+                        showSnackbarMessage("Error loading learning objectives.");
                     }
                 },
 
                 convertToHtml(md_text) {
                     return converter.makeHtml(md_text);
-                }
+				},
             },
 
             created() {
-                this.getObjectives();
+                this.getQuestions();
             },
 
             compilerOptions: {
