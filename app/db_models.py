@@ -113,6 +113,32 @@ source_objectives = db.Table(
     db.Column('objective_id', db.Integer, db.ForeignKey('objective.id'))
 )
 
+# association table for sources associated with a topic
+topic_sources = db.Table(
+    'topic_sources',
+    db.Column('topic_id', db.Integer, db.ForeignKey('topic.id')),
+    db.Column('source_id', db.Integer, db.ForeignKey('source.id'))
+)
+
+
+class Topic(SearchableMixin, db.Model):
+    __searchable__ = ['text']
+
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.String, nullable=False)
+
+    objectives = db.relationship('Objective',
+                                 foreign_keys='Objective.topic_id',
+                                 backref='topic', lazy='dynamic')
+
+    sources = db.relationship('Source',
+                                 secondary=topic_sources,
+                                 primaryjoin=('topic_sources.c.topic_id == Topic.id'),
+                                 secondaryjoin=('topic_sources.c.source_id == Source.id'),
+                                 backref=db.backref('topics', lazy='dynamic'),
+                                 lazy='dynamic')
+
+
 
 class Question(SearchableMixin, db.Model):
     __searchable__ = ['prompt']
@@ -442,6 +468,7 @@ class Objective(SearchableMixin, db.Model):
 
     public = db.Column(db.Boolean, default=True, nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'))
 
     questions = db.relationship('Question',
                                 foreign_keys='Question.objective_id',
