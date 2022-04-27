@@ -73,22 +73,28 @@
 								<ul class="dropdown-menu">
 									<li>
 										<a class="dropdown-item" 
-											href="{{ url_for('instructor.manage_questions', course_name=course.name) }}"
-											>Manage Questions</a>
+											href="{{ url_for('instructor.manage_questions', course_name=course.name) }}">
+                                            <i class="bi-question-circle"></i>
+                                            Manage Questions
+                                        </a>
 									
 									</li>
 
 									<li>
 										<a class="dropdown-item" 
-											href="{{ url_for('instructor.manage_roster', course_name=course.name) }}"
-											>Manage Roster</a>
+											href="{{ url_for('instructor.manage_roster', course_name=course.name) }}">
+                                            <i class="bi-people"></i>
+                                            Manage Roster
+                                        </a>
 									
 									</li>
 
 									<li>
 										<a class="dropdown-item" 
-											href="{{ url_for('instructor.edit_course', course_name=course.name) }}"
-											>Edit Settings</a>
+											href="{{ url_for('instructor.edit_course', course_name=course.name) }}">
+                                            <i class="bi-tools"></i>
+                                            Edit Settings
+                                        </a>
 									
 									</li>
 								</ul>
