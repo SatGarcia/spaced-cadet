@@ -274,6 +274,20 @@ class TextbookSectionSchema(SourceSchema):
         return data
 
 
+class ClassMeetingSchema(SourceSchema):
+    date = fields.Date()
+    course = fields.Nested("CourseSchema",
+                             only=("id", "name", "title"))
+
+    @pre_load
+    def set_type(self, data, **kwargs):
+        """ Sets source type to that of class-meeting so user doesn't have
+        to specify it themselves. """
+
+        data['type'] = "class-meeting"
+        return data
+
+
 class TextbookSchema(Schema):
     id = fields.Int(dump_only=True)
 
@@ -338,7 +352,12 @@ class CourseSchema(Schema):
     description = fields.Str(required=True)
     start_date = fields.Date(required=True, data_key="start-date")
     end_date = fields.Date(required=True, data_key="end-date")
-    users = fields.List(fields.Nested(UserSchema), dump_only=True)
+
+    users = fields.List(fields.Nested(UserSchema, only=('id', 'email')),
+                        dump_only=True)
+    meetings = fields.List(fields.Nested(ClassMeetingSchema,
+                                          only=('id', 'title')),
+                           dump_only=True)
 
     @validates("name")
     def unique_name(self, course_name):

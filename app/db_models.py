@@ -81,6 +81,7 @@ class ResponseType(enum.Enum):
 class SourceType(enum.Enum):
     GENERIC = "generic"
     TEXTBOOK_SECTION = "textbook-section"
+    CLASS_MEETING = "class-meeting"
 
 # association table for users enrolled in a course
 enrollments = db.Table(
@@ -389,6 +390,10 @@ class Course(SearchableMixin, db.Model):
                                backref=db.backref('courses', lazy='dynamic'),
                                lazy='dynamic')
 
+    meetings = db.relationship('ClassMeeting',
+                                foreign_keys='ClassMeeting.course_id',
+                                backref='course', lazy='dynamic')
+
     assessments = db.relationship('Assessment',
                                     foreign_keys='Assessment.course_id',
                                     backref='course', lazy='dynamic')
@@ -482,7 +487,7 @@ class Source(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.Enum(SourceType), nullable=False)
 
-    title = db.Column(db.String(100), index=True)
+    title = db.Column(db.String(100), index=True, nullable=False)
 
     public = db.Column(db.Boolean, default=True, nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -541,6 +546,18 @@ class TextbookSection(Source):
     }
 
     textbook_id = db.Column(db.Integer, db.ForeignKey('textbook.id'))
+
+
+class ClassMeeting(Source):
+    id = db.Column(db.Integer, db.ForeignKey('source.id'), primary_key=True)
+
+    date = db.Column(db.Date, default=datetime.today, nullable=False)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SourceType.CLASS_MEETING,
+    }
+
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
 
 
 class Assessment(db.Model):
