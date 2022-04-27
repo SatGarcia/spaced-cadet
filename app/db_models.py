@@ -521,12 +521,7 @@ class Source(db.Model):
     }
 
     def __repr__(self):
-        r = f"<Source {self.id}: {self.title}"
-        if self.authors:
-            r += f" by {self.authors}"
-
-        r += f". Type: {self.type}>"
-        return r
+        return f"<Source {self.id}: {self.title}. Type: {self.type}>"
 
 
 class Textbook(SearchableMixin, db.Model):
@@ -548,6 +543,9 @@ class Textbook(SearchableMixin, db.Model):
     sections = db.relationship('TextbookSection',
                                 foreign_keys='TextbookSection.textbook_id',
                                 backref='textbook', lazy='dynamic')
+
+    def __repr__(self):
+        return f"<Textbook {self.id}: '{self.title}' by {self.authors}>"
 
 
 
