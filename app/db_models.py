@@ -506,7 +506,6 @@ class Source(db.Model):
 
     title = db.Column(db.String(100), index=True, nullable=False)
 
-    public = db.Column(db.Boolean, default=True, nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
     objectives = db.relationship('Objective',

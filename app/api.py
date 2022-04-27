@@ -239,7 +239,6 @@ class SourceSchema(Schema):
     id = fields.Int(dump_only=True)
     type = fields.Method("get_type", required=True, deserialize="create_type")
     title = fields.Str(required=True)
-    public = fields.Boolean()
     author = fields.Nested("UserSchema", only=('email',), dump_only=True)
 
     objectives = fields.List(fields.Nested(LearningObjectiveSchema),
