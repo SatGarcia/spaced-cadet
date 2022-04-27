@@ -495,7 +495,8 @@ class TextbookSectionsApi(Resource):
             return {"message": f"No textbook found with id {textbook_id}"}, 404
 
         return create_and_commit(TextbookSection, textbook_section_schema,
-                                 request.get_json(), add_to=t.sections)
+                                 request.get_json(), add_to=[t.sections,
+                                                             current_user.authored_sources])
 
 
 class ClassMeetingsApi(Resource):
@@ -513,7 +514,9 @@ class ClassMeetingsApi(Resource):
         if not (current_user.instructor or current_user.admin):
             return {'message': "Unauthorized access"}, 401
 
-        return create_and_commit(ClassMeeting, class_meeting_schema, request.get_json())
+        return create_and_commit(ClassMeeting, class_meeting_schema,
+                                 request.get_json(),
+                                 add_to=[current_user.authored_sources])
 
 
 class UserApi(Resource):
@@ -575,7 +578,7 @@ class CourseApi(Resource):
             return {'message': f"Course {course_id} not found."}, 404
 
 
-def create_and_commit(obj_type, schema, json_data, add_to=None):
+def create_and_commit(obj_type, schema, json_data, add_to=[]):
     """ Uses the given JSON data and schema to create an object of the given
     type. """
     if not json_data:
@@ -592,8 +595,8 @@ def create_and_commit(obj_type, schema, json_data, add_to=None):
     db.session.add(obj)
 
     # add it to the collection specified by add_to, if that param was given
-    if add_to:
-        add_to.append(obj)
+    for collection in add_to:
+        collection.append(obj)
 
     db.session.commit()
 
@@ -1361,7 +1364,7 @@ class ObjectivesApi(Resource):
         return create_and_commit(Objective,
                                  objective_schema,
                                  request.get_json(),
-                                 add_to=current_user.authored_objectives)
+                                 add_to=[current_user.authored_objectives])
 
 
 
