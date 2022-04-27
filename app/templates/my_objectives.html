@@ -91,7 +91,10 @@
 									<tr>
 										<th scope="row">Topic:</th>
 										<td v-if="objective.topic">
-											[[ objective.topic.text ]]
+											<button type="button" class="btn btn-light btn-sm">
+												[[ objective.topic.text ]]
+												<i class="bi-x" @click="removeTopic(objective)"></i>
+											</button>
 										</td>
 										<td v-else>
 											<em>None</em>
@@ -197,6 +200,16 @@
             methods: {
 				displayMessage(msg) {
 					showSnackbarMessage(msg);
+				},
+
+				async removeTopic(objective) {
+					const response = await CadetApi.removeObjectiveTopic(objective.id);
+					if (response.ok) {
+						objective.topic = null;
+					}
+					else {
+						showSnackbarMessage("Error removing topic. Try again later.");
+					}
 				},
 
 				async setTopicInSelected(topic_id) {
