@@ -238,7 +238,7 @@ class SourceSchema(Schema):
 
     id = fields.Int(dump_only=True)
     type = fields.Method("get_type", required=True, deserialize="create_type")
-    title = fields.Str()
+    title = fields.Str(required=True)
     public = fields.Boolean()
     author = fields.Nested("UserSchema", only=('email',), dump_only=True)
 
@@ -261,10 +261,9 @@ class SourceSchema(Schema):
 
 class TextbookSectionSchema(SourceSchema):
     number = fields.Str()
-    title = fields.Str(required=True)
     url = fields.Str()
     textbook = fields.Nested("TextbookSchema",
-                             only=("id", "title"))
+                             only=("id", "title", "edition"))
 
     @pre_load
     def set_type(self, data, **kwargs):
@@ -345,7 +344,6 @@ class CourseSchema(Schema):
     def unique_name(self, course_name):
         if Course.query.filter_by(name=course_name).count() > 0:
             raise ValidationError("name must be unique")
-
 
 
 user_schema = UserSchema()
