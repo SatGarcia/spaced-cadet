@@ -92,6 +92,7 @@ enrollments = db.Table(
               primary_key=True)
 )
 
+# association table for questions in a course
 assigned_questions = db.Table(
     'assigned_questions',
     db.Column('course_id', db.Integer, db.ForeignKey('course.id'),
@@ -105,6 +106,15 @@ assigned_objectives = db.Table(
     'assigned_objectives',
     db.Column('assessment_id', db.Integer, db.ForeignKey('assessment.id')),
     db.Column('objective_id', db.Integer, db.ForeignKey('objective.id'))
+)
+
+# association table for textbooks in a course
+assigned_textbooks = db.Table(
+    'assigned_textbooks',
+    db.Column('course_id', db.Integer, db.ForeignKey('course.id'),
+              primary_key=True),
+    db.Column('textbook_id', db.Integer, db.ForeignKey('textbook.id'),
+              primary_key=True)
 )
 
 # association table for objectives associated with a source
@@ -387,6 +397,13 @@ class Course(SearchableMixin, db.Model):
                                secondary=enrollments,
                                primaryjoin=('enrollments.c.course_id == Course.id'),
                                secondaryjoin=('enrollments.c.user_id == User.id'),
+                               backref=db.backref('courses', lazy='dynamic'),
+                               lazy='dynamic')
+
+    textbooks = db.relationship('Textbook',
+                               secondary=assigned_textbooks,
+                               primaryjoin=('assigned_textbooks.c.course_id == Course.id'),
+                               secondaryjoin=('assigned_textbooks.c.textbook_id == Textbook.id'),
                                backref=db.backref('courses', lazy='dynamic'),
                                lazy='dynamic')
 
