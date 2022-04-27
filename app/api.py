@@ -1372,5 +1372,5 @@ from app.db_models import (
     QuestionType, AnswerOption, Course, ShortAnswerQuestion,
     AutoCheckQuestion, MultipleChoiceQuestion, User, Question, JumbleBlock,
     CodeJumbleQuestion, Textbook, TextbookSection, SourceType, Objective,
-    Topic, ClassMeeting
+    Topic, ClassMeeting, Source
 )
