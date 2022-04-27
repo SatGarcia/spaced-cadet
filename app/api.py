@@ -357,6 +357,9 @@ class CourseSchema(Schema):
     meetings = fields.List(fields.Nested(ClassMeetingSchema,
                                           only=('id', 'title')),
                            dump_only=True)
+    textbooks = fields.List(fields.Nested("TextbookSchema",
+                                          only=("id", "title", "edition")),
+                            dump_only=True)
 
     @validates("name")
     def unique_name(self, course_name):
@@ -376,6 +379,8 @@ mc_question_schema = MultipleChoiceQuestionSchema()
 cj_question_schema = CodeJumbleQuestionSchema()
 textbook_schema = TextbookSchema()
 textbook_section_schema = TextbookSectionSchema()
+class_meeting_schema = ClassMeetingSchema()
+class_meetings_schema = ClassMeetingSchema(many=True)
 objective_schema = LearningObjectiveSchema()
 objectives_schema = LearningObjectiveSchema(many=True)
 textbook_section_schema = TextbookSectionSchema()
@@ -403,6 +408,12 @@ def init_app(flask_app):
     rf_api.add_resource(CourseQuestionApi,
                         '/api/course/<int:course_id>/question/<int:question_id>',
                         endpoint='course_question')
+    rf_api.add_resource(CourseTextbooksApi,
+                        '/api/course/<int:course_id>/textbooks',
+                        endpoint='course_textbooks')
+    rf_api.add_resource(CourseMeetingsApi,
+                        '/api/course/<int:course_id>/meetings',
+                        endpoint='course_meetings')
 
     rf_api.add_resource(TopicApi, '/api/topic/<int:topic_id>')
     rf_api.add_resource(TopicsApi, '/api/topics',
@@ -417,6 +428,7 @@ def init_app(flask_app):
     rf_api.add_resource(TextbookApi, '/api/textbook/<int:textbook_id>')
     rf_api.add_resource(TextbooksApi, '/api/textbooks')
     rf_api.add_resource(TextbookSectionsApi, '/api/textbook/<int:textbook_id>/sections')
+    rf_api.add_resource(ClassMeetingsApi, '/api/class-meetings')
 
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>',
                         endpoint='question_api')
@@ -484,6 +496,24 @@ class TextbookSectionsApi(Resource):
 
         return create_and_commit(TextbookSection, textbook_section_schema,
                                  request.get_json(), add_to=t.sections)
+
+
+class ClassMeetingsApi(Resource):
+    @jwt_required()
+    def get(self):
+        if not current_user.admin:
+            return {'message': "Unauthorized access"}, 401
+
+        meetings = ClassMeetings.query.all()
+        result = class_meetings_schema.dump(meetings)
+        return {'class-meetings': result}
+
+    @jwt_required()
+    def post(self):
+        if not (current_user.instructor or current_user.admin):
+            return {'message': "Unauthorized access"}, 401
+
+        return create_and_commit(ClassMeeting, class_meeting_schema, request.get_json())
 
 
 class UserApi(Resource):
@@ -916,72 +946,18 @@ class IdListSchema(Schema):
 class SingleIdSchema(Schema):
     id = fields.Int(required=True)
 
+
 class RosterApi(Resource):
     @jwt_required()
     def get(self, course_id):
-        c = Course.query.filter_by(id=course_id).one_or_none()
-        if c:
-            # Limit access to admins and course instructors
-            if (not current_user.admin)\
-                    and (not current_user.instructor or current_user not in c.users):
-                return {'message': 'Unauthorized access.'}, 401
-
-            result = users_schema.dump(c.users)
-            return {"roster": result}
-        else:
-            return {'message': f"Course {course_id} not found."}, 404
+        schema = UserSchema(only=('id','email'))
+        return course_collections_getter(course_id, schema, 'users')
 
     @jwt_required()
     def post(self, course_id):
-        course = Course.query.filter_by(id=course_id).one_or_none()
-        if not course:
-            return {'message': f"Course {course_id} not found."}, 404
-
-        # Limit access to admins and course instructors
-        if (not current_user.admin)\
-                and (not current_user.instructor or current_user not in course.users):
-            return {'message': 'Unauthorized access.'}, 401
-
-        json_data = request.get_json()
-
-        if not json_data:
-            return {"message": "No input data provided"}, 400
-
-        # validate and load the list of student IDs
-        try:
-            data = IdListSchema().load(json_data)
-        except ValidationError as err:
-            return err.messages, 422
-
-        already_enrolled = []
-        newly_enrolled = []
-        invalid_ids = []
-
-        for user_id in data['ids']:
-            user = User.query.filter_by(id=user_id).one_or_none()
-
-            if user:
-                if user in course.users:
-                    already_enrolled.append(user)
-                else:
-                    newly_enrolled.append(user)
-                    course.users.append(user)
-
-            else:
-                invalid_ids.append(user_id)
-
-        db.session.commit()
-
-        return {
-            "newly-enrolled": UserSchema(many=True, only=("id", "email",
-                                                          "first_name",
-                                                          "last_name")).dump(
-                                                              newly_enrolled),
-            "already-enrolled": UserSchema(many=True, only=("id", "email",
-                                                            "first_name",
-                                                            "last_name")).dump(
-                                                                already_enrolled),
-            "invalid-ids": invalid_ids}
+        schema = UserSchema(only=('id','email'))
+        return course_collections_poster(course_id, schema, 'users',
+                                         User)
 
 
 class EnrolledStudentApi(Resource):
@@ -1007,67 +983,108 @@ class EnrolledStudentApi(Resource):
         return {"removed": removed_student}
 
 
+def course_collections_getter(course_id, schema, collection_name):
+    c = Course.query.filter_by(id=course_id).one_or_none()
+    if c:
+        # Limit access to admins and course instructors
+        if (not current_user.admin)\
+                and (not current_user.instructor or current_user not in c.users):
+            return {'message': 'Unauthorized access.'}, 401
+
+        result = schema.dump(getattr(c, collection_name), many=True)
+        return {collection_name: result}
+
+    else:
+        return {'message': f"Course {course_id} not found."}, 404
+
+
+def course_collections_poster(course_id, schema, collection_name, collection_type):
+    # NOTE: collection_type is the type of item in collection (e.g. User or
+    # Question)
+    course = Course.query.filter_by(id=course_id).one_or_none()
+    if not course:
+        return {'message': f"Course {course_id} not found."}, 404
+
+    # Limit access to admins and course instructors
+    if (not current_user.admin)\
+            and (not current_user.instructor or current_user not in course.users):
+        return {'message': 'Unauthorized access.'}, 401
+
+    json_data = request.get_json()
+
+    if not json_data:
+        return {"message": "No input data provided"}, 400
+
+    # validate and load the list of question IDs
+    try:
+        data = IdListSchema().load(json_data)
+    except ValidationError as err:
+        return err.messages, 422
+
+    ignored = []
+    added = []
+    invalid_ids = []
+
+    for item_id in data['ids']:
+        item = collection_type.query.filter_by(id=item_id).one_or_none()
+
+        if item:
+            collection = getattr(course, collection_name)
+            if item in collection:
+                ignored.append(item)
+            else:
+                added.append(item)
+                collection.append(item)
+
+        else:
+            invalid_ids.append(item_id)
+
+    db.session.commit()
+
+    return {
+        "added": schema.dump(added, many=True),
+        "previously-added": schema.dump(ignored, many=True),
+        "invalid-ids": invalid_ids
+    }
+
+
 class CourseQuestionsApi(Resource):
     @jwt_required()
     def get(self, course_id):
-        c = Course.query.filter_by(id=course_id).one_or_none()
-        if c:
-            # Limit access to admins and course instructors
-            if (not current_user.admin)\
-                    and (not current_user.instructor or current_user not in c.users):
-                return {'message': 'Unauthorized access.'}, 401
-
-            result = QuestionSchema(only=("id",)).dump(c.questions, many=True)
-            return {"question_ids": [q['id'] for q in result]}
-        else:
-            return {'message': f"Course {course_id} not found."}, 404
+        schema = QuestionSchema(only=('id','prompt'))
+        return course_collections_getter(course_id, schema, 'questions')
 
     @jwt_required()
     def post(self, course_id):
-        course = Course.query.filter_by(id=course_id).one_or_none()
-        if not course:
-            return {'message': f"Course {course_id} not found."}, 404
+        schema = QuestionSchema(only=('id','prompt'))
+        return course_collections_poster(course_id, schema, 'questions',
+                                         Question)
 
-        # Limit access to admins and course instructors
-        if (not current_user.admin)\
-                and (not current_user.instructor or current_user not in course.users):
-            return {'message': 'Unauthorized access.'}, 401
 
-        json_data = request.get_json()
+class CourseTextbooksApi(Resource):
+    @jwt_required()
+    def get(self, course_id):
+        schema = TextbookSchema(only=('id','title','edition'))
+        return course_collections_getter(course_id, schema, 'textbooks')
 
-        if not json_data:
-            return {"message": "No input data provided"}, 400
+    @jwt_required()
+    def post(self, course_id):
+        schema = TextbookSchema(only=('id','title','edition'))
+        return course_collections_poster(course_id, schema, 'textbooks',
+                                         Textbook)
 
-        # validate and load the list of question IDs
-        try:
-            data = IdListSchema().load(json_data)
-        except ValidationError as err:
-            return err.messages, 422
 
-        good_ones = []
-        bad_ones = []
+class CourseMeetingsApi(Resource):
+    @jwt_required()
+    def get(self, course_id):
+        schema = ClassMeetingSchema(only=('id','title'))
+        return course_collections_getter(course_id, schema, 'meetings')
 
-        for q_id in data['ids']:
-            q = Question.query.filter_by(id=q_id).one_or_none()
-
-            if q:
-                if q in course.questions:
-                    bad_ones.append({q_id: "Course already has this question."})
-                else:
-                    good_ones.append(q)
-
-            else:
-                bad_ones.append({q_id: "No question with this ID."})
-
-        if bad_ones:
-            return {"errors": bad_ones}, 400
-
-        for q in good_ones:
-            course.questions.append(q)
-
-        db.session.commit()
-
-        return {"questions": QuestionSchema().dump(good_ones, many=True)}
+    @jwt_required()
+    def post(self, course_id):
+        schema = ClassMeetingSchema(only=('id','title'))
+        return course_collections_poster(course_id, schema, 'meetings',
+                                         ClassMeeting)
 
 
 class QuestionsApi(Resource):
@@ -1352,5 +1369,5 @@ from app.db_models import (
     QuestionType, AnswerOption, Course, ShortAnswerQuestion,
     AutoCheckQuestion, MultipleChoiceQuestion, User, Question, JumbleBlock,
     CodeJumbleQuestion, Textbook, TextbookSection, SourceType, Objective,
-    Topic
+    Topic, ClassMeeting
 )
