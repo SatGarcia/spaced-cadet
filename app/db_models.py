@@ -136,7 +136,7 @@ class Topic(SearchableMixin, db.Model):
     __searchable__ = ['text']
 
     id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.String, nullable=False)
+    text = db.Column(db.String, unique=True, nullable=False)
 
     objectives = db.relationship('Objective',
                                  foreign_keys='Objective.topic_id',
