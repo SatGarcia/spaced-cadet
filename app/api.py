@@ -1346,6 +1346,16 @@ class ObjectivesApi(Resource):
             objectives = objectives.filter(db.or_(Objective.public == True,
                                                   Objective.author == current_user))
 
+        # handle request to limit to specific topics
+        topic_list_str = request.args.get("topics")
+        if topic_list_str:
+            try:
+                topic_ids = [int(i) for i in topic_list_str.split(',')]
+            except:
+                return {'message': f"Invalid topics argument: {topic_list_str}"}, 400
+
+            objectives = objectives.join(Topic).filter(Topic.id.in_(topic_ids))
+
         # if they used the 'html' argument, get the HTML version of the field
         if request.args.get("html") is not None:
             schema = LearningObjectiveSchema(many=True)
