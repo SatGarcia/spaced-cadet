@@ -1129,6 +1129,17 @@ class QuestionsApi(Resource):
             questions = questions.filter(db.or_(Question.public == True,
                                                 Question.author == current_user))
 
+        # handle request to limit to questions with specific objectives
+        objective_list_str = request.args.get("objectives")
+        if objective_list_str:
+            try:
+                objective_ids = [int(i) for i in objective_list_str.split(',')]
+            except:
+                return {'message': f"Invalid objectives argument: {objective_list_str}"}, 400
+
+            questions = questions.join(Objective).filter(Objective.id.in_(objective_ids))
+
+
         result = question_schema.dump(questions.all(), many=True)
         return {'questions': result}
 
