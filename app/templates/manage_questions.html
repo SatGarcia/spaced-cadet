@@ -7,7 +7,10 @@
 			<h5>Add Questions</h5>
 			<ul class="list-unstyled mx-3">
                 <li>
-                    <a class="btn btn-link text-decoration-none" href="{{ url_for('instructor.add_question', course_name=course.name) }}">Browse Existing Questions</a>
+                    <a class="btn btn-link text-decoration-none" href="{{ url_for('instructor.find_questions', course_name=course.name) }}">Find Questions By Topic</a>
+                </li>
+                <li>
+                    <a class="btn btn-link text-decoration-none" href="{{ url_for('instructor.add_question', course_name=course.name) }}">Browse All Existing Questions</a>
                 </li>
                 <li>
                     <span class="dropdown">

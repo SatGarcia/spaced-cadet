@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block body %}
+    <div class="container pt-3">
+        <h4>Find Questions</h4>
+
+		<div id="questionFinder">
+			<div class="row border m-2 p-2" id="selectTopics">
+                <h5>Topics</h5>
+				<!-- TODO: search box -->
+				<!-- area for listing all course topics (v-else) -->
+				<div>
+                    Course Topics: 
+                    <br />
+					<button type="button" class="btn btn-sm btn-light m-2"
+                           v-for="(topic, index) in all_topics" :key="topic.id"
+                           @click="toggleTopicSelect(index)">
+						[[ topic.text ]]
+					</button>
+				</div>
+
+				<!-- TODO: area for adding new topics to course -->
+
+				<!-- area for selected topics -->
+                <div class="mt-3">
+                    Selected Topics:
+                    <br />
+					<span class="badge bg-light text-dark border m-1"
+                           v-for="(topic, index) in selected_topics" :key="index">
+						[[ topic.text ]]
+                        <i class="bi-x" @click="selected_topics.splice(index,1)"></i>
+					</span>
+                </div>
+			</div>
+
+			<div class="row border m-2 p-2" id="selectObjectives"
+                                   v-if="selected_topics.length !== 0 || selected_objectives.length != 0">
+                <h5>Learning Objectives</h5>
+                <!-- area for possible objectives (based on selected topics) -->
+                <div>
+                    <i class="bi-list-task"></i>
+                    All Objectives of Selected Topics:
+
+                    <div class="list-group" v-if="all_objectives.length !== 0">
+                        <button type="button" class="list-group-item list-group-item-action"
+                                              v-for="(lo, index) in all_objectives" :key="lo.id"
+                                              @click="toggleObjectiveSelect(lo)">
+                            <span class="text-primary" v-if="objective_is_selected[index]">
+                                <i class="bi-check-circle"></i>
+                            </span>
+                            <span class="text-secondary" v-else="!objective_is_selected[index]">
+                                <i class="bi-dash-circle"></i>
+                            </span>
+
+                            <span class="ms-2" v-html="convertToHtml(lo.description)"></span>
+
+                            <span class="badge bg-light text-dark border m-1">
+                                [[ lo.topic.text ]]
+                            </span>
+                        </button>
+                    </div>
+                    <div v-else>
+                        None found.
+                    </div>
+                </div>
+
+				<!-- area for selected objectives -->
+                <div class="mt-3">
+                    <i class="bi-list-check"></i>
+                    Selected Objectives:
+
+                    <ol class="list-group list-group-numbered">
+                        <li type="button" class="list-group-item"
+                                          v-for="(lo, index) in selected_objectives" :key="lo.id">
+                            <span v-html="convertToHtml(lo.description)"></span>
+                            <span class="badge bg-light text-dark border m-1">
+                                [[ lo.topic.text ]]
+                            </span>
+                            <i role="button" class="bi-x mx-2 fs-6 text-danger"
+                                             @click="selected_objectives.splice(index,1)"></i>
+                        </li>
+                    </ol>
+                </div>
+			</div>
+
+			<div class="row border m-2 p-2" id="selectQuestions"
+                                   v-if="selected_objectives.length !== 0 || selected_questions.length != 0">
+                <h5>Questions</h5>
+				<!-- area for possible questions (based on selected objectives) -->
+                <div>
+                    <i class="bi-list-task"></i>
+                    All Questions of Selected Objectives:
+
+                    <div class="list-group" v-if="all_questions.length !== 0">
+                        <button type="button" class="list-group-item list-group-item-action"
+                                              v-for="(q, index) in all_questions" :key="q.id"
+                                              @click="toggleQuestionSelect(q)">
+                            <div class="d-flex">
+                                <div class="mt-1">
+                                    <span class="text-primary" v-if="question_is_selected[index]">
+                                        <i class="bi-check-circle"></i>
+                                    </span>
+                                    <span class="text-secondary" v-else="!question_is_selected[index]">
+                                        <i class="bi-dash-circle"></i>
+                                    </span>
+                                </div>
+                                <div class="ms-2 flex-grow-1">
+                                    <table class="table table-borderless table-sm mb-0">
+                                        <tbody>
+                                            <tr>
+                                                <th scope="row" class="col-1">Type:</th>
+                                                <td>[[ q.type ]]</td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">Prompt:</th>
+                                                <td>
+                                                    <div class="clippy" v-html="convertToHtml(q.prompt)"></div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">Objective:</th>
+                                                <td v-html="convertToHtml(q.objective.description)"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div>
+                                    <i class="bi-eye"></i>
+                                    <a :href=`/q/${q.id}/preview` target="_blank"
+                                        class="link-secondary text-decoration-none">
+                                        Preview
+                                    </a>
+                                </div>
+                            </div>
+
+                        </button>
+                    </div>
+                </div>
+
+				<!-- area for selected questions -->
+                <div class="mt-3">
+                    <i class="bi-list-check"></i>
+                    Selected Questions:
+
+                    <ol class="list-group list-group-numbered">
+                        <li class="list-group-item"
+                            v-for="(question, index) in selected_questions" :key="question.id">
+
+                            <span v-html="convertToHtml(question.prompt)"></span>
+                            <i role="button" class="bi-x mx-2 fs-6 text-danger"
+                                             @click="selected_questions.splice(index,1)"></i>
+                        </li>
+                    </ol>
+                </div>
+
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary"
+                                          :class="{disabled: selected_questions.length === 0}"
+                                          @click="submitSelected">
+                        Add [[ selected_questions.length ]] Selected Questions
+                    </button>
+                    <form method="POST" action="" id="addQuestionsForm">
+                        {{ form.csrf_token }}
+				        {{ form.selected_questions }}
+                    </form>
+                </div>
+			</div>
+		</div>
+	</div>
+
+	<div id="snackbar">Default message.</div> 
+
+    <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
+    <script src="https://unpkg.com/vue@3"></script>
+
+	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
+	<script src="{{ url_for('static', filename='js/cadet-api.js') }}" type="module"></script>
+
+	<script type="module">
+		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+		import * as CadetApi from '/static/js/cadet-api.js';
+
+        const converter = new showdown.Converter();
+        const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
+
+        const app = Vue.createApp({
+            data() {
+                return {
+					all_topics: [],
+					selected_topics: [],
+                    all_objectives: [],
+                    selected_objectives: [],
+                    all_questions: [],
+                    selected_questions: [],
+                }
+            },
+
+            watch: {
+                selected_topics: {
+                    handler(newSelectedTopics, oldSelecedTopics) {
+                        this.getObjectives();
+                    },
+                    deep: true,
+                },
+
+                selected_objectives: {
+                    handler(newSelectedObjectives, oldSelecedObjectives) {
+                        this.getQuestions();
+                    },
+                    deep: true,
+                },
+            },
+
+            computed: {
+                objective_is_selected() {
+                    const selected_ids = this.selected_objectives.map(o => o.id);
+                    return this.all_objectives.map(o => selected_ids.includes(o.id))
+                },
+
+                question_is_selected() {
+                    const selected_ids = this.selected_questions.map(o => o.id);
+                    return this.all_questions.map(o => selected_ids.includes(o.id))
+                },
+            },
+
+            methods: {
+				displayMessage(msg) {
+					showSnackbarMessage(msg);
+				},
+
+                toggleTopicSelect(index) {
+                    const target_topic = this.all_topics[index];
+                    const found_index = this.selected_topics.findIndex((topic) => topic.id === target_topic.id);
+
+                    if (found_index === -1) {
+                        // wasn't selected before, so add it to selected list
+                        this.selected_topics.push(target_topic);
+                    }
+                    else {
+                        // it was already in there so remove it
+                        this.selected_topics.splice(found_index, 1);
+                    }
+                },
+
+                toggleObjectiveSelect(target_objective) {
+                    // FIXME: code duplication with toggleTopicSelect
+                    const found_index = this.selected_objectives.findIndex((objective) => objective.id === target_objective.id);
+
+                    if (found_index === -1) {
+                        // wasn't selected before, so add it to selected list
+                        this.selected_objectives.push(target_objective);
+                    }
+                    else {
+                        // it was already in there so remove it
+                        this.selected_objectives.splice(found_index, 1);
+                    }
+                },
+
+                toggleQuestionSelect(target_question) {
+                    // FIXME: code duplication with toggleObjectiveSelect
+                    const found_index = this.selected_questions.findIndex((question) => question.id === target_question.id);
+
+                    if (found_index === -1) {
+                        // wasn't selected before, so add it to selected list
+                        this.selected_questions.push(target_question);
+                    }
+                    else {
+                        // it was already in there so remove it
+                        this.selected_questions.splice(found_index, 1);
+                    }
+                },
+
+                async getTopics() {
+                    const url = "{{ url_for('topics_api') }}";
+                    const response = await fetchOrRefresh(url, 'GET', refresh_url);
+                    if (response.ok) {
+                        const r = await response.json();
+                        this.all_topics = r["topics"];
+                    }
+                    else {
+                        showSnackbarMessage("Error retrieving topics.");
+                    }
+                },
+
+                async getObjectives() {
+                    if (this.selected_topics.length > 0) {
+                        const topic_ids = this.selected_topics.map(t => t.id);
+                        let url = `{{ url_for('objectives_api') }}?topics=${topic_ids[0]}`;
+
+                        for (let i = 1; i < topic_ids.length; i++) {
+                            url = url + `,${topic_ids[i]}`;
+                        }
+                        const response = await fetchOrRefresh(url, 'GET', refresh_url);
+
+                        if (response.ok) {
+                            const r = await response.json();
+                            this.all_objectives = r["learning_objectives"];
+                        }
+                        else {
+                            showSnackbarMessage("Error retrieving learning objectives.");
+                            this.all_objectives = [];
+                        }
+                    }
+                    else {
+                        this.all_objectives = [];
+                    }
+                },
+
+                async getQuestions() {
+                    if (this.selected_objectives.length > 0) {
+                        const objective_ids = this.selected_objectives.map(t => t.id);
+                        let url = `{{ url_for('questions_api') }}?objectives=${objective_ids[0]}`;
+
+                        for (let i = 1; i < objective_ids.length; i++) {
+                            url = url + `,${objective_ids[i]}`;
+                        }
+                        const response = await fetchOrRefresh(url, 'GET', refresh_url);
+
+                        if (response.ok) {
+                            const r = await response.json();
+                            this.all_questions = r["questions"];
+                        }
+                        else {
+                            showSnackbarMessage("Error retrieving questions.");
+                            this.all_questions = [];
+                        }
+                    }
+                    else {
+                        this.all_questions = [];
+                    }
+                },
+
+                submitSelected() {
+                    const selected_ids = this.selected_questions.map(q => q.id);
+                    const my_str = selected_ids.join();
+                    console.log(my_str);
+
+                    document.getElementById("selected_questions").value = my_str;
+                    document.getElementById("addQuestionsForm").submit();
+                },
+
+                convertToHtml(md_text, unwrap_p=true) {
+                    let html_text = converter.makeHtml(md_text);
+                    if (unwrap_p) {
+                        html_text = html_text.slice(3, -4);
+                    }
+                    return html_text;
+				},
+            },
+
+            created() {
+                this.getTopics();
+            },
+
+            compilerOptions: {
+                delimiters: ["[[", "]]"]
+            },
+        });
+        
+        const vm = app.mount('#questionFinder');
+	</script>
+{% endblock %}
