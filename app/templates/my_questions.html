@@ -27,19 +27,29 @@
 							style="min-height: 2.75rem">
 							<div v-if="selected_indices.length === 0" class="mx-2">
 								Filter:
-								<button role="button" class="btn btn-link text-decoration-none link-secondary"
-									@click="updateDisplayedQuestions(all_questions)">
-									All
-								</button>
+								<span class="pb-2" :class="noActiveFilter">
+									<button role="button" class="btn btn-link text-decoration-none link-secondary"
+							   				:class="current_filter === '' ?  'link-dark' : 'link-secondary'"
+										   @click="updateDisplayedQuestions(all_questions); current_filter = ''">
+										All
+									</button>
+								</span>
 
-								<button role="button" class="btn btn-link text-decoration-none link-secondary"
-									@click="filterByMissingObjective">
-									Missing Learning Objective
-								</button>
+								<span class="pb-2" :class="filterNoObjective">
+									<button role="button" class="btn btn-link text-decoration-none link-secondary"
+												:class="current_filter === 'no_lo' ?  'link-dark' : 'link-secondary'"
+										@click="filterByMissingObjective">
+										Missing Learning Objective
+									</button>
+								</span>
 
-								<button role="button" class="btn btn-link text-decoration-none link-secondary"
-									@click="filterByDisabled">
-									Disabled
+								<span class="pb-2" :class="filterDisabled">
+									<button role="button" class="btn btn-link text-decoration-none link-secondary"
+											:class="current_filter === 'disabled' ?  'link-dark' : 'link-secondary'"
+										@click="filterByDisabled">
+										Disabled
+									</button>
+								</span>
 							</div>
 
 							<div v-else class="mx-2">
@@ -222,6 +232,7 @@
 					target_user: {{ target_author }},
 					selected_indices: [],
 					mass_select: false,
+					current_filter: "",
 					resolveConfirmation: undefined,
                 }
             },
@@ -234,6 +245,18 @@
 			computed: {
 				typeStrings() {
 					return this.questions.map(this.getTypeString);
+				},
+
+				noActiveFilter() {
+					return this.getStyle(this.current_filter === '');
+				},
+
+				filterNoObjective() {
+					return this.getStyle(this.current_filter === 'no_lo');
+				},
+
+				filterDisabled() {
+					return this.getStyle(this.current_filter === 'disabled');
 				},
 			},
 
@@ -253,6 +276,14 @@
 					showSnackbarMessage(msg);
 				},
 
+				getStyle(b) {
+					return {
+						'border-bottom': b,
+						'border-primary': b,
+						'border-3': b,
+					}
+				},
+
 				/* Update array of questions to display and deselects all
 				questions. */
 				updateDisplayedQuestions(questions_to_display) {
@@ -264,11 +295,13 @@
 				filterByMissingObjective() {
 					const without_objectives = this.all_questions.filter(q => q.objective === null);
 					this.updateDisplayedQuestions(without_objectives);
+					this.current_filter = "no_lo";
 				},
 
 				filterByDisabled() {
 					const disabled_questions = this.all_questions.filter(q => !q.enabled);
 					this.updateDisplayedQuestions(disabled_questions);
+					this.current_filter = "disabled";
 				},
 
 				async setObjectiveInSelected(objective_id) {
