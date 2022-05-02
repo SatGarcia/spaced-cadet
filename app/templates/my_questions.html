@@ -12,7 +12,7 @@
 			</confirmation-dialog>
 
 
-			<ul class="list-unstyled" v-if="questions.length > 0">
+			<ul class="list-unstyled" v-if="all_questions.length > 0">
 				<li class="m-2">
 					<div class="container row">
 						<div class="col-auto border pt-2"
@@ -25,7 +25,19 @@
 
 						<div class="col-10 p-1 border-top border-bottom d-flex align-items-center"
 							style="min-height: 2.75rem">
-							<div v-if="selected_indices.length > 0" class="mx-2">
+							<div v-if="selected_indices.length === 0" class="mx-2">
+								Filter:
+								<button role="button" class="btn btn-link text-decoration-none link-secondary"
+									@click="updateDisplayedQuestions(all_questions)">
+									All
+								</button>
+								<button role="button" class="btn btn-link text-decoration-none link-secondary"
+									@click="filterByMissingObjective">
+									Missing Learning Objective
+								</button>
+							</div>
+
+							<div v-else class="mx-2">
 								<div class="btn-group mx-2">
 									<button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
 										<i class="bi-tag"></i>
@@ -200,6 +212,7 @@
         const app = Vue.createApp({
             data() {
                 return {
+					all_questions: [],
                     questions: [],
 					target_user: {{ target_author }},
 					selected_indices: [],
@@ -233,6 +246,19 @@
             methods: {
 				displayMessage(msg) {
 					showSnackbarMessage(msg);
+				},
+
+				/* Update array of questions to display and deselects all
+				questions. */
+				updateDisplayedQuestions(questions_to_display) {
+					this.questions.length = 0;
+					this.questions.push(...questions_to_display);
+					this.selected_indices.length = 0;
+				},
+
+				filterByMissingObjective() {
+					const without_objectives = this.all_questions.filter(q => q.objective === null);
+					this.updateDisplayedQuestions(without_objectives)
 				},
 
 				async setObjectiveInSelected(objective_id) {
@@ -356,7 +382,9 @@
                     const response = await fetchOrRefresh(url, 'GET', refresh_url);
                     if (response.ok) {
                         const r = await response.json();
-                        this.questions = r["questions"];
+                        this.all_questions = r["questions"];
+						this.questions = [];
+						this.updateDisplayedQuestions(this.all_questions);
                     }
                     else {
                         showSnackbarMessage(`Error loading questions. Try again. (HTTP Status: ${response.status})`);
