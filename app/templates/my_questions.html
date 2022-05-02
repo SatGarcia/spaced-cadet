@@ -31,10 +31,15 @@
 									@click="updateDisplayedQuestions(all_questions)">
 									All
 								</button>
+
 								<button role="button" class="btn btn-link text-decoration-none link-secondary"
 									@click="filterByMissingObjective">
 									Missing Learning Objective
 								</button>
+
+								<button role="button" class="btn btn-link text-decoration-none link-secondary"
+									@click="filterByDisabled">
+									Disabled
 							</div>
 
 							<div v-else class="mx-2">
@@ -258,7 +263,12 @@
 
 				filterByMissingObjective() {
 					const without_objectives = this.all_questions.filter(q => q.objective === null);
-					this.updateDisplayedQuestions(without_objectives)
+					this.updateDisplayedQuestions(without_objectives);
+				},
+
+				filterByDisabled() {
+					const disabled_questions = this.all_questions.filter(q => !q.enabled);
+					this.updateDisplayedQuestions(disabled_questions);
 				},
 
 				async setObjectiveInSelected(objective_id) {
