@@ -397,7 +397,7 @@ class AssessmentSchema(Schema):
                             dump_only=True)
 
     objectives = fields.List(fields.Nested("LearningObjectiveSchema",
-                                           only=('id', 'description')),
+                                           only=('id', 'description', 'topic')),
                              dump_only=True)
 
     questions = fields.List(fields.Nested("QuestionSchema",

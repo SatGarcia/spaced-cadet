@@ -344,12 +344,46 @@ def create_assessment(course_name):
 
         flash(f"Successfully created assessment {assessment.title}", "success")
 
-        # FIXME redirect to manage assessments (when that route exists)
-        return redirect(url_for(f'.manage_questions', course_name=course_name))
+        return redirect(url_for(f'.setup_assessment',
+                                course_name=course_name,
+                                assessment_id=assessment.id))
 
     return render_template("create_assessment.html",
                            page_title="Cadet: Create Assessment",
                            course=course,
+                           form=form)
+
+
+@instructor.route('/c/<course_name>/assessment/<int:assessment_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_assessment(course_name, assessment_id):
+    course = Course.query.filter_by(name=course_name).first()
+    assessment = Assessment.query.filter_by(id=assessment_id).first()
+
+    if (not course) or (not assessment) or (assessment not in course.assessments):
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    form_data = request.form if request.method == 'POST' else None
+    form = AssessmentForm(formdata=form_data, obj=assessment)
+
+    if form.validate_on_submit():
+        form.populate_obj(assessment)
+
+        db.session.commit()
+
+        flash(f"Assessment ({assessment.title}) successfully updated.", "success")
+        return redirect(url_for(".manage_assessment",
+                                course_name=course_name))
+
+
+    return render_template("create_assessment.html",
+                           page_title="Cadet: Edit Assessment",
+                           edit_mode=True,
                            form=form)
 
 
@@ -395,6 +429,67 @@ def find_questions(course_name):
     return render_template("find_questions.html",
                            page_title="Cadet: Find Questions",
                            course=course,
+                           form=form)
+
+@instructor.route('/c/<course_name>/assessment/<int:assessment_id>/setup', methods=['GET', 'POST'])
+def setup_assessment(course_name, assessment_id):
+    course = Course.query.filter_by(name=course_name).first()
+    assessment = Assessment.query.filter_by(id=assessment_id).first()
+
+    if (not course) or (not assessment) or (assessment not in course.assessments):
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    form = SetupAssessmentForm()
+
+    if form.validate_on_submit():
+        topic_ids = [] if len(form.selected_topics.data) == 0\
+                    else [int(i) for i in form.selected_topics.data.split(',')]
+        objective_ids = [] if len(form.selected_objectives.data) == 0\
+                    else [int(i) for i in form.selected_objectives.data.split(',')]
+        question_ids = [] if len(form.selected_questions.data) == 0\
+                    else [int(i) for i in form.selected_questions.data.split(',')]
+
+        topics = Topic.query.filter(Topic.id.in_(topic_ids))
+        objectives = Objective.query.filter(Objective.id.in_(objective_ids))
+        questions = Question.query.filter(Question.id.in_(question_ids))
+
+        #if None in questions:
+        if topics.count() != len(topic_ids)\
+                or objectives.count() != len(objective_ids)\
+                or questions.count() != len(question_ids):
+            flash("An error occurred during assessment setup. Please try again.", "danger")
+        else:
+            assessment.topics = topics
+            assessment.objectives = objectives
+
+            # check that all questions are either public or have current user
+            # as the author
+            correct_permissions = [(q.public or q.author == current_user) for q in questions]
+            if False in correct_permissions:
+                flash("ERROR: Cannot add other user's private questions.",
+                      "danger")
+
+            else:
+                assessment.questions = questions
+
+                db.session.commit()
+                flash(f"Successfully updated assessment with {topics.count()} topics, {objectives.count()} learning objectives, and {questions.count()} questions",
+                      "success")
+
+        return redirect(url_for(f'.manage_assessments', course_name=course_name))
+
+    from app.api import AssessmentSchema
+    a = AssessmentSchema().dump(assessment)
+
+    return render_template("setup_assessment.html",
+                           page_title="Cadet: Assessment Setup",
+                           course=course,
+                           assessment=a,
                            form=form)
 
 
@@ -581,6 +676,22 @@ def manage_roster(course_name):
                            roster_form=form)
 
 
+@instructor.route('/c/<course_name>/assessments')
+@login_required
+def manage_assessments(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    return render_template("manage_assessments.html",
+                           page_title="Cadet: Manage Course Assessments",
+                           course=course)
+
 @instructor.route('/c/<course_name>/questions')
 @login_required
 def manage_questions(course_name):
@@ -652,6 +763,17 @@ class DataRequiredIf(DataRequired):
             raise Exception('no field named "%s" in form' % self.other_field_name)
         if bool(other_field.data):
             super(DataRequiredIf, self).__call__(form, field)
+
+
+class SetupAssessmentForm(FlaskForm):
+    selected_topics = HiddenField("Selected Topic IDs",
+                                  [Regexp("(^\d+(,\d+)*$|^$)")])
+    selected_objectives = HiddenField("Selected Objective IDs",
+                                      [Regexp("(^\d+(,\d+)*$|^$)")])
+    selected_questions = HiddenField("Selected Question IDs",
+                                     [Regexp("(^\d+(,\d+)*$|^$)")])
+    submit = SubmitField("Set Topics, Objectives, and Questions")
+    #[Regexp("^\d+(,\d+)*$")])
 
 
 class AddQuestionsToCourseForm(FlaskForm):
@@ -774,5 +896,5 @@ class RosterUploadForm(FlaskForm):
 from app.db_models import (
     AnswerOption, CodeJumbleQuestion, JumbleBlock, Course,
     ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, Question,
-    QuestionType, User, Objective, Textbook, Assessment
+    QuestionType, User, Objective, Textbook, Assessment, Topic
 )

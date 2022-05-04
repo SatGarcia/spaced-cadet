@@ -443,7 +443,8 @@ class Course(SearchableMixin, db.Model):
 
     assessments = db.relationship('Assessment',
                                     foreign_keys='Assessment.course_id',
-                                    backref='course', lazy='dynamic')
+                                    backref='course', lazy='dynamic',
+                                    order_by='Assessment.time')
 
     questions = db.relationship('Question',
                                secondary=assigned_questions,

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+    <div class="container pt-3">
+		<h4>Manage Assessments: {{course.name}}</h4>
+
+
+		<div class="container">
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th scope="col" class="col-2">Title</th>
+						<th scope="col" class="col-2">Description</th>
+						<th scope="col" class="col-2">Date/Time</th>
+						<th scope="col" class="col-2">Topics</th>
+						<th scope="col" class="col-1">Questions</th>
+						<th scope="col" class="col-3">Action</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for assessment in course.assessments %}
+						<tr id="{{assessment.id}}">
+							<th scope="row">{{ assessment.title }}</td>
+							<td>{{ assessment.description }}</td>
+							<td>{{ assessment.time }}</td>
+							<td>
+								{% for topic in assessment.topics %}
+									<span class="badge rounded-pill bg-light text-dark border">{{ topic.text }}</span>
+								{% endfor %}
+							</td>
+							<td>{{ assessment.questions.count() }}</td>
+							<td>
+								<a class="text-decoration-none link-secondary"
+								   href="{{ url_for('instructor.edit_assessment', course_name=course.name, assessment_id=assessment.id) }}">
+									<i class="bi-gear"></i>
+									Settings
+								</a>
+								<br />
+								<a href="{{ url_for('instructor.setup_assessment', course_name=course.name, assessment_id=assessment.id) }}"
+								   class="text-decoration-none link-secondary">
+									<i class="bi-list-stars"></i>
+									Update Topics/Questions
+								</a>
+							</td>
+						</tr>
+					{% endfor %}
+					<tr>
+						<td colspan="6">
+							<a href="{{ url_for('instructor.create_assessment', course_name=course.name) }}"
+								 class="text-decoration-none">
+								<i class="bi-plus-circle"></i>
+								Create New Assessment
+							</a>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+    </div>
+{% endblock %}

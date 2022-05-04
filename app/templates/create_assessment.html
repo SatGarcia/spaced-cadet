@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+    <div class="container pt-3">
+        {% if edit_mode %}
+            <h4>Edit Assessment ({{course_name}})</h4>
+        {% else %}
+            <h4>Create New Assessment</h4>
+        {% endif %}
+
+		<div class="row">
+			<form method="POST" action="">
+				{{ form.csrf_token }}
+
+                <div class="row">
+                    {{ forms.input(form.title, "Enter a title for the assessment") }}
+                    {{ forms.input(form.description, "Enter a description of the assessment") }}
+                    {{ forms.input(form.time) }}
+                </div>
+
+                <div class="row pt-2">
+                    <div class="col w-auto">
+                        {{ form.submit(class_="btn btn-primary") }}
+                    </div>
+                </div>
+			</form>
+		</div>
+    </div>
+
+{% endblock %}
