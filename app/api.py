@@ -15,6 +15,7 @@ import secrets
 
 from app import db
 from app.user_views import markdown_to_html
+from app.auth import AuthorizationError
 
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
@@ -42,6 +43,87 @@ class AuthenticationSchema(Schema):
 
 class ImmutableFieldError(Exception):
     pass
+
+
+def admin_or_course_instructor(course):
+    if not (current_user.admin or (current_user.instructor and current_user in course.users)):
+        raise AuthorizationError()
+
+
+def admin_or_author(obj):
+    if not (current_user.admin or obj.author == current_user):
+        raise AuthorizationError()
+
+
+def item_collection_getter(item_type, item_id, schema, collection_name,
+                              authorization_checker):
+    item = item_type.query.filter_by(id=item_id).one_or_none()
+    if item:
+        # check that current_user is authorized
+        try:
+            authorization_checker(item)
+        except AuthorizationError as e:
+            return {'message': 'Unauthorized access.'}, 401
+
+        result = schema.dump(getattr(item, collection_name), many=True)
+        return {collection_name: result}
+
+    else:
+        return {'message': f"{item_type.__name__} with id {item_id} not found."}, 404
+
+
+def item_collection_poster(item_type, item_id, schema, collection_name,
+                            collection_type, authorization_checker):
+    # NOTE: collection_type is the type of item in collection (e.g. User or
+    # Question)
+    item = item_type.query.filter_by(id=item_id).one_or_none()
+    if not item:
+        return {'message': f"{item_type.__name__} with id {item_id} not found."}, 404
+
+    # check authorization for updating
+    try:
+        authorization_checker(item)
+    except AuthorizationError as e:
+        return {'message': 'Unauthorized access.'}, 401
+
+    json_data = request.get_json()
+
+    if not json_data:
+        return {"message": "No input data provided"}, 400
+
+    # validate and load the list of question IDs
+    try:
+        data = IdListSchema().load(json_data)
+    except ValidationError as err:
+        return err.messages, 422
+
+    ignored = []
+    added = []
+    invalid_ids = []
+
+    collection = getattr(item, collection_name)
+
+    for new_item_id in data['ids']:
+        item_to_add = collection_type.query.filter_by(id=new_item_id).one_or_none()
+
+        if item_to_add:
+            if item_to_add in collection:
+                ignored.append(item_to_add)
+            else:
+                added.append(item_to_add)
+                collection.append(item_to_add)
+
+        else:
+            invalid_ids.append(new_item_id)
+
+    db.session.commit()
+
+    return {
+        "added": schema.dump(added, many=True),
+        "previously-added": schema.dump(ignored, many=True),
+        "invalid-ids": invalid_ids
+    }
+
 
 
 class TopicSchema(Schema):
@@ -761,64 +843,15 @@ class ObjectiveTopicApi(Resource):
 class SourceTopicsApi(Resource):
     @jwt_required()
     def get(self, source_id):
-        s = Source.query.filter_by(id=source_id).one_or_none()
-        if s:
-            # Limit access to admins and source author
-            if not (current_user.admin or current_user == s.author):
-                return {'message': 'Unauthorized access.'}, 401
-
-            result = TopicSchema(only=('id', 'text'), many=True).dump(s.topics)
-            return {"source-topics": result}
-
-        else:
-            return {'message': f"Source {source_id} not found."}, 404
+        schema = TopicSchema(only=('id', 'text'))
+        return item_collection_getter(Source, source_id, schema, 'topics',
+                                      admin_or_author)
 
     @jwt_required()
     def post(self, source_id):
-        source = Source.query.filter_by(id=source_id).one_or_none()
-        if not source:
-            return {'message': f"Source {source_id} not found."}, 404
-
-        # Limit access to admins and source author
-        if not (current_user.admin or current_user == source.author):
-            return {'message': 'Unauthorized access.'}, 401
-
-        json_data = request.get_json()
-
-        if not json_data:
-            return {"message": "No input data provided"}, 400
-
-        # validate and load the list of question IDs
-        try:
-            data = IdListSchema().load(json_data)
-        except ValidationError as err:
-            return err.messages, 422
-
-        duplicate_topics = []
-        new_topics = []
-        invalid_ids = []
-
-        for topic_id in data['ids']:
-            topic = Topic.query.filter_by(id=topic_id).one_or_none()
-
-            if topic:
-                if topic in source.topics:
-                    duplicate_topics.append(topic)
-                else:
-                    new_topics.append(topic)
-                    source.topics.append(topic)
-
-            else:
-                invalid_ids.append(topic_id)
-
-        db.session.commit()
-
-        return {
-            "added-topics": TopicSchema(many=True, only=("id", "text")).dump(new_topics),
-            "duplicates": TopicSchema(many=True, only=("id", "text")).dump(duplicate_topics),
-            "invalid-ids": invalid_ids
-        }
-
+        schema = TopicSchema(only=('id', 'text'))
+        return item_collection_poster(Source, source_id, schema, 'topics',
+                                      Topic, admin_or_author)
 
 
 class LogoutApi(Resource):
@@ -954,13 +987,14 @@ class RosterApi(Resource):
     @jwt_required()
     def get(self, course_id):
         schema = UserSchema(only=('id','email'))
-        return course_collections_getter(course_id, schema, 'users')
+        return item_collection_getter(Course, course_id, schema, 'users',
+                                      admin_or_course_instructor)
 
     @jwt_required()
     def post(self, course_id):
         schema = UserSchema(only=('id','email'))
-        return course_collections_poster(course_id, schema, 'users',
-                                         User)
+        return item_collection_poster(Course, course_id, schema, 'users',
+                                         User, admin_or_course_instructor)
 
 
 class EnrolledStudentApi(Resource):
@@ -986,108 +1020,47 @@ class EnrolledStudentApi(Resource):
         return {"removed": removed_student}
 
 
-def course_collections_getter(course_id, schema, collection_name):
-    c = Course.query.filter_by(id=course_id).one_or_none()
-    if c:
-        # Limit access to admins and course instructors
-        if (not current_user.admin)\
-                and (not current_user.instructor or current_user not in c.users):
-            return {'message': 'Unauthorized access.'}, 401
-
-        result = schema.dump(getattr(c, collection_name), many=True)
-        return {collection_name: result}
-
-    else:
-        return {'message': f"Course {course_id} not found."}, 404
-
-
-def course_collections_poster(course_id, schema, collection_name, collection_type):
-    # NOTE: collection_type is the type of item in collection (e.g. User or
-    # Question)
-    course = Course.query.filter_by(id=course_id).one_or_none()
-    if not course:
-        return {'message': f"Course {course_id} not found."}, 404
-
-    # Limit access to admins and course instructors
-    if (not current_user.admin)\
-            and (not current_user.instructor or current_user not in course.users):
-        return {'message': 'Unauthorized access.'}, 401
-
-    json_data = request.get_json()
-
-    if not json_data:
-        return {"message": "No input data provided"}, 400
-
-    # validate and load the list of question IDs
-    try:
-        data = IdListSchema().load(json_data)
-    except ValidationError as err:
-        return err.messages, 422
-
-    ignored = []
-    added = []
-    invalid_ids = []
-
-    for item_id in data['ids']:
-        item = collection_type.query.filter_by(id=item_id).one_or_none()
-
-        if item:
-            collection = getattr(course, collection_name)
-            if item in collection:
-                ignored.append(item)
-            else:
-                added.append(item)
-                collection.append(item)
-
-        else:
-            invalid_ids.append(item_id)
-
-    db.session.commit()
-
-    return {
-        "added": schema.dump(added, many=True),
-        "previously-added": schema.dump(ignored, many=True),
-        "invalid-ids": invalid_ids
-    }
-
-
 class CourseQuestionsApi(Resource):
     @jwt_required()
     def get(self, course_id):
         schema = QuestionSchema(only=('id','prompt'))
-        return course_collections_getter(course_id, schema, 'questions')
+        return item_collection_getter(Course, course_id, schema, 'questions',
+                                      admin_or_course_instructor)
 
     @jwt_required()
     def post(self, course_id):
         schema = QuestionSchema(only=('id','prompt'))
-        return course_collections_poster(course_id, schema, 'questions',
-                                         Question)
+        return item_collection_poster(Course, course_id, schema, 'questions',
+                                         Question, admin_or_course_instructor)
 
 
 class CourseTextbooksApi(Resource):
     @jwt_required()
     def get(self, course_id):
         schema = TextbookSchema(only=('id','title','edition'))
-        return course_collections_getter(course_id, schema, 'textbooks')
+        return item_collection_getter(Course, course_id, schema, 'textbooks',
+                                      admin_or_course_instructor)
 
     @jwt_required()
     def post(self, course_id):
         schema = TextbookSchema(only=('id','title','edition'))
-        return course_collections_poster(course_id, schema, 'textbooks',
-                                         Textbook)
+        return item_collection_poster(Course, course_id, schema, 'textbooks',
+                                         Textbook, admin_or_course_instructor)
 
 
 class CourseMeetingsApi(Resource):
     @jwt_required()
     def get(self, course_id):
         schema = ClassMeetingSchema(only=('id','title'))
-        return course_collections_getter(course_id, schema, 'meetings')
+        return item_collection_getter(Course, course_id, schema, 'meetings',
+                                      admin_or_course_instructor)
 
     @jwt_required()
     def post(self, course_id):
         schema = ClassMeetingSchema(only=('id','title'))
-        return course_collections_poster(course_id, schema, 'meetings',
-                                         ClassMeeting)
+        return item_collection_poster(Course, course_id, schema, 'meetings',
+                                         ClassMeeting,
+                                      admin_or_course_instructor)
 
 
 class QuestionsApi(Resource):
