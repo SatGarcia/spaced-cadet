@@ -93,6 +93,15 @@ enrollments = db.Table(
 )
 
 # association table for questions in a course
+course_topics = db.Table(
+    'course_topics',
+    db.Column('course_id', db.Integer, db.ForeignKey('course.id'),
+              primary_key=True),
+    db.Column('topic_id', db.Integer, db.ForeignKey('topic.id'),
+              primary_key=True)
+)
+
+# association table for questions in a course
 assigned_questions = db.Table(
     'assigned_questions',
     db.Column('course_id', db.Integer, db.ForeignKey('course.id'),
@@ -424,6 +433,13 @@ class Course(SearchableMixin, db.Model):
     meetings = db.relationship('ClassMeeting',
                                 foreign_keys='ClassMeeting.course_id',
                                 backref='course', lazy='dynamic')
+
+    topics = db.relationship('Topic',
+                             secondary=course_topics,
+                             primaryjoin=('course_topics.c.course_id == Course.id'),
+                             secondaryjoin=('course_topics.c.topic_id == Topic.id'),
+                             backref=db.backref('courses', lazy='dynamic'),
+                             lazy='dynamic')
 
     assessments = db.relationship('Assessment',
                                     foreign_keys='Assessment.course_id',
