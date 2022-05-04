@@ -101,11 +101,25 @@ assigned_questions = db.Table(
               primary_key=True)
 )
 
+# association table for topics associated with an assessment
+assessment_topics = db.Table(
+    'assessment_topics',
+    db.Column('assessment_id', db.Integer, db.ForeignKey('assessment.id')),
+    db.Column('topic_id', db.Integer, db.ForeignKey('topic.id'))
+)
+
 # association table for objectives associated with an assessment
-assigned_objectives = db.Table(
-    'assigned_objectives',
+assessment_objectives = db.Table(
+    'assessment_objectives',
     db.Column('assessment_id', db.Integer, db.ForeignKey('assessment.id')),
     db.Column('objective_id', db.Integer, db.ForeignKey('objective.id'))
+)
+
+# association table for topics associated with an assessment
+assessment_questions = db.Table(
+    'assessment_questions',
+    db.Column('assessment_id', db.Integer, db.ForeignKey('assessment.id')),
+    db.Column('question_id', db.Integer, db.ForeignKey('question.id'))
 )
 
 # association table for textbooks in a course
@@ -562,6 +576,7 @@ class TextbookSection(Source):
     textbook_id = db.Column(db.Integer, db.ForeignKey('textbook.id'))
 
 
+
 class ClassMeeting(Source):
     id = db.Column(db.Integer, db.ForeignKey('source.id'), primary_key=True)
 
@@ -576,16 +591,32 @@ class ClassMeeting(Source):
 
 class Assessment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.String(100), index=True, nullable=False)
+    title = db.Column(db.String(50), index=True, nullable=False)
+    description = db.Column(db.String, index=True)
     time = db.Column(db.DateTime, default=datetime.now)
+
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
 
+    topics = db.relationship('Topic',
+                             secondary=assessment_topics,
+                             primaryjoin=('assessment_topics.c.assessment_id == Assessment.id'),
+                             secondaryjoin=('assessment_topics.c.topic_id == Topic.id'),
+                             backref=db.backref('assessments', lazy='dynamic'),
+                             lazy='dynamic')
+
     objectives = db.relationship('Objective',
-                                 secondary=assigned_objectives,
-                                 primaryjoin=('assigned_objectives.c.assessment_id == Assessment.id'),
-                                 secondaryjoin=('assigned_objectives.c.objective_id == Objective.id'),
+                                 secondary=assessment_objectives,
+                                 primaryjoin=('assessment_objectives.c.assessment_id == Assessment.id'),
+                                 secondaryjoin=('assessment_objectives.c.objective_id == Objective.id'),
                                  backref=db.backref('assessments', lazy='dynamic'),
                                  lazy='dynamic')
+
+    questions = db.relationship('Question',
+                                secondary=assessment_questions,
+                                primaryjoin=('assessment_questions.c.assessment_id == Assessment.id'),
+                                secondaryjoin=('assessment_questions.c.question_id == Question.id'),
+                                backref=db.backref('assessments', lazy='dynamic'),
+                                lazy='dynamic')
 
     def __repr__(self):
         return f"<Assessment {self.id}: {self.description} at {str(self.time)}>"

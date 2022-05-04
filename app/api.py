@@ -388,7 +388,22 @@ class TextbookSchema(Schema):
 
 class AssessmentSchema(Schema):
     id = fields.Int(dump_only=True)
-    pass
+    title = fields.Str(required=True)
+    description = fields.Str()
+    time = fields.DateTime()
+
+    topics = fields.List(fields.Nested("TopicSchema",
+                                       only=('id', 'text')),
+                            dump_only=True)
+
+    objectives = fields.List(fields.Nested("LearningObjectiveSchema",
+                                           only=('id', 'description')),
+                             dump_only=True)
+
+    questions = fields.List(fields.Nested("QuestionSchema",
+                                           only=('id', 'type', 'prompt')),
+                             dump_only=True)
+
 
 
 class UserSchema(Schema):
