@@ -8,8 +8,8 @@ from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField,
     FieldList, FormField, IntegerField, BooleanField
 )
-from wtforms.fields import DateField
-from wtforms.widgets import DateInput
+from wtforms.fields import DateField, DateTimeLocalField
+from wtforms.widgets import DateInput, DateTimeLocalInput
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms.validators import (
     DataRequired, InputRequired, NumberRange, ValidationError, Length, Regexp
@@ -320,6 +320,39 @@ def upload_roster(course_name):
                            roster_form=roster_upload_form)
 
 
+@instructor.route('/c/<course_name>/new-assessment', methods=['GET', 'POST'])
+@login_required
+def create_assessment(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    form = AssessmentForm()
+
+    if form.validate_on_submit():
+        assessment = Assessment(title=form.title.data,
+                                description=form.description.data,
+                                time=form.time.data)
+
+        course.assessments.append(assessment)
+        db.session.commit()
+
+        flash(f"Successfully created assessment {assessment.title}", "success")
+
+        # FIXME redirect to manage assessments (when that route exists)
+        return redirect(url_for(f'.manage_questions', course_name=course_name))
+
+    return render_template("create_assessment.html",
+                           page_title="Cadet: Create Assessment",
+                           course=course,
+                           form=form)
+
+
 @instructor.route('/c/<course_name>/find-questions', methods=['GET', 'POST'])
 def find_questions(course_name):
     course = Course.query.filter_by(name=course_name).first()
@@ -626,6 +659,13 @@ class AddQuestionsToCourseForm(FlaskForm):
     submit = SubmitField("Add Questions")
 
 
+class AssessmentForm(FlaskForm):
+    title = StringField("Title", [DataRequired(), Length(min=5, max=100)])
+    description = TextAreaField("Description", [DataRequired()])
+    time = DateTimeLocalField('Date/Time', format="%Y-%m-%dT%H:%M", widget=DateTimeLocalInput(), validators=[DataRequired()])
+    submit = SubmitField("Create Assessment")
+
+
 class CourseDetailsForm(FlaskForm):
     name = StringField("Name", [DataRequired(), Length(min=5, max=64),
                                 Regexp("^[a-z].*[a-z0-9]$",
@@ -734,5 +774,5 @@ class RosterUploadForm(FlaskForm):
 from app.db_models import (
     AnswerOption, CodeJumbleQuestion, JumbleBlock, Course,
     ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, Question,
-    QuestionType, User, Objective
+    QuestionType, User, Objective, Textbook, Assessment
 )
