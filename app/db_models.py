@@ -456,6 +456,12 @@ class Course(SearchableMixin, db.Model):
     def __repr__(self):
         return f"<Course {self.id}: {self.name} ({self.title})>"
 
+    def upcoming_assessments(self):
+        return self.assessments.filter(Assessment.time >= datetime.now())
+
+    def past_assessments(self):
+        return self.assessments.filter(Assessment.time < datetime.now())
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
