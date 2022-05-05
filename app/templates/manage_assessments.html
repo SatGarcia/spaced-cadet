@@ -11,8 +11,8 @@
 				<thead>
 					<tr>
 						<th scope="col" class="col-2">Title</th>
-						<th scope="col" class="col-2">Description</th>
-						<th scope="col" class="col-2">Date/Time</th>
+						<th scope="col" class="col-3">Description</th>
+						<th scope="col" class="col-1">Date/Time</th>
 						<th scope="col" class="col-2">Topics</th>
 						<th scope="col" class="col-1">Questions</th>
 						<th scope="col" class="col-3">Action</th>
@@ -23,7 +23,10 @@
 						<tr id="{{assessment.id}}">
 							<th scope="row">{{ assessment.title }}</td>
 							<td>{{ assessment.description }}</td>
-							<td>{{ assessment.time }}</td>
+							<td>
+								{{ assessment.time.strftime("%m-%d-%Y") }}
+								<br/>{{ assessment.time.strftime("@ %I:%M %p") }}
+							</td>
 							<td>
 								{% for topic in assessment.topics %}
 									<span class="badge rounded-pill bg-light text-dark border">{{ topic.text }}</span>
