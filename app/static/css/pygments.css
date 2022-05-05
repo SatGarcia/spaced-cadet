@@ -188,6 +188,10 @@ table.codehilitetable {
 	mask-image: linear-gradient(to bottom, black 100%, transparent 100%);
 }
 
+.inline-p p {
+	display: inline;
+}
+
 /*
 .clippy:active, .clippy:hover {
 	height: auto;

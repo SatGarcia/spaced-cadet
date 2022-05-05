@@ -34,7 +34,7 @@
 									<span class="fw-bold">Learning Objectives:</span>
 									<ol>
 										{% for objective in assessment.objectives %}
-											<li>
+											<li class="inline-p">
 												{{ objective.description|mdown|safe }}
 											</li>
 										{% endfor %}
