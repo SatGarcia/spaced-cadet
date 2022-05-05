@@ -12,7 +12,7 @@
 
 					<div class="mt-1">
 						<span class="fw-bold">Date/Time:</span>
-						{{ assessment.time }}
+						{{ assessment.time.strftime('%B %d, %Y @ %I:%M %p') }}
 					</div>
 
 					{% if assessment.topics.count() != 0 %}
