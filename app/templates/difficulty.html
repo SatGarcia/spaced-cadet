@@ -9,8 +9,7 @@
         Nice work, cadet! How difficult was it for you to recall the info
         needed to answer this question?
 
-		<form method="POST" 
-			  action="{{ url_for('user_views.difficulty', course_name=course_name) }}">
+		<form method="POST" action="{{ post_url }}">
             {{ form.csrf_token }}
             {{ form.attempt_id }}
             <ul class="list-unstyled px-1 pt-2">

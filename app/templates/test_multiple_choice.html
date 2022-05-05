@@ -20,7 +20,7 @@
 
         <div class="row" id="response_area">
 			<form method="POST"
-		 		  action="{% if not preview_mode %}{{ url_for('user_views.test_multiple_choice', course_name=course_name) }}{% endif %}">
+		 		action="{% if not preview_mode %}{{ post_url }}{% endif %}">
 				{{ form.csrf_token }}
 				{{ form.question_id }}
 				{{ forms.checkbox_input(form.response) }}

@@ -15,7 +15,7 @@
                         {% for course in ns.current_courses %}
                             <li>
                                 <a class="dropdown-item"
-                                   href="{{ url_for('user_views.test', course_name=course.name) }}">
+                                   href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">
                                     {{ course.name }}
                                 </a>
                             </li>

@@ -47,13 +47,14 @@ def is_a_repeat(last_attempt):
     return (last_attempt is not None) and (last_attempt.time.date() == date.today())
 
 
-@user_views.route('/c/<course_name>/train/rating', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/rating', methods=['POST'])
 @login_required
-def difficulty(course_name):
+def difficulty(course_name, mission_id):
     """ Route to handle self-reported difficulty of a problem that the user
     got correct. """
 
     course = check_course_authorization(course_name)
+    check_mission_inclusion(mission_id, course)
 
     form = DifficultyForm(request.form)
 
@@ -76,28 +77,26 @@ def difficulty(course_name):
         a.sm2_update(form.difficulty.data, repeat_attempt=repeated)
         db.session.commit()
 
-        return redirect(url_for('.test', course_name=course_name))
+        return redirect(url_for('.test',
+                                course_name=course_name,
+                                mission_id=mission_id))
 
     return render_template("difficulty.html",
                            page_title="Cadet Test: Rating",
-                           course_name=course_name,
-                           form=form)
+                           form=form,
+                           post_url=url_for('.difficulty',
+                                            course_name=course_name,
+                                            mission_id=mission_id))
 
 
-@user_views.route('/c/<course_name>/train/review', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review', methods=['POST'])
 @login_required
-def self_review(course_name):
+def self_review(course_name, mission_id):
     """ User will self-verify whether the answer they submitted is the correct
     one or not. """
 
-    course = Course.query.filter_by(name=course_name).first()
-
-    if not course:
-        abort(404)
-    try:
-        check_authorization(current_user, course=course)
-    except AuthorizationError:
-        abort(401)
+    course = check_course_authorization(course_name)
+    check_mission_inclusion(mission_id, course)
 
     form = SelfReviewForm(request.form)
     attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
@@ -117,8 +116,10 @@ def self_review(course_name):
             difficulty_form = DifficultyForm(attempt_id=form.attempt_id.data)
             return render_template("difficulty.html",
                                    page_title="Cadet Test: Rating",
-                                   course_name=course_name,
-                                   form=difficulty_form)
+                                   form=difficulty_form,
+                                   post_url=url_for('.difficulty',
+                                                    course_name=course_name,
+                                                    mission_id=mission_id))
 
         else:
             # user reported they were wrong
@@ -136,7 +137,9 @@ def self_review(course_name):
             db.session.commit()
 
             flash("Keep your chin up, cadet. We'll test you on that question again tomorrow.", "danger")
-            return redirect(url_for('.test', course_name=course_name))
+            return redirect(url_for('.test',
+                                    course_name=course_name,
+                                    mission_id=mission_id))
 
     prompt_html = markdown_to_html(attempt.question.prompt)
     answer_html = markdown_to_html(attempt.question.answer)
@@ -145,6 +148,7 @@ def self_review(course_name):
                            page_title="Cadet Test: Self Verification",
                            course_name=course_name,
                            form=form,
+                           post_url="", # same as current route!
                            prompt=Markup(prompt_html),
                            response=attempt.response,
                            correct_answer=Markup(answer_html))
@@ -172,13 +176,26 @@ def check_course_authorization(course_name):
     else:
         return course
 
+def check_mission_inclusion(mission_id, course):
+    """ Checks that an assessment (a.k.a. mission) with the given id exists
+    and is part of the course. Returns the Assessment object or aborts if
+    either of those checks fails. """
 
-@user_views.route('/c/<course_name>/train/multiple-choice', methods=['POST'])
+    mission = course.assessments.filter_by(id=mission_id).first()
+
+    if not mission:
+        abort(404)
+    else:
+        return mission
+
+
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-choice', methods=['POST'])
 @login_required
-def test_multiple_choice(course_name):
+def test_multiple_choice(course_name, mission_id):
 
     # TODO: code duplication in this function
     course = check_course_authorization(course_name)
+    check_mission_inclusion(mission_id, course)
 
     form = MultipleChoiceForm(request.form)
     original_question_id = form.question_id.data
@@ -229,8 +246,10 @@ def test_multiple_choice(course_name):
             difficulty_form = DifficultyForm(attempt_id=attempt.id)
             return render_template("difficulty.html",
                                    page_title="Cadet Test: Rating",
-                                   course_name=course_name,
-                                   form=difficulty_form)
+                                   form=difficulty_form,
+                                   post_url=url_for('.difficulty',
+                                                    course_name=course_name,
+                                                    mission_id=mission_id))
 
         else:
             attempt.correct = False
@@ -252,7 +271,9 @@ def test_multiple_choice(course_name):
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
-                                   course_name=course_name,
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
@@ -264,15 +285,17 @@ def test_multiple_choice(course_name):
                            course_name=course_name,
                            fresh_question=(not repeated),
                            form=form,
+                           post_url="", # same url as current so can leave this blank
                            prompt=Markup(prompt_html))
 
 
-@user_views.route('/c/<course_name>/train/short-answer', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/short-answer', methods=['POST'])
 @login_required
-def test_short_answer(course_name):
+def test_short_answer(course_name, mission_id):
     """ Checks answer given to a short answer question. """
 
     course = check_course_authorization(course_name)
+    check_mission_inclusion(mission_id, course)
 
     form = ShortAnswerForm(request.form)
     original_question_id = form.question_id.data
@@ -314,7 +337,9 @@ def test_short_answer(course_name):
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
-                                   course_name=course_name,
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
@@ -324,6 +349,9 @@ def test_short_answer(course_name):
                                page_title="Cadet Test: Self Verification",
                                course_name=course_name,
                                form=review_form,
+                               post_url=url_for('.self_review',
+                                                course_name=course_name,
+                                                mission_id=mission_id),
                                prompt=Markup(prompt_html),
                                response=form.response.data,
                                correct_answer=Markup(answer_html))
@@ -331,18 +359,20 @@ def test_short_answer(course_name):
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
                            post_url=url_for(".test_short_answer",
-                                            course_name=course_name),
+                                            course_name=course_name,
+                                            mission_id=mission_id),
                            fresh_question=(not repeated),
                            form=form,
                            prompt=Markup(prompt_html))
 
 
-@user_views.route('/c/<course_name>/train/auto-check', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/auto-check', methods=['POST'])
 @login_required
-def test_auto_check(course_name):
+def test_auto_check(course_name, mission_id):
     """ Checks the correctness of an auto-check type of question. """
 
     course = check_course_authorization(course_name)
+    check_mission_inclusion(mission_id, course)
 
     form = AutoCheckForm(request.form)
     original_question_id = form.question_id.data
@@ -383,7 +413,9 @@ def test_auto_check(course_name):
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
-                                   course_name=course_name,
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
                                    prompt=Markup(prompt_html),
                                    answer=original_question.answer)
 
@@ -398,8 +430,10 @@ def test_auto_check(course_name):
             difficulty_form = DifficultyForm(attempt_id=attempt.id)
             return render_template("difficulty.html",
                                    page_title="Cadet Test: Rating",
-                                   course_name=course_name,
-                                   form=difficulty_form)
+                                   form=difficulty_form,
+                                   post_url=url_for('.difficulty',
+                                                    course_name=course_name,
+                                                    mission_id=mission_id))
 
         else:
             # User was wrong so show them the correct answer
@@ -409,7 +443,9 @@ def test_auto_check(course_name):
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
-                                   course_name=course_name,
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
                                    prompt=Markup(prompt_html),
                                    answer=original_question.answer)
 
@@ -417,18 +453,20 @@ def test_auto_check(course_name):
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
                            post_url=url_for(".test_auto_check",
-                                            course_name=course_name),
+                                            course_name=course_name,
+                                            mission_id=mission_id),
                            fresh_question=(not repeated),
                            form=form,
                            prompt=Markup(prompt_html))
 
 
-@user_views.route('/c/<course_name>/train/code-jumble', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/code-jumble', methods=['POST'])
 @login_required
-def test_code_jumble(course_name):
+def test_code_jumble(course_name, mission_id):
     """ Checks the correctness of a code jumble type of question. """
 
     course = check_course_authorization(course_name)
+    check_mission_inclusion(mission_id, course)
 
     form = CodeJumbleForm(request.form)
 
@@ -474,7 +512,9 @@ def test_code_jumble(course_name):
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
-                                   course_name=course_name,
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
@@ -494,8 +534,10 @@ def test_code_jumble(course_name):
             difficulty_form = DifficultyForm(attempt_id=attempt.id)
             return render_template("difficulty.html",
                                    page_title="Cadet Test: Rating",
-                                   course_name=course_name,
-                                   form=difficulty_form)
+                                   form=difficulty_form,
+                                   post_url=url_for('.difficulty',
+                                                    course_name=course_name,
+                                                    mission_id=mission_id))
 
         else:
             attempt.correct = False
@@ -510,7 +552,9 @@ def test_code_jumble(course_name):
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
-                                   course_name=course_name,
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
@@ -520,18 +564,18 @@ def test_code_jumble(course_name):
 
     return render_template("test_code_jumble.html",
                            page_title="Cadet Test",
-                           course_name=course_name,
                            fresh_question=(not repeated),
                            form=form,
+                           post_url=url_for('.test_code_jumble',
+                                            course_name=course_name,
+                                            mission_id=mission_id),
                            prompt=Markup(prompt_html),
                            code_blocks=code_blocks)
 
 
-@user_views.route('/c/<course_name>/train')
+@user_views.route('/c/<course_name>/missions')
 @login_required
-def test(course_name):
-    """ Presents a random question to the user. """
-
+def missions_overview(course_name):
     course = Course.query.filter_by(name=course_name).first()
     if not course:
         abort(404)
@@ -540,7 +584,26 @@ def test(course_name):
     except AuthorizationError:
         abort(401)
 
-    possible_questions = course.questions
+    return render_template("missions_overview.html",
+                           page_title=f"Cadet: {course_name} Missions",
+                           course=course)
+
+
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train')
+@login_required
+def test(course_name, mission_id):
+    """ Presents a random question to the user. """
+
+    course = Course.query.filter_by(name=course_name).first()
+    assessment = Assessment.query.filter_by(id=mission_id).first()
+    if (not course) or (not assessment):
+        abort(404)
+    try:
+        check_authorization(current_user, course=course)
+    except AuthorizationError:
+        abort(401)
+
+    possible_questions = assessment.questions
 
     # find questions that haven't been attempted yet, as these will be part of
     # the pool of questions we can ask them
@@ -590,7 +653,8 @@ def test(course_name):
                                page_title="Cadet Test",
                                fresh_question=fresh_question,
                                post_url=url_for(".test_short_answer",
-                                                course_name=course_name),
+                                                course_name=course_name,
+                                                mission_id=mission_id),
                                form=form,
                                prompt=Markup(prompt_html))
 
@@ -601,7 +665,8 @@ def test(course_name):
                                page_title="Cadet Test",
                                fresh_question=fresh_question,
                                post_url=url_for(".test_auto_check",
-                                                course_name=course_name),
+                                                course_name=course_name,
+                                                mission_id=mission_id),
                                form=form,
                                prompt=Markup(prompt_html))
 
@@ -617,6 +682,9 @@ def test(course_name):
                                course_name=course_name,
                                fresh_question=fresh_question,
                                form=form,
+                               post_url=url_for('.test_multiple_choice',
+                                                course_name=course_name,
+                                                mission_id=mission_id),
                                prompt=Markup(prompt_html))
 
     elif question.type == QuestionType.CODE_JUMBLE:
@@ -626,9 +694,11 @@ def test(course_name):
 
         return render_template("test_code_jumble.html",
                                page_title="Cadet Test",
-                               course_name=course_name,
                                fresh_question=fresh_question,
                                form=form,
+                               post_url=url_for('.test_code_jumble',
+                                                course_name=course_name,
+                                                mission_id=mission_id),
                                prompt=Markup(prompt_html),
                                code_blocks=code_blocks)
     else:
@@ -696,7 +766,7 @@ class MultipleChoiceForm(FlaskForm):
 
 from app.db_models import (
     Question, Attempt, enrollments, QuestionType, AnswerOption, TextAttempt,
-    SelectionAttempt, JumbleBlock, Course
+    SelectionAttempt, JumbleBlock, Course, Objective, User, Assessment
 )
 
 from app.auth import check_authorization, AuthorizationError

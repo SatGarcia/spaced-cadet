@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+    <div class="container pt-3">
+		<h5>Training: {{course.name}}</h5>
+
+		<div class="container">
+			<h6>Missions:</h6>
+			<ul class="list-group">
+				{% for assessment in course.assessments %}
+					<li class="list-group-item d-flex justify-content-between align-items-start">
+						<div>
+							<div class="fw-bold fs-5">{{ assessment.title }}</div>
+
+							{{ assessment.description }}
+
+							<div class="mt-1">
+								<span class="fw-bold">Date/Time:</span>
+								{{ assessment.time }}
+							</div>
+
+							{% if assessment.topics.count() != 0 %}
+								<div class="mt-1">
+									<span class="fw-bold">Topics:</span>
+									{% for topic in assessment.topics %}
+										<span class="badge rounded-pill bg-light text-dark border">{{ topic.text }}</span>
+									{% endfor %}
+								</div>
+							{% endif %}
+
+							{% if assessment.objectives.count() != 0 %}
+								<div class="mt-1">
+									<span class="fw-bold">Learning Objectives:</span>
+									<ol>
+										{% for objective in assessment.objectives %}
+											<li>
+												{{ objective.description|mdown|safe }}
+											</li>
+										{% endfor %}
+									</ol>
+								</div>
+							{% endif %}
+
+							<div class="mt-1">
+								<span class="fw-bold">Questions:</span>
+								{{ assessment.questions.count() }}
+							</div>
+						</div>
+						<a role="button" class="btn btn-sm btn-primary"
+					   		href="{{ url_for("user_views.test", course_name=course.name, mission_id=assessment.id) }}">
+							Begin Training
+						</a>
+					</li>
+				{% endfor %}
+			</ul>
+		</div>
+    </div>
+{% endblock %}

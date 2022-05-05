@@ -58,8 +58,7 @@
         </div>
 
 		<div class="row pt-2">
-			<form method="POST" 
-		 		  action="{% if not preview_mode %}{{ url_for('user_views.test_code_jumble', course_name=course_name) }}{% endif %}">
+			<form method="POST" action="{% if not preview_mode %}{{ post_url }}{% endif %}">
 				
 				{{ form.csrf_token }}
 				{{ form.question_id }}
