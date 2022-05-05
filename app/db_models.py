@@ -518,6 +518,15 @@ class User(UserMixin, db.Model):
     def get_active_courses(self):
         return self.courses.filter(Course.end_date >= date.today())
 
+    def latest_next_attempts(self):
+        """ Returns the id and latest next attempt date for all questions that
+        this user has attempted. """
+        return db.session.query(
+            Attempt.question_id,
+            Attempt.next_attempt,
+            db.func.max(Attempt.next_attempt).label('latest_next_attempt_time')
+        ).group_by(Attempt.question_id).filter(Attempt.user_id == self.id)
+
 
 class Objective(SearchableMixin, db.Model):
     __searchable__ = ['description']
@@ -644,6 +653,55 @@ class Assessment(db.Model):
     def __repr__(self):
         return f"<Assessment {self.id}: {self.description} at {str(self.time)}>"
 
+
+    def unattempted_questions(self, user):
+        """ Returns all questions that don't have an attempt by the given user. """
+        return self.questions.filter(~ Question.attempts.any(Attempt.user_id == user.id))
+
+    def due_questions(self, user):
+        """ Returns all assessment questions whose latest next_attempt for the
+        given user is today."""
+
+        latest_next_attempts = user.latest_next_attempts().subquery()
+
+        return self.questions.join(
+            latest_next_attempts, db.and_(Question.id == latest_next_attempts.c.question_id,
+                                          latest_next_attempts.c.latest_next_attempt_time == date.today()))
+
+    def overdue_questions(self, user):
+        """ Returns all assessment questions whose latest next_attempt for the
+        given user was before today."""
+        latest_next_attempts = user.latest_next_attempts().subquery()
+
+        return self.questions.join(
+            latest_next_attempts, db.and_(Question.id == latest_next_attempts.c.question_id,
+                                          latest_next_attempts.c.latest_next_attempt_time < date.today()))
+
+    def waiting_questions(self, user):
+        """ Returns all assessment questions whose latest next_attempt for the
+        given user is after today (i.e. don't need any practice now)."""
+        latest_next_attempts = user.latest_next_attempts().subquery()
+
+        return self.questions.join(
+            latest_next_attempts, db.and_(Question.id == latest_next_attempts.c.question_id,
+                                          latest_next_attempts.c.latest_next_attempt_time > date.today()))
+
+    def fresh_questions(self, user):
+        """ Returns all "fresh" assessment questions, where fresh is defined as needing
+        to be practiced by the user for the FIRST time today. """
+        return self.unattempted_questions(user).union(self.due_questions(user)).union(self.overdue_questions(user))
+
+    def repeat_questions(self, user):
+        """ Returns all assessment questions that the user has already attempted today
+        but that haven't gotten a quality score of 4 or above."""
+        midnight_today = datetime.combine(date.today(), datetime.min.time())
+
+        poor_attempts = Attempt.query.filter(db.and_(Attempt.user_id == user.id,
+                                                     Attempt.time >= midnight_today))\
+                                     .group_by(Attempt.question_id)\
+                                     .having(db.func.max(Attempt.quality) < 4)
+
+        return self.questions.join(poor_attempts)
 
 
 from app.user_views import markdown_to_html

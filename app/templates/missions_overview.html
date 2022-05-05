@@ -11,7 +11,7 @@
 					{{ assessment.description }}
 
 					<div class="mt-1">
-						<span class="fw-bold">Date/Time:</span>
+						<span class="fw-bold">Deadline:</span>
 						{{ assessment.time.strftime('%B %d, %Y @ %I:%M %p') }}
 					</div>
 
@@ -37,14 +37,29 @@
 						</div>
 					{% endif %}
 
+					{% set num_needing_practice = assessment.fresh_questions(current_user).count() + assessment.repeat_questions(current_user).count() %}
+
 					<div class="mt-1">
 						<span class="fw-bold">Questions:</span>
-						{{ assessment.questions.count() }}
+						Total: {{ assessment.questions.count() }}
+
+						{% if num_needing_practice > 0 %}
+							( Needs Practice:
+							<span class="text-danger">
+							{{ num_needing_practice }}
+							<i class="bi-exclamation-circle"></i>
+							</span>
+							)
+						{% endif %}
 					</div>
 				</div>
-				<a role="button" class="btn btn-sm btn-primary"
+				<a role="button" class="mt-1 btn btn-sm btn-primary position-relative"
 					 href="{{ url_for("user_views.test", course_name=course.name, mission_id=assessment.id) }}">
 					Begin Training
+					<span class="position-absolute top-0 start-100 translate-middle badge bg-danger">
+						{{ num_needing_practice }}
+						<span class="visually-hidden">questions that need practice</span>
+					</span>
 				</a>
 			</li>
 		{% endfor %}
