@@ -603,48 +603,21 @@ def test(course_name, mission_id):
     except AuthorizationError:
         abort(401)
 
-    possible_questions = assessment.questions
-
-    # find questions that haven't been attempted yet, as these will be part of
-    # the pool of questions we can ask them
-    unattempted_questions = possible_questions.filter(~ Question.attempts.any(Attempt.user_id == current_user.id))
-
-    # Find questions whose next attempt is before today, as these will also be
-    # part of the pool of questions to ask
-
-    latest_next_attempts = db.session.query(
-        Attempt.question_id, Attempt.next_attempt, db.func.max(Attempt.next_attempt).label('latest_next_attempt_time')
-    ).group_by(Attempt.question_id).filter(Attempt.user_id == current_user.id).subquery()
-
-    target_time = datetime.now()
-    ready_questions = Question.query.join(
-        latest_next_attempts, db.and_(Question.id == latest_next_attempts.c.question_id,
-                                      latest_next_attempts.c.latest_next_attempt_time <= target_time)
-    ).union(unattempted_questions)
-
-    # randomly pick one of the ready questions
-    question = ready_questions.order_by(db.func.random()).first()
-
-    # question is "fresh" if it hasn't been attempted yet today
+    # set the question bank based on whether there are fresh questions or not
+    questions = assessment.fresh_questions(current_user).order_by(db.func.random())
     fresh_question = True
 
-    if not question:
-        # There weren't any "new" questions (i.e. those the user hasn't
-        # already attempted today). Look for questions that they attempted
-        # today but whose quality was 3 or less.
-
-        today = datetime.combine(date.today(), datetime.min.time())
-        attempted_today = possible_questions.filter(Question.attempts.any(Attempt.time >= today))
-        needs_reps = attempted_today.filter(~ Question.attempts.any(Attempt.quality > 3))
-
-        question = needs_reps.order_by(db.func.random()).first()
+    if questions.count() == 0:
         fresh_question = False
+        questions = assessment.repeat_questions(current_user).order_by(db.func.random())
 
-        if not question:
-            # No questions that need more reps today so display a "congrats"
-            # page for the user.
-            return render_template("completed.html",
-                                   page_title="Cadet: Complete")
+    if questions.count() == 0:
+        # No questions that need more reps today so display a "congrats" page
+        # for the user.
+        return render_template("completed.html",
+                               page_title="Cadet: Complete")
+
+    question = questions.first()
 
     if question.type == QuestionType.SHORT_ANSWER:
         form = ShortAnswerForm(question_id=question.id)
