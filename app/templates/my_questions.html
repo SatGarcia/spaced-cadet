@@ -3,6 +3,21 @@
     <div class="container pt-3">
         <h4>My Questions</h4>
 
+		<div class="row">
+			<span class="dropdown">
+				<button class="btn btn-link dropdown-toggle text-decoration-none" type="button" id="newQuestionButton" data-bs-toggle="dropdown" aria-expanded="false">
+					<i class="bi-plus-circle"></i>
+					Create New Question
+				</button>
+				<ul class="dropdown-menu" aria-labelledby="newQuestionButton">
+					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='short-answer')}}">Short Answer (Self-Graded)</a></li>
+					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='auto-check')}}">Short Answer (Auto-Graded)</a></li>
+					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='multiple-choice')}}">Multiple Choice</a></li>
+					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='code-jumble')}}">Code Jumble</a></li>
+				</ul>
+			</span>
+		</div>
+
 		<div class="row" id="currentQuestions">
 			<confirmation-dialog name="confirmationModal"
 				 @confirmed="resolveConfirmation(true)"
@@ -189,19 +204,6 @@
 			</set-objective-modal>
 		</div>
 
-		<div class="row">
-			<span class="dropdown">
-				<button class="btn btn-link dropdown-toggle text-decoration-none" type="button" id="newQuestionButton" data-bs-toggle="dropdown" aria-expanded="false">
-					Create New Question
-				</button>
-				<ul class="dropdown-menu" aria-labelledby="newQuestionButton">
-					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='short-answer')}}">Short Answer (Self-Graded)</a></li>
-					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='auto-check')}}">Short Answer (Auto-Graded)</a></li>
-					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='multiple-choice')}}">Multiple Choice</a></li>
-					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='code-jumble')}}">Code Jumble</a></li>
-				</ul>
-			</span>
-		</div>
 
 	</div>
 
