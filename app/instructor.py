@@ -655,7 +655,7 @@ def create_new_question(question_type):
                            form=form)
 
 
-@instructor.route('/c/<course_name>/roster')
+@instructor.route('/c/<course_name>/admin/roster')
 @login_required
 def manage_roster(course_name):
     course = Course.query.filter_by(name=course_name).first()
@@ -676,7 +676,7 @@ def manage_roster(course_name):
                            roster_form=form)
 
 
-@instructor.route('/c/<course_name>/assessments')
+@instructor.route('/c/<course_name>/admin/assessments')
 @login_required
 def manage_assessments(course_name):
     course = Course.query.filter_by(name=course_name).first()
@@ -692,7 +692,7 @@ def manage_assessments(course_name):
                            page_title="Cadet: Manage Course Assessments",
                            course=course)
 
-@instructor.route('/c/<course_name>/questions')
+@instructor.route('/c/<course_name>/admin/questions')
 @login_required
 def manage_questions(course_name):
     course = Course.query.filter_by(name=course_name).first()

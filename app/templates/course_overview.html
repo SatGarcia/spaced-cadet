@@ -1,7 +1,15 @@
 {% extends "base.html" %}
 {% block body %}
+
     <div class="container pt-3">
-        <h3>{{ course.name }}: {{ course.title }}</h3>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ course.name }}</li>
+            </ol>
+        </nav>
+
+        <h3>{{ course.title }}</h3>
 
         {{ course.description }}
 

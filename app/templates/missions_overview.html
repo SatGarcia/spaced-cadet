@@ -68,7 +68,13 @@
 
 {% block body %}
     <div class="container pt-3">
-		<h4>Missions for {{course.name}}</h4>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}">Home</a></li>
+				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview',course_name=course.name) }}">{{ course.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Missions</li>
+            </ol>
+        </nav>
 
 		<h5>Upcoming Missions</h5>
 		{{ assessment_list_group(course.upcoming_assessments()) }}
