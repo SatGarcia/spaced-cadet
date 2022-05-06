@@ -538,6 +538,8 @@ def init_app(flask_app):
     rf_api.add_resource(ObjectiveApi, '/api/objective/<int:objective_id>')
     rf_api.add_resource(ObjectivesApi, '/api/objectives',
                         endpoint='objectives_api')
+    rf_api.add_resource(ObjectiveSearchApi, '/api/objectives/search',
+                        endpoint='objective_search_api')
     rf_api.add_resource(QuestionObjectiveApi,
                         '/api/question/<int:question_id>/objective',
                         endpoint='question_objective')
@@ -1313,7 +1315,7 @@ class QuestionObjectiveApi(Resource):
             return {'updated': question_schema.dump(q)}
 
 
-class ObjectivesApi(Resource):
+class ObjectiveSearchApi(Resource):
     @jwt_required()
     def get(self):
         query_str = request.args.get("q")
@@ -1322,6 +1324,56 @@ class ObjectivesApi(Resource):
             objectives = Objective.query
         else:
             objectives = Objective.search(query_str)[0]
+
+        target_author = request.args.get('author')
+
+        if target_author == 'self':
+            # restrict results to current user if author=self is specified
+            objectives = objectives.filter(Objective.author_id == current_user.id)
+
+        elif target_author:
+            # Restrict results to specific user id if author is given (and not
+            # it's not 'self'). This option is only available to admins
+            if not current_user.admin:
+                return {'message': "author usage restricted to 'self'"}, 401
+
+            try:
+                target_id = int(target_author)
+            except:
+                return {'message': f"Invalid value for author argument: {target_author}"}, 400
+            else:
+                objectives = objectives.filter(Objective.author_id == target_id)
+
+        elif not current_user.admin:
+            # if no author specified and user isn't an admin, get all public
+            # objectives as well as those that are authored by the current user
+            objectives = objectives.filter(db.or_(Objective.public == True,
+                                                  Objective.author == current_user))
+
+        # topic_q parameter is a query string to search for topics and limit
+        # objective search results to only those objectives that have one of
+        # the topics.
+        topic_query_str = request.args.get("topics_q")
+        if topic_query_str is not None:
+            print("SEARCHING FOR TOPIC QUERY:", topic_query_str)
+            topics = Topic.search(topic_query_str)[0]
+            objectives = objectives.join(topics)
+
+        # if they used the 'html' argument, get the HTML version of the field
+        if request.args.get("html") is not None:
+            schema = LearningObjectiveSchema(many=True)
+            schema.context = {"html": True}
+        else:
+            schema = objectives_schema
+
+        result = schema.dump(objectives.all())
+        return {'learning_objectives': result}
+
+
+class ObjectivesApi(Resource):
+    @jwt_required()
+    def get(self):
+        objectives = Objective.query
 
         target_author = request.args.get('author')
 

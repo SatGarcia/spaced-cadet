@@ -125,3 +125,15 @@ export async function deleteObjective(objective_id) {
     return await fetchOrRefresh(url, 'DELETE');
 }
 
+export async function searchObjectives(search_string, topic_search_string="") {
+    let url = "/api/objectives/search?html";  // FIXME "{{ url_for('objective_search_api') }}";
+
+    if (search_string !== "") {
+        url = url + "&q=" + encodeURIComponent(search_string);
+    }
+    if (topic_search_string !== "") {
+        url = url + "&topics_q=" + encodeURIComponent(topic_search_string);
+    }
+
+    return await fetchOrRefresh(url, 'GET', refresh_url);
+}
