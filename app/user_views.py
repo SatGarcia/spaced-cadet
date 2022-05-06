@@ -615,7 +615,8 @@ def test(course_name, mission_id):
         # No questions that need more reps today so display a "congrats" page
         # for the user.
         return render_template("completed.html",
-                               page_title="Cadet: Complete")
+                               page_title="Cadet: Complete",
+                               course_name=course_name)
 
     question = questions.first()
 
