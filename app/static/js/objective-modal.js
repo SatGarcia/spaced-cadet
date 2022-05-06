@@ -1,5 +1,5 @@
 import { showSnackbarMessage, fetchOrRefresh } from './helpers.js';
-import { createNewObjective } from './cadet-api.js';
+import { createNewObjective, searchObjectives } from './cadet-api.js';
 
 const refresh_url = '/auth/refresh';
 
@@ -48,14 +48,9 @@ export default {
       objectives_modal.hide();
     },
 
-    async searchObjectives() {
-      let url = "/api/objectives?html";  // FIXME "{{ url_for('objectives_api') }}";
-      if (this.search_string) {
-        url = url + "&q=" + encodeURIComponent(this.search_string);
-      }
-      const response = await fetchOrRefresh(url, 'GET', refresh_url);
-      if (response.ok) {
-        const r = await response.json();
+    async displaySearchResults(query_response) {
+      if (query_response.ok) {
+        const r = await query_response.json();
         this.objectives = r["learning_objectives"];
       }
       else {
@@ -63,6 +58,22 @@ export default {
         const objectives_modal = bootstrap.Modal.getInstance(modal_el);
         objectives_modal.hide();
         this.$emit('failedToSearch');
+      }
+    },
+
+    async searchByDescription() {
+      if (this.search_string !== "") {
+        // Only search if a non-empty string given
+        const response = await searchObjectives(this.search_string);
+        await this.displaySearchResults(response);
+      }
+    },
+
+    async searchByTopic() {
+      if (this.search_string !== "") {
+        // Only search if a non-empty string given
+        const response = await searchObjectives("", this.search_string);
+        await this.displaySearchResults(response);
       }
     },
 
@@ -111,15 +122,24 @@ export default {
                             <input 
                                 id="searchObjectives"
                                 v-model.trim="search_string" 
-                                @keyup.enter="searchObjectives()"
+                                @keyup.enter="searchByDescription()"
                                 type="text"
                                 class="form-control"
                                 placeholder="Search learning objectives (e.g. while loop)">
-                            <button class="btn btn-xs btn-primary"
-                                @click="searchObjectives()">
-                                <i class="bi-search"></i>
-                                Search
-                            </button>
+
+                            <div class="btn-group">
+                              <button class="btn btn-xs btn-primary"
+                                  @click="searchByDescription()">
+                                  <i class="bi-search"></i>
+                                  Search
+                              </button>
+                              <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" @click="searchByTopic">Search by Topic</a></li>
+                              </ul>
+                            </div>
                         </div>
                     </div>
 
@@ -141,11 +161,18 @@ export default {
                                         name="objOptions"
                                         type="radio"
                                         class="visually-hidden">
-                                    <label :for="'opt' + index" v-html="lo.description"></label>
+                                    <label :for="'opt' + index">
+                                      <div v-if="lo.topic !== null">
+                                        Topic:
+                                        <span class="badge rounded-pill bg-light text-dark">[[lo.topic.text]]</span>
+                                      </div>
+                                      <span class="inline-p" v-html="lo.description"></span>
+                                    </label>
                                 </li>
                             </ul>
                         </div>
                     </div>
+
                     <div class="mt-3">
                     <em>
                         Can't find a suitable learning objective?
