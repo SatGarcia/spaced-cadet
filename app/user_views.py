@@ -573,6 +573,22 @@ def test_code_jumble(course_name, mission_id):
                            code_blocks=code_blocks)
 
 
+@user_views.route('/c/<course_name>')
+@login_required
+def course_overview(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+    try:
+        check_authorization(current_user, course=course)
+    except AuthorizationError:
+        abort(401)
+
+    return render_template("course_overview.html",
+                           page_title=f"Cadet: {course_name}",
+                           course=course)
+
+
 @user_views.route('/c/<course_name>/missions')
 @login_required
 def missions_overview(course_name):
