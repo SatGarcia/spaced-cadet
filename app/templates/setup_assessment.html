@@ -13,16 +13,22 @@
                     {{course.name}} Topics: 
                     <br />
 					<button type="button" class="btn btn-sm btn-light m-2"
-                           v-for="(topic, index) in all_topics" :key="topic.id"
+                           v-for="(topic, index) in displayed_topics" :key="topic.id"
                            @click="toggleTopicSelect(index)">
 						[[ topic.text ]]
 					</button>
+                    <pagination-control
+                        class="mt-2"
+                        description="Page navigation for topics"
+                        :num_items="all_topics.length"
+                        @selected-page="setDisplayedTopics">
+                    </pagination-control>
 				</div>
 
 				<!-- TODO: area for adding new topics to course -->
 
 				<!-- area for selected topics -->
-                <div class="mt-3">
+                <div>
                     Assessment Topics:
                     <br />
 					<span class="badge bg-light text-dark border m-1"
@@ -190,6 +196,7 @@
 
 	<script type="module">
 		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+		import PaginationControl from '/static/js/pagination-control.js';
 		import * as CadetApi from '/static/js/cadet-api.js';
 
         const converter = new showdown.Converter();
@@ -199,6 +206,7 @@
             data() {
                 return {
 					all_topics: [],
+                    displayed_topics: [],
                     selected_topics: [],
                     all_objectives: [],
                     selected_objectives: [],
@@ -206,6 +214,10 @@
                     selected_questions: [],
                 }
             },
+
+            components: {
+				PaginationControl,
+			},
 
             watch: {
                 selected_topics: {
@@ -240,8 +252,12 @@
 					showSnackbarMessage(msg);
 				},
 
+                setDisplayedTopics(start, end) {
+                    this.displayed_topics = this.all_topics.slice(start, end);
+                },
+
                 toggleTopicSelect(index) {
-                    const target_topic = this.all_topics[index];
+                    const target_topic = this.displayed_topics[index];
                     const found_index = this.selected_topics.findIndex((topic) => topic.id === target_topic.id);
 
                     if (found_index === -1) {
@@ -288,6 +304,7 @@
                     if (response.ok) {
                         const r = await response.json();
                         this.all_topics = r["topics"];
+                        this.setDisplayedTopics(0, Math.min(this.all_topics.length, 25));
                     }
                     else {
                         showSnackbarMessage("Error retrieving topics.");
