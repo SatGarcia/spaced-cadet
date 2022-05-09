@@ -49,12 +49,12 @@
 
                     <div class="list-group" v-if="all_objectives.length !== 0">
                         <button type="button" class="list-group-item list-group-item-action"
-                                              v-for="(lo, index) in all_objectives" :key="lo.id"
+                                              v-for="(lo, index) in displayed_objectives" :key="lo.id"
                                               @click="toggleObjectiveSelect(lo)">
                             <span class="text-primary" v-if="objective_is_selected[index]">
                                 <i class="bi-check-circle"></i>
                             </span>
-                            <span class="text-secondary" v-else="!objective_is_selected[index]">
+                            <span class="text-secondary" v-else>
                                 <i class="bi-dash-circle"></i>
                             </span>
 
@@ -64,6 +64,13 @@
                                 [[ lo.topic.text ]]
                             </span>
                         </button>
+
+                        <pagination-control
+                            class="mt-2"
+                            description="Page navigation for objectives"
+                            :num_items="all_objectives.length"
+                            @selected-page="setDisplayedObjectives">
+                        </pagination-control>
                     </div>
                     <div v-else>
                         None found.
@@ -208,7 +215,9 @@
 					all_topics: [],
                     displayed_topics: [],
                     selected_topics: [],
+
                     all_objectives: [],
+                    displayed_objectives: [],
                     selected_objectives: [],
                     all_questions: [],
                     selected_questions: [],
@@ -238,7 +247,7 @@
             computed: {
                 objective_is_selected() {
                     const selected_ids = this.selected_objectives.map(o => o.id);
-                    return this.all_objectives.map(o => selected_ids.includes(o.id))
+                    return this.selected_objectives.map(o => selected_ids.includes(o.id))
                 },
 
                 question_is_selected() {
@@ -254,6 +263,10 @@
 
                 setDisplayedTopics(start, end) {
                     this.displayed_topics = this.all_topics.slice(start, end);
+                },
+
+                setDisplayedObjectives(start, end) {
+                    this.displayed_objectives = this.all_objectives.slice(start, end);
                 },
 
                 toggleTopicSelect(index) {
@@ -324,6 +337,7 @@
                         if (response.ok) {
                             const r = await response.json();
                             this.all_objectives = r["learning_objectives"];
+                            this.setDisplayedObjectives(0, Math.min(this.all_objectives.length, 25));
                         }
                         else {
                             showSnackbarMessage("Error retrieving learning objectives.");
