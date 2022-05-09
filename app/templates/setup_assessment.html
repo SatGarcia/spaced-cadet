@@ -2,7 +2,19 @@
 
 {% block body %}
     <div class="container pt-3">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}" class="text-decoration-none">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview', course_name=course.name) }}" class="text-decoration-none">{{ course.name }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('instructor.manage_assessments', course_name=course.name) }}" class="text-decoration-none">Manage Assessments</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Assessment Setup ({{assessment.title}})</li>
+            </ol>
+        </nav>
+
         <h5>Assessment Setup: {{assessment.title}}</h5>
+        <div>
+            <em>{{assessment.description|mdown|safe}}</em>
+        </div>
 
 		<div id="assessmentSetup">
 			<div class="row border m-2 p-2" id="selectTopics">
@@ -178,7 +190,7 @@
 
 			</div>
             <div class="container mt-3">
-                <strong>Assessment Summary:</strong>
+                <strong>{{ assessment.title }} Summary:</strong>
                 [[selected_topics.length]] topics,
                 [[selected_objectives.length]] objectives,
                 [[selected_questions.length]] questions
