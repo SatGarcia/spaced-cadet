@@ -4,8 +4,18 @@ export default {
   },
 
   props: {
-    num_items: Number,
-    description: String,
+    num_items: {
+      type: Number,
+      required: true,
+    },
+    items_per_page: {
+      type: Number,
+      default: 10,
+    },
+    description: {
+      type: String,
+      required: true,
+    },
   },
 
   emits: ['selected-page'],
@@ -22,13 +32,12 @@ export default {
         arr.push({start: i * this.items_per_page, end: Math.min((i+1)*this.items_per_page, this.num_items)});
       }
 
-      return arr
+      return arr;
     }
   },
 
   data() {
     return {
-      items_per_page: 25,
       selected_page_num: 0,
     }
   },
