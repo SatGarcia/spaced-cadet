@@ -4,10 +4,22 @@
 {% block body %}
     <div class="container pt-3">
         {% if edit_mode %}
-            <h4>Edit Course ({{course_name}})</h4>
+            {% set header_text = "Edit Course Settings" %}
         {% else %}
-            <h4>Create New Course</h4>
+            {% set header_text = "Create New Course" %}
         {% endif %}
+
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}" class="text-decoration-none">Home</a></li>
+                {% if edit_mode %}
+                    <li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview', course_name=course_name) }}" class="text-decoration-none">{{ course_name }}</a></li>
+                {% endif %}
+                <li class="breadcrumb-item active" aria-current="page">{{ header_text }}</li>
+            </ol>
+        </nav>
+
+        <h5>{{ header_text }}</h5>
 
 		<div class="row">
 			<form method="POST" action="">
