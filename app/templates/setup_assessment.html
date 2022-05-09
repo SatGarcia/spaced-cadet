@@ -21,6 +21,7 @@
                         class="mt-2"
                         description="Page navigation for topics"
                         :num_items="all_topics.length"
+                        :items_per_page="25"
                         @selected-page="setDisplayedTopics">
                     </pagination-control>
 				</div>
@@ -69,6 +70,7 @@
                             class="mt-2"
                             description="Page navigation for objectives"
                             :num_items="all_objectives.length"
+                            :items_per_page="10"
                             @selected-page="setDisplayedObjectives">
                         </pagination-control>
                     </div>
@@ -106,7 +108,7 @@
 
                     <div class="list-group" v-if="all_questions.length !== 0">
                         <button type="button" class="list-group-item list-group-item-action"
-                                              v-for="(q, index) in all_questions" :key="q.id"
+                                              v-for="(q, index) in displayed_questions" :key="q.id"
                                               @click="toggleQuestionSelect(q)">
                             <div class="d-flex">
                                 <div class="mt-1">
@@ -148,6 +150,14 @@
 
                         </button>
                     </div>
+
+                    <pagination-control
+                        class="mt-2"
+                        description="Page navigation for questions"
+                        :num_items="all_questions.length"
+                        :items_per_page="5"
+                        @selected-page="setDisplayedQuestions">
+                    </pagination-control>
                 </div>
 
 				<!-- area for selected questions -->
@@ -219,7 +229,9 @@
                     all_objectives: [],
                     displayed_objectives: [],
                     selected_objectives: [],
+
                     all_questions: [],
+                    displayed_questions: [],
                     selected_questions: [],
                 }
             },
@@ -247,12 +259,12 @@
             computed: {
                 objective_is_selected() {
                     const selected_ids = this.selected_objectives.map(o => o.id);
-                    return this.selected_objectives.map(o => selected_ids.includes(o.id))
+                    return this.displayed_objectives.map(o => selected_ids.includes(o.id))
                 },
 
                 question_is_selected() {
                     const selected_ids = this.selected_questions.map(o => o.id);
-                    return this.all_questions.map(o => selected_ids.includes(o.id))
+                    return this.displayed_questions.map(o => selected_ids.includes(o.id))
                 },
             },
 
@@ -267,6 +279,10 @@
 
                 setDisplayedObjectives(start, end) {
                     this.displayed_objectives = this.all_objectives.slice(start, end);
+                },
+
+                setDisplayedQuestions(start, end) {
+                    this.displayed_questions = this.all_questions.slice(start, end);
                 },
 
                 toggleTopicSelect(index) {
@@ -337,7 +353,7 @@
                         if (response.ok) {
                             const r = await response.json();
                             this.all_objectives = r["learning_objectives"];
-                            this.setDisplayedObjectives(0, Math.min(this.all_objectives.length, 25));
+                            this.setDisplayedObjectives(0, Math.min(this.all_objectives.length, 10));
                         }
                         else {
                             showSnackbarMessage("Error retrieving learning objectives.");
@@ -362,6 +378,7 @@
                         if (response.ok) {
                             const r = await response.json();
                             this.all_questions = r["questions"];
+                            this.setDisplayedQuestions(0, Math.min(this.all_questions.length, 10));
                         }
                         else {
                             showSnackbarMessage("Error retrieving questions.");
