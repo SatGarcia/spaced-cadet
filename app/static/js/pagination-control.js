@@ -49,7 +49,7 @@ export default {
   },
 
   template: `
-  <nav :aria-label="description">
+  <nav :aria-label="description" v-if="num_items > items_per_page">
     <ul class="pagination justify-content-center">
       <li class="page-item" :class="{disabled: selected_page_num === 0}">
         <a class="page-link" href="javascript:undefined" @click="selectPreviousPage">Previous</a>
