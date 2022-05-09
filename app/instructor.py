@@ -50,7 +50,7 @@ def create_course():
         db.session.commit()
 
         flash(f"Successfully created course {course.name}", "success")
-        return redirect(url_for("user_views.root"))
+        return redirect(url_for("user_views.course_overview", course_name=course.name))
 
     return render_template("create_course.html",
                            page_title="Cadet: Create Course",
@@ -87,7 +87,7 @@ def edit_course(course_name):
         db.session.commit()
 
         flash("Course successfully updated.", "success")
-        return redirect(url_for("user_views.root"))
+        return redirect(url_for("user_views.course_overview", course_name=course.name))
 
 
     return render_template("create_course.html",
