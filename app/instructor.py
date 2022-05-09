@@ -370,6 +370,7 @@ def edit_assessment(course_name, assessment_id):
 
     form_data = request.form if request.method == 'POST' else None
     form = AssessmentForm(formdata=form_data, obj=assessment)
+    form.submit.label.text = "Save Changes"
 
     if form.validate_on_submit():
         form.populate_obj(assessment)
@@ -377,12 +378,13 @@ def edit_assessment(course_name, assessment_id):
         db.session.commit()
 
         flash(f"Assessment ({assessment.title}) successfully updated.", "success")
-        return redirect(url_for(".manage_assessment",
+        return redirect(url_for(".manage_assessments",
                                 course_name=course_name))
 
 
     return render_template("create_assessment.html",
                            page_title="Cadet: Edit Assessment",
+                           course=course,
                            edit_mode=True,
                            form=form)
 
