@@ -11,12 +11,43 @@
             </ol>
         </nav>
 
-        <h5>Assessment Setup: {{assessment.title}}</h5>
-        <div>
-            <em>{{assessment.description|mdown|safe}}</em>
-        </div>
 
 		<div id="assessmentSetup">
+            <div class="d-flex">
+                <div class="me-auto">
+                    <h5>Assessment Setup: {{assessment.title}}</h5>
+                    <div>
+                        <em>{{assessment.description|mdown|safe}}</em>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="button" class="btn btn-lg btn-primary"
+                                          @click="submitSelected">
+                        <i class="bi-save"></i>
+                        Save Selections
+                    </button>
+
+                    <form method="POST" action="" id="setupAssessmentForm">
+                        {{ form.csrf_token }}
+                        {{ form.selected_topics }}
+                        {{ form.selected_objectives }}
+                        {{ form.selected_questions }}
+                    </form>
+                </div>
+            </div>
+
+            <div>
+                <strong>Summary:</strong>
+                <ul>
+                    <li>[[selected_topics.length]] topic(s)</li>
+                    <li>[[selected_objectives.length]] objective(s)</li>
+                    <li>[[selected_questions.length]] question(s)</li>
+                </ul>
+            </div>
+
+            <hr/>
+
             <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="pills-topics-tab" data-bs-toggle="pill" data-bs-target="#selectTopics" type="button" role="tab" aria-controls="selectTopics" aria-selected="true">Topics ([[ all_topics.length ]])</button>
@@ -33,199 +64,201 @@
                 <div class="tab-pane fade show active" id="selectTopics" role="tabpanel" aria-labelledby="pills-topics-tab">
                     <!-- TODO: search box -->
                     <!-- area for listing all course topics -->
-                    <div>
-                        <h5>Available Topics:</h5>
-                        <button type="button" class="btn btn-sm btn-light m-2"
-                               v-for="(topic, index) in displayed_topics" :key="topic.id"
-                               @click="toggleTopicSelect(index)">
-                            [[ topic.text ]]
-                        </button>
-                        <pagination-control
-                            class="mt-3"
-                            description="Page navigation for topics"
-                            :num_items="all_topics.length"
-                            :items_per_page="25"
-                            @selected-page="setDisplayedTopics">
-                        </pagination-control>
-                    </div>
+                    <div class="row">
+                        <div class="col-8">
+                            <h5>
+                                <i class="bi-list-task"></i>
+                                Available Topics:
+                            </h5>
+                            <button type="button" class="btn btn-sm btn-light m-2"
+                                   v-for="(topic, index) in displayed_topics" :key="topic.id"
+                                   @click="toggleTopicSelect(index)">
+                                [[ topic.text ]]
+                            </button>
+                            <pagination-control
+                                class="mt-3"
+                                description="Page navigation for topics"
+                                :num_items="all_topics.length"
+                                :items_per_page="25"
+                                @selected-page="setDisplayedTopics">
+                            </pagination-control>
+                        </div>
 
-                    <!-- TODO: area for adding new topics to course -->
+                        <!-- TODO: area for adding new topics to course -->
 
-                    <!-- area for selected topics -->
-                    <div>
-                        <h5>Selected Topics:</h5>
-                        <span class="badge bg-light text-dark border m-1"
-                               v-for="(topic, index) in selected_topics" :key="index">
-                            [[ topic.text ]]
-                            <i class="bi-x" @click="selected_topics.splice(index,1)"></i>
-                        </span>
+                        <!-- area for selected topics -->
+                        <div class="col-4">
+                            <h5>
+                                <i class="bi-list-check"></i>
+                                Selected Topics:
+                            </h5>
+                            <ol class="list-group list-group-numbered">
+                                <li type="button" class="list-group-item d-flex"
+                                                  v-for="(t, index) in selected_topics" :key="t.id">
+                                    <div class="ms-2 me-auto">
+                                        [[ t.text ]]
+                                    </div>
+                                    <div>
+                                        <i role="button" class="bi-x mx-2 fs-6 text-danger"
+                                                         @click="selected_topics.splice(index,1)"></i>
+                                        <span class="visually-hidden">Remove</span>
+                                    </div>
+                                </li>
+                            </ol>
+                        </div>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="selectObjectives" role="tabpanel" aria-labelledby="pills-objectives-tab">
                     <!-- area for possible objectives (based on selected topics) -->
-                    <div>
-                        <h5>
-                            <i class="bi-list-task"></i>
-                            All Objectives of Selected Topics:
-                        </h5>
+                    <div class="row">
+                        <div class="col-8">
+                            <h5>
+                                <i class="bi-list-task"></i>
+                                All Objectives of Selected Topics:
+                            </h5>
 
-                        <div class="list-group" v-if="all_objectives.length !== 0">
-                            <button type="button" class="list-group-item list-group-item-action"
-                                                  v-for="(lo, index) in displayed_objectives" :key="lo.id"
-                                                  @click="toggleObjectiveSelect(lo)">
-                                <span class="text-primary" v-if="objective_is_selected[index]">
-                                    <i class="bi-check-circle"></i>
-                                </span>
-                                <span class="text-secondary" v-else>
-                                    <i class="bi-dash-circle"></i>
-                                </span>
+                            <div class="list-group" v-if="all_objectives.length !== 0">
+                                <button type="button" class="list-group-item list-group-item-action"
+                                                      v-for="(lo, index) in displayed_objectives" :key="lo.id"
+                                                      @click="toggleObjectiveSelect(lo)">
+                                    <span class="text-primary" v-if="objective_is_selected[index]">
+                                        <i class="bi-check-circle"></i>
+                                    </span>
+                                    <span class="text-secondary" v-else>
+                                        <i class="bi-dash-circle"></i>
+                                    </span>
 
-                                <span class="ms-2" v-html="convertToHtml(lo.description)"></span>
+                                    <span class="ms-2" v-html="convertToHtml(lo.description)"></span>
 
-                                <span class="badge bg-light text-dark border m-1">
-                                    [[ lo.topic.text ]]
-                                </span>
-                            </button>
+                                    <span class="badge bg-light text-dark border m-1">
+                                        [[ lo.topic.text ]]
+                                    </span>
+                                </button>
 
-                            <pagination-control
-                                class="mt-2"
-                                description="Page navigation for objectives"
-                                :num_items="all_objectives.length"
-                                :items_per_page="10"
-                                @selected-page="setDisplayedObjectives">
-                            </pagination-control>
+                                <pagination-control
+                                    class="mt-2"
+                                    description="Page navigation for objectives"
+                                    :num_items="all_objectives.length"
+                                    :items_per_page="10"
+                                    @selected-page="setDisplayedObjectives">
+                                </pagination-control>
+                            </div>
+                            <div v-else>
+                                None found.
+                            </div>
                         </div>
-                        <div v-else>
-                            None found.
+
+                        <!-- area for selected objectives -->
+                        <div class="col-4">
+                            <h5>
+                                <i class="bi-list-check"></i>
+                                Selected Objectives:
+                            </h5>
+
+                            <ol class="list-group list-group-numbered">
+                                <li type="button" class="list-group-item d-flex"
+                                                  v-for="(lo, index) in selected_objectives" :key="lo.id">
+                                    <div class="ms-2 me-auto">
+                                        <span v-html="convertToHtml(lo.description)"></span>
+                                        <span class="badge bg-light text-dark border m-1">
+                                            [[ lo.topic.text ]]
+                                        </span>
+                                    </div>
+                                    <i role="button" class="bi-x mx-2 fs-6 text-danger"
+                                                     @click="selected_objectives.splice(index,1)"></i>
+                                </li>
+                            </ol>
                         </div>
-                    </div>
-
-                    <!-- area for selected objectives -->
-                    <div class="mt-3">
-                        <h5>
-                            <i class="bi-list-check"></i>
-                            Selected Objectives:
-                        </h5>
-
-                        <ol class="list-group list-group-numbered">
-                            <li type="button" class="list-group-item"
-                                              v-for="(lo, index) in selected_objectives" :key="lo.id">
-                                <span v-html="convertToHtml(lo.description)"></span>
-                                <span class="badge bg-light text-dark border m-1">
-                                    [[ lo.topic.text ]]
-                                </span>
-                                <i role="button" class="bi-x mx-2 fs-6 text-danger"
-                                                 @click="selected_objectives.splice(index,1)"></i>
-                            </li>
-                        </ol>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="selectQuestions" role="tabpanel" aria-labelledby="pills-questions-tab">
                     <!-- area for possible questions (based on selected objectives) -->
-                    <div>
-                        <h5>
-                            <i class="bi-list-task"></i>
-                            All Questions of Selected Objectives:
-                        </h5>
+                    <div class="row">
+                        <div class="col-8">
+                            <h5>
+                                <i class="bi-list-task"></i>
+                                All Questions of Selected Objectives:
+                            </h5>
 
-                        <div class="list-group" v-if="all_questions.length !== 0">
-                            <button type="button" class="list-group-item list-group-item-action"
-                                                  v-for="(q, index) in displayed_questions" :key="q.id"
-                                                  @click="toggleQuestionSelect(q)">
-                                <div class="d-flex">
-                                    <div class="mt-1">
-                                        <span class="text-primary" v-if="question_is_selected[index]">
-                                            <i class="bi-check-circle"></i>
-                                        </span>
-                                        <span class="text-secondary" v-else="!question_is_selected[index]">
-                                            <i class="bi-dash-circle"></i>
-                                        </span>
-                                    </div>
-                                    <div class="ms-2 flex-grow-1">
-                                        <table class="table table-borderless table-sm mb-0">
-                                            <tbody>
-                                                <tr>
-                                                    <th scope="row" class="col-1">Type:</th>
-                                                    <td>[[ q.type ]]</td>
-                                                </tr>
-                                                <tr>
-                                                    <th scope="row">Prompt:</th>
-                                                    <td>
-                                                        <div class="clippy" v-html="convertToHtml(q.prompt)"></div>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <th scope="row">Objective:</th>
-                                                    <td v-html="convertToHtml(q.objective.description)"></td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div>
-                                        <i class="bi-eye"></i>
-                                        <a :href=`/q/${q.id}/preview` target="_blank"
-                                            class="link-secondary text-decoration-none">
-                                            Preview
-                                        </a>
-                                    </div>
-                                </div>
+                            <div class="list-group" v-if="all_questions.length !== 0">
+                                <button type="button" class="list-group-item list-group-item-action"
+                                                      v-for="(q, index) in displayed_questions" :key="q.id"
+                                                      @click="toggleQuestionSelect(q)">
+                                    <div class="d-flex">
+                                        <div class="mt-1">
+                                            <span class="text-primary" v-if="question_is_selected[index]">
+                                                <i class="bi-check-circle"></i>
+                                            </span>
+                                            <span class="text-secondary" v-else="!question_is_selected[index]">
+                                                <i class="bi-dash-circle"></i>
+                                            </span>
+                                        </div>
 
-                            </button>
+                                        <div class="ms-2 flex-grow-1">
+                                            <table class="table table-borderless table-sm mb-0">
+                                                <tbody>
+                                                    <tr>
+                                                        <th scope="row" class="col-1">Type:</th>
+                                                        <td>[[ q.type ]]</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th scope="row">Prompt:</th>
+                                                        <td>
+                                                            <div class="clippy" v-html="convertToHtml(q.prompt)"></div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th scope="row">Objective:</th>
+                                                        <td v-html="convertToHtml(q.objective.description)"></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <div class="ms-1" style="white-space: nowrap">
+                                            <i class="bi-eye"></i>
+                                            <a :href=`/q/${q.id}/preview` target="_blank"
+                                                class="link-secondary text-decoration-none">
+                                                Preview
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                </button>
+                            </div>
+
+                            <pagination-control
+                                class="mt-2"
+                                description="Page navigation for questions"
+                                :num_items="all_questions.length"
+                                :items_per_page="5"
+                                @selected-page="setDisplayedQuestions">
+                            </pagination-control>
                         </div>
 
-                        <pagination-control
-                            class="mt-2"
-                            description="Page navigation for questions"
-                            :num_items="all_questions.length"
-                            :items_per_page="5"
-                            @selected-page="setDisplayedQuestions">
-                        </pagination-control>
-                    </div>
+                        <!-- area for selected questions -->
+                        <div class="col-4">
+                            <h5>
+                                <i class="bi-list-check"></i>
+                                Selected Questions:
+                            </h5>
 
-                    <!-- area for selected questions -->
-                    <div class="mt-3">
-                        <h5>
-                            <i class="bi-list-check"></i>
-                            Selected Questions:
-                        </h5>
+                            <ol class="list-group list-group-numbered">
+                                <li class="list-group-item d-flex"
+                                    v-for="(question, index) in selected_questions" :key="question.id">
 
-                        <ol class="list-group list-group-numbered">
-                            <li class="list-group-item"
-                                v-for="(question, index) in selected_questions" :key="question.id">
-
-                                <span v-html="convertToHtml(question.prompt)"></span>
-                                <i role="button" class="bi-x mx-2 fs-6 text-danger"
-                                                 @click="selected_questions.splice(index,1)"></i>
-                            </li>
-                        </ol>
+                                    <span class="ms-2 me-auto" v-html="convertToHtml(question.prompt)"></span>
+                                    <i role="button" class="bi-x fs-6 text-danger"
+                                                     @click="selected_questions.splice(index,1)"></i>
+                                </li>
+                            </ol>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="container mt-3">
-                <strong>{{ assessment.title }} Summary:</strong>
-                [[selected_topics.length]] topics,
-                [[selected_objectives.length]] objectives,
-                [[selected_questions.length]] questions
-
-                <div class="mt-2">
-                    <a role="button" class="btn btn-sm btn-secondary"
-                                     href="{{ url_for('instructor.manage_assessments', course_name=course.name) }}">
-                        Cancel Setup</a>
-                    <button type="button" class="btn btn-sm btn-primary ms-2"
-                                          @click="submitSelected">
-                        Update Assessment
-                    </button>
-                </div>
-                <form method="POST" action="" id="setupAssessmentForm">
-                    {{ form.csrf_token }}
-                    {{ form.selected_topics }}
-                    {{ form.selected_objectives }}
-                    {{ form.selected_questions }}
-                </form>
-            </div>
 		</div>
 
 	</div>
