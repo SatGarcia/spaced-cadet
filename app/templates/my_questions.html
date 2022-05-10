@@ -31,10 +31,10 @@
 				<li class="m-2">
 					<div class="container row">
 						<div class="col-auto border pt-2"
-							:class="{'bg-light': selected_indices.length !== questions.length, 'bg-primary bg-gradient': selected_indices.length === questions.length}">
+							:class="{'bg-light': selected_indices.length !== displayed_questions.length, 'bg-primary bg-gradient': selected_indices.length === displayed_questions.length}">
 							<input id="massSelect" type="checkbox"
 								v-model="mass_select"
-								:checked="selected_indices.length === questions.length">
+								:checked="selected_indices.length === displayed_questions.length">
 							<label for="massSelect" class="visually-hidden">Select All/None</label>
 						</div>
 
@@ -45,7 +45,7 @@
 								<span class="pb-2" :class="noActiveFilter">
 									<button role="button" class="btn btn-link text-decoration-none link-secondary"
 							   				:class="current_filter === '' ?  'link-dark' : 'link-secondary'"
-										   @click="updateDisplayedQuestions(all_questions); current_filter = ''">
+										   @click="setFilteredQuestions(all_questions); current_filter = ''">
 										All
 									</button>
 								</span>
@@ -123,7 +123,7 @@
 				</li>
 
 				<li class="m-2"
-					v-for="(q, index) in questions" :key="q.id">
+					v-for="(q, index) in displayed_questions" :key="q.id">
 					<div class="container row">
 						<div class="col-auto pt-2 border"
 							:class="{'bg-light': !selected_indices.includes(index), 'bg-primary bg-gradient': selected_indices.includes(index)}">
@@ -195,6 +195,14 @@
 				</li>
 			</ul>
 
+			<pagination-control
+				class="mt-3"
+				description="Page navigation for questions"
+				:num_items="filtered_questions.length"
+				:items_per_page="questions_per_page"
+				@selected-page="setDisplayedQuestions">
+			</pagination-control>
+
 			<set-objective-modal 
 			   name="setObjectiveModal"
 				  @objective-set="setObjectiveInSelected"
@@ -222,6 +230,7 @@
 		import * as CadetApi from '/static/js/cadet-api.js';
 		import ConfirmationDialog from '/static/js/confirmation-dialog.js';
 		import SetObjectiveModal from '/static/js/objective-modal.js';
+		import PaginationControl from '/static/js/pagination-control.js';
 
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
@@ -230,7 +239,10 @@
             data() {
                 return {
 					all_questions: [],
-                    questions: [],
+                    filtered_questions: [], // subset of all_questions that may be displayed
+					displayed_questions: [], // subset of filtered_questions that are actually displayed
+					questions_per_page: 10,
+
 					target_user: {{ target_author }},
 					selected_indices: [],
 					mass_select: false,
@@ -242,11 +254,12 @@
 			components: {
 				ConfirmationDialog,
 				SetObjectiveModal,
+				PaginationControl,
 			},
 
 			computed: {
 				typeStrings() {
-					return this.questions.map(this.getTypeString);
+					return this.displayed_questions.map(this.getTypeString);
 				},
 
 				noActiveFilter() {
@@ -266,7 +279,7 @@
 				mass_select(checkedNow, wasChecked) {
 					this.selected_indices = [];
 					if (checkedNow) {
-						for (let i = 0; i < this.questions.length; i++) {
+						for (let i = 0; i < this.displayed_questions.length; i++) {
 							this.selected_indices.push(i);
 						}
 					}
@@ -286,23 +299,28 @@
 					}
 				},
 
+                setDisplayedQuestions(start, end) {
+                    this.displayed_questions = this.filtered_questions.slice(start, end);
+                },
+
 				/* Update array of questions to display and deselects all
 				questions. */
-				updateDisplayedQuestions(questions_to_display) {
-					this.questions.length = 0;
-					this.questions.push(...questions_to_display);
+				setFilteredQuestions(questions_to_display) {
+					this.filtered_questions.length = 0;
+					this.filtered_questions.push(...questions_to_display);
 					this.selected_indices.length = 0;
+					this.setDisplayedQuestions(0, Math.min(this.filtered_questions.length, this.questions_per_page));
 				},
 
 				filterByMissingObjective() {
 					const without_objectives = this.all_questions.filter(q => q.objective === null);
-					this.updateDisplayedQuestions(without_objectives);
+					this.setFilteredQuestions(without_objectives);
 					this.current_filter = "no_lo";
 				},
 
 				filterByDisabled() {
 					const disabled_questions = this.all_questions.filter(q => !q.enabled);
-					this.updateDisplayedQuestions(disabled_questions);
+					this.setFilteredQuestions(disabled_questions);
 					this.current_filter = "disabled";
 				},
 
@@ -311,13 +329,13 @@
 					let failed_indices = [];
 
 					for (const index of this.selected_indices) {
-						const q_id = this.questions[index].id;
+						const q_id = this.displayed_questions[index].id;
 						const response = await CadetApi.setQuestionObjective(q_id, objective_id);
 
 						if (response.ok) {
 							updated_indices.push(index);
 							const r = await response.json()
-							this.questions[index].objective = r["updated"].objective;
+							this.displayed_questions[index].objective = r["updated"].objective;
 						}
 						else {
 							failed_indices.push(index);
@@ -332,17 +350,17 @@
 					let failed_indices = [];
 
 					for (const index of this.selected_indices) {
-						if (this.questions[index].objective === null) {
+						if (this.displayed_questions[index].objective === null) {
 							updated_indices.push(index);
 							continue;
 						}
 
-						const q_id = this.questions[index].id;
+						const q_id = this.displayed_questions[index].id;
 						const response = await CadetApi.removeQuestionObjective(q_id);
 
 						if (response.ok) {
 							updated_indices.push(index);
-							this.questions[index].objective = null;
+							this.displayed_questions[index].objective = null;
 						}
 						else {
 							failed_indices.push(index);
@@ -357,19 +375,19 @@
 					let failed_indices = [];
 
 					for (const index of this.selected_indices) {
-						if (this.questions[index][field_name] === field_value) {
+						if (this.displayed_questions[index][field_name] === field_value) {
 							// skip updating those questions whose field value is
 							// already set to the desired value
 							updated_indices.push(index);
 							continue;
 						}
 
-						const q_id = this.questions[index].id;
+						const q_id = this.displayed_questions[index].id;
 						const response = await CadetApi.updateQuestionField(field_name, field_value, q_id);
 
 						if (response.ok) {
 							updated_indices.push(index);
-							this.questions[index][field_name] = field_value;
+							this.displayed_questions[index][field_name] = field_value;
 						}
 						else {
 							failed_indices.push(index);
@@ -389,6 +407,13 @@
 					});
 				},
 
+				removeQuestion(target_arr, question_id) {
+					const target_index = target_arr.findIndex(q => q.id === question_id);
+					if (target_index != -1) {
+						target_arr.splice(target_index, 1);
+					}
+				},
+
 				async deleteSelected() {
 					// get confirmation first
 					const confirmation = await this.getConfirmation();
@@ -404,11 +429,13 @@
 						original_indices.sort( (a,b) => { return b - a; } );
 
 						for (const index of original_indices) {
-							const q_id = this.questions[index].id;
+							const q_id = this.displayed_questions[index].id;
 							const response = await CadetApi.deleteQuestion(q_id);
 							if (response.ok) {
 								deleted_indices.push(index);
-								this.questions.splice(index, 1);
+								this.displayed_questions.splice(index, 1);
+								this.removeQuestion(this.all_questions, q_id);
+								this.removeQuestion(this.filtered_questions, q_id);
 							}
 							else {
 								failed_indices.push(index);
@@ -428,8 +455,8 @@
                     if (response.ok) {
                         const r = await response.json();
                         this.all_questions = r["questions"];
-						this.questions = [];
-						this.updateDisplayedQuestions(this.all_questions);
+						this.setFilteredQuestions(this.all_questions);
+						this.setDisplayedQuestions(0, Math.min(this.filtered_questions.length, this.questions_per_page));
                     }
                     else {
                         showSnackbarMessage(`Error loading questions. Try again. (HTTP Status: ${response.status})`);
