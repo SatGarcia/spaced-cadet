@@ -18,7 +18,7 @@ export default {
     },
   },
 
-  emits: ['selected-page'],
+  emits: ['selected-page', 'selected-page-num'],
 
   watch: {
     pages(new_pages, old_pages) {
@@ -27,6 +27,7 @@ export default {
         // no items were selected (start and end both 0)
         this.selected_page_num = 0;
         this.$emit('selected-page', 0, 0);
+        this.$emit('selected-page-num', 0);
       }
       else if (this.selected_page_num >= new_pages.length) {
         // if the page we were on doesn't exist anymore, switch to whatever
@@ -62,6 +63,7 @@ export default {
     setSelectedPage(index) {
       this.selected_page_num = index;
       this.$emit('selected-page', this.pages[index].start, this.pages[index].end);
+      this.$emit('selected-page-num', index);
     },
 
     selectPreviousPage() {
