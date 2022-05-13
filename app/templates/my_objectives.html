@@ -3,6 +3,12 @@
     <div class="container pt-3">
         <h4>My Learning Objectives</h4>
 
+		<a href="{{ url_for('instructor.create_new_objective') }}"
+			class="text-decoration-none ms-2">
+			<i class="bi-plus-circle"></i>
+			Create New Objective
+		</a>
+
 		<div class="row" id="currentObjectives">
 			<confirmation-dialog name="confirmationModal"
 				 @confirmed="resolveConfirmation(true)"
@@ -12,14 +18,14 @@
 			</confirmation-dialog>
 
 
-			<ul class="list-unstyled" v-if="objectives.length > 0">
+			<ul class="list-unstyled" v-if="displayed_objectives.length > 0">
 				<li class="m-2">
 					<div class="container row">
 						<div class="col-auto border pt-2"
-							:class="{'bg-light': selected_indices.length !== objectives.length, 'bg-primary bg-gradient': selected_indices.length === objectives.length}">
+							:class="{'bg-light': selected_indices.length !== displayed_objectives.length, 'bg-primary bg-gradient': selected_indices.length === displayed_objectives.length}">
 							<input id="massSelect" type="checkbox"
 								v-model="mass_select"
-								:checked="selected_indices.length === objectives.length">
+								:checked="selected_indices.length === displayed_objectives.length">
 							<label for="massSelect" class="visually-hidden">Select All/None</label>
 						</div>
 
@@ -66,6 +72,10 @@
 									Delete
 								</button>
 							</div>
+							<filter-control v-else class="ms-2"
+								:filters="[{name: 'All', func: () => true}, {name: 'Missing Topic', func: lo => lo.topic === null}]"
+								@selected-filter="f => (current_filter = f)">
+							</filter-control>
 						</div>
 						<div class="col-1 pt-2 border border-start-0">
 						</div>
@@ -73,7 +83,7 @@
 				</li>
 
 				<li class="m-2"
-					v-for="(objective, index) in objectives" :key="objective.id">
+					v-for="(objective, index) in displayed_objectives" :key="objective.id">
 					<div class="container row">
 						<!-- Column with checkbox -->
 						<div class="col-auto pt-2 border"
@@ -86,7 +96,7 @@
 
 						<!-- Column with table of objective info -->
 						<div class="col-10 p-1 border-top border-bottom">
-							<table class="table table-borderless table-sm">
+							<table class="table table-borderless table-sm mb-0">
 								<tbody>
 									<tr>
 										<th scope="row">Topic:</th>
@@ -103,7 +113,7 @@
 
 									<tr>
 										<th scope="row" class="col-1">Description:</th>
-										<td v-html="convertToHtml(objective.description)"></td>
+										<td class="inline-p" v-html="convertToHtml(objective.description)"></td>
 									</tr>
 
 									<tr>
@@ -133,6 +143,14 @@
 				</li>
 			</ul>
 
+			<pagination-control
+				class="mt-3"
+				description="Page navigation for objectives"
+				:num_items="filtered_objectives.length"
+				:items_per_page="objectives_per_page"
+				@selected-page-num="(pn) => (current_page_num = pn)">
+			</pagination-control>
+
 			<set-topic-modal 
 			   name="setTopicModal"
 				  @topic-set="setTopicInSelected"
@@ -142,38 +160,42 @@
 			</set-objective-modal>
 		</div>
 
-		<div class="row">
-			<a href="{{ url_for('instructor.create_new_objective') }}"
-                class="text-decoration-none">
-                <i class="bi-plus-circle"></i>
-				Create New Objective
-			</a>
-		</div>
 	</div>
 
 	<div id="snackbar">Default message.</div> 
 
     <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
-    <script src="https://unpkg.com/vue@3"></script>
-
-	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
-	<script src="{{ url_for('static', filename='js/cadet-api.js') }}" type="module"></script>
-	<script src="{{ url_for('static', filename='js/confirmation-dialog.js') }}" type="module"></script>
 
 
 	<script type="module">
-		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+		import { fetchOrRefresh, getCookie, showSnackbarMessage, findAndRemove } from '/static/js/helpers.js';
+		import { createApp, ref } from '/static/js/vue.esm-browser.js';
 		import * as CadetApi from '/static/js/cadet-api.js';
 		import ConfirmationDialog from '/static/js/confirmation-dialog.js';
 		import SetTopicModal from '/static/js/topic-modal.js';
+		import { useFilterableList, usePagination } from '/static/js/filterable-lists.js';
+		import PaginationControl from '/static/js/pagination-control.js';
+		import FilterControl from '/static/js/filter-control.js';
 
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
 
-        const app = Vue.createApp({
+        const app = createApp({
+			setup() {
+				const current_filter = ref(() => true);
+
+				const { all_data: all_objectives,
+						filtered_data: filtered_objectives,
+						error: fetch_errors } = useFilterableList("/api/objectives?author=self", "learning_objectives", current_filter);
+
+				const objectives_per_page = ref(10);
+				const current_page_num = ref(0);
+				const { current_page: displayed_objectives } = usePagination(filtered_objectives, objectives_per_page, current_page_num);
+				return { all_objectives, filtered_objectives, current_filter, current_page_num, displayed_objectives, objectives_per_page };
+			},
+
             data() {
                 return {
-                    objectives: [],
 					target_user: {{ target_author }},
 					selected_indices: [],
 					mass_select: false,
@@ -184,13 +206,15 @@
 			components: {
 				ConfirmationDialog,
 				SetTopicModal,
+				PaginationControl,
+				FilterControl,
 			},
 
 			watch: {
 				mass_select(checkedNow, wasChecked) {
 					this.selected_indices = [];
 					if (checkedNow) {
-						for (let i = 0; i < this.objectives.length; i++) {
+						for (let i = 0; i < this.displayed_objectives.length; i++) {
 							this.selected_indices.push(i);
 						}
 					}
@@ -217,13 +241,13 @@
 					let failed_indices = [];
 
 					for (const index of this.selected_indices) {
-						const o_id = this.objectives[index].id;
+						const o_id = this.displayed_objectives[index].id;
 						const response = await CadetApi.setObjectiveTopic(o_id, topic_id);
 
 						if (response.ok) {
 							updated_indices.push(index);
 							const r = await response.json()
-							this.objectives[index].topic = r["updated"].topic;
+							this.displayed_objectives[index].topic = r["updated"].topic;
 						}
 						else {
 							failed_indices.push(index);
@@ -238,17 +262,17 @@
 					let failed_indices = [];
 
 					for (const index of this.selected_indices) {
-						if (this.objectives[index].topic === null) {
+						if (this.displayed_objectives[index].topic === null) {
 							updated_indices.push(index);
 							continue;
 						}
 
-						const o_id = this.objectives[index].id;
+						const o_id = this.displayed_objectives[index].id;
 						const response = await CadetApi.removeObjectiveTopic(o_id);
 
 						if (response.ok) {
 							updated_indices.push(index);
-							this.objectives[index].topic = null;
+							this.displayed_objectives[index].topic = null;
 						}
 						else {
 							failed_indices.push(index);
@@ -263,19 +287,19 @@
 					let failed_indices = [];
 
 					for (const index of this.selected_indices) {
-						if (this.objectives[index][field_name] === field_value) {
+						if (this.displayed_objectives[index][field_name] === field_value) {
 							// skip updating those objectives whose field value is
 							// already set to the desired value
 							updated_indices.push(index);
 							continue;
 						}
 
-						const o_id = this.objectives[index].id;
+						const o_id = this.displayed_objectives[index].id;
 						const response = await CadetApi.updateObjectiveField(field_name, field_value, o_id);
 
 						if (response.ok) {
 							updated_indices.push(index);
-							this.objectives[index][field_name] = field_value;
+							this.displayed_objectives[index][field_name] = field_value;
 						}
 						else {
 							failed_indices.push(index);
@@ -306,15 +330,16 @@
 						const original_indices = [...this.selected_indices];
 
 						// TRICKY: sort indices in reverse order so indices
-						// don't get thrown off when removing from this.objectives
+						// don't get thrown off when removing from this.all_objectives
 						original_indices.sort( (a,b) => { return b - a; } );
 
 						for (const index of original_indices) {
-							const o_id = this.objectives[index].id;
+							const o_id = this.displayed_objectives[index].id;
 							const response = await CadetApi.deleteObjective(o_id);
 							if (response.ok) {
 								deleted_indices.push(index);
-								this.objectives.splice(index, 1);
+								//this.displayed_objectives.splice(index, 1);
+								findAndRemove(this.all_objectives, o_id);
 							}
 							else {
 								failed_indices.push(index);
@@ -322,18 +347,18 @@
 						}
 
 						showSnackbarMessage(`Successfully deleted ${deleted_indices.length} objectives. Failures: ${failed_indices.length}`);
-						this.selected_indices = failed_indices;
+						this.selected_indices = [];
 					}
 				},
 
-                async getQuestions() {
+                async getObjectives() {
                     let url = "{{ url_for('objectives_api') }}";
 					url = url + `?author=${this.target_user}`;
 
                     const response = await fetchOrRefresh(url, 'GET', refresh_url);
                     if (response.ok) {
                         const r = await response.json();
-                        this.objectives = r["learning_objectives"];
+                        this.all_objectives = r["learning_objectives"];
                     }
                     else {
                         showSnackbarMessage("Error loading learning objectives.");
@@ -346,7 +371,7 @@
             },
 
             created() {
-                this.getQuestions();
+                //this.getObjectives();
             },
 
             compilerOptions: {
