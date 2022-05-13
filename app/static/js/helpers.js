@@ -45,3 +45,14 @@ export async function fetchOrRefresh(url, http_method, refresh_url, config) {
 
     return response;
 }
+
+export function findAndRemove(arr, target_id) {
+    const target_index = arr.findIndex(item => item.id === target_id);
+    if (target_index != -1) {
+        arr.splice(target_index, 1);
+        return true;
+    }
+    else {
+        return false;
+    }
+}
