@@ -22,6 +22,7 @@
 						<th scope="col">Last Name</th>
 						<th scope="col">First Name</th>
 						<th scope="col">Email</th>
+						<th scope="col">Role</th>
 						<th scope="col">Action</th>
 					</tr>
 				</thead>
@@ -33,6 +34,7 @@
 							<td>{{ s.last_name }}</td>
 							<td>{{ s.first_name }}</td>
 							<td>{{ s.email }}</td>
+							<td>{% if s.instructor %}Instructor{% else %}Student{% endif %}</td>
 							<td>
 								{% set remove_url = url_for('enrolled_student', course_id=course.id, student_id=s.id, _external=True) %}
 								<button type="button" 
