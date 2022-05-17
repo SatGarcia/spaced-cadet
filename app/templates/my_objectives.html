@@ -18,7 +18,7 @@
 			</confirmation-dialog>
 
 
-			<ul class="list-unstyled" v-if="displayed_objectives.length > 0">
+			<ul class="list-unstyled">
 				<li class="m-2">
 					<div class="container row">
 						<div class="col-auto border pt-2"
@@ -72,10 +72,14 @@
 									Delete
 								</button>
 							</div>
-							<filter-control v-else class="ms-2"
-								:filters="[{name: 'All', func: () => true}, {name: 'Missing Topic', func: lo => lo.topic === null}]"
-								@selected-filter="f => (current_filter = f)">
-							</filter-control>
+
+							<keep-alive>
+								<filter-control v-if="selected_indices.length === 0" class="ms-2"
+								  :filters="[{name: 'All', func: () => true}, {name: 'Missing Topic', func: lo => lo.topic === null}, {name: 'Private', func: lo => lo.public === false}, {name: 'Public', func: lo => lo.public}]"
+									@selected-filter="f => (current_filter = f)">
+								</component>
+							</keep-alive>
+
 						</div>
 						<div class="col-1 pt-2 border border-start-0">
 						</div>
