@@ -41,7 +41,11 @@ export function usePagination(all_items, items_per_page, selected_page) {
     const start = selected_page.value * items_per_page.value;
     const end = Math.min(start + items_per_page.value, all_items.value.length);
 
-    if (start >= 0 && start < all_items.value.length) {
+    if (start === 0 && end === 0) {
+      // if start and end are both 0, then current page is an empty array
+      current_page.value = [];
+    }
+    else if (start >= 0 && start < all_items.value.length) {
       // if the start and end are within bounds, set it!
       current_page.value = all_items.value.slice(start, end);
     }
