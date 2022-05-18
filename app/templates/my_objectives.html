@@ -22,10 +22,8 @@
 				<li class="m-2">
 					<div class="container row">
 						<div class="col-auto border pt-2"
-							:class="{'bg-light': selected_indices.length !== displayed_objectives.length, 'bg-primary bg-gradient': selected_indices.length === displayed_objectives.length}">
-							<input id="massSelect" type="checkbox"
-								v-model="mass_select"
-								:checked="selected_indices.length === displayed_objectives.length">
+							:class="{'bg-light': mass_select_state !== 'checked', 'bg-primary bg-gradient': mass_select_state === 'checked'}">
+							<input id="massSelect" type="checkbox" @click="toggle_mass_select">
 							<label for="massSelect" class="visually-hidden">Select All/None</label>
 						</div>
 
@@ -202,7 +200,6 @@
                 return {
 					target_user: {{ target_author }},
 					selected_indices: [],
-					mass_select: false,
 					resolveConfirmation: undefined,
                 }
             },
@@ -214,24 +211,59 @@
 				FilterControl,
 			},
 
-			watch: {
-				mass_select(checkedNow, wasChecked) {
-					this.selected_indices = [];
-					if (checkedNow) {
-						for (let i = 0; i < this.displayed_objectives.length; i++) {
-							this.selected_indices.push(i);
-						}
+			computed: {
+				mass_select_state() {
+					if (this.selected_indices.length === this.displayed_objectives.length) {
+						return "checked";
+					}
+					else if (this.selected_indices.length === 0) {
+						return "unchecked";
+					}
+					else {
+						return "indeterminate";
 					}
 				},
+			},
 
+			watch: {
 				displayed_objectives(newDisplayed, oldDisplayed) {
 					this.selected_indices = [];
+				},
+
+				mass_select_state(newVal, oldVal) {
+					const checkbox = document.getElementById('massSelect');
+					if (newVal === "checked") {
+						checkbox.checked = true;
+						checkbox.indeterminate = false;
+					}
+					else if (newVal === "unchecked") {
+						checkbox.checked = false;
+						checkbox.indeterminate = false;
+					}
+					else {
+						checkbox.checked = false;
+						checkbox.indeterminate = true;
+					}
 				},
 			},
 
             methods: {
 				displayMessage(msg) {
 					showSnackbarMessage(msg);
+				},
+
+				toggle_mass_select() {
+					if (this.mass_select_state === "unchecked") {
+						// was unchecked so select all!
+						this.selected_indices = [];
+						for (let index = 0; index < this.displayed_objectives.length; index++) {
+							this.selected_indices.push(index);
+						}
+					}
+					else {
+						// was partially or fully checked so deselect all
+						this.selected_indices = [];
+					}
 				},
 
 				async removeTopic(objective) {
@@ -347,7 +379,6 @@
 							const response = await CadetApi.deleteObjective(o_id);
 							if (response.ok) {
 								deleted_indices.push(index);
-								//this.displayed_objectives.splice(index, 1);
 								findAndRemove(this.all_objectives, o_id);
 							}
 							else {
