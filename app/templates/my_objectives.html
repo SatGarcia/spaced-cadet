@@ -223,6 +223,10 @@
 						}
 					}
 				},
+
+				displayed_objectives(newDisplayed, oldDisplayed) {
+					this.selected_indices = [];
+				},
 			},
 
             methods: {
@@ -304,6 +308,7 @@
 						if (response.ok) {
 							updated_indices.push(index);
 							this.displayed_objectives[index][field_name] = field_value;
+
 						}
 						else {
 							failed_indices.push(index);
