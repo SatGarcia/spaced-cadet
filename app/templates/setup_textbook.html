@@ -9,62 +9,94 @@
 			</ol>
 		</nav>
 
-		<h5>Select Textbook(s)</h5>
+		<div class="row" id="textbookSetup">
+			<div class="col-8">
+				<h5>Find Textbook(s)</h5>
+				<div class="row pb-2">
+					<div class="input-group">
+						<label for="textbookSearchBar"
+							class="form-label visually-hidden">
+							Search Textbooks</label>
+						<input id="textbookSearchBar"
+						  v-model.trim="search_string" 
+						  @keyup.enter="search()"
+						  type="text"
+						  class="form-control"
+						  placeholder="Search textbooks (e.g. dive into systems)">
 
-		<div class="row pb-2" id="textbookSetup">
-			<div class="input-group">
-				<label for="textbookSearchBar"
-		   			class="form-label visually-hidden">
-					Search Textbooks</label>
-				<input id="textbookSearchBar"
-				  v-model.trim="search_string" 
-				  @keyup.enter="search()"
-				  type="text"
-				  class="form-control"
-				  placeholder="Search textbooks (e.g. dive into systems)">
+						<button class="btn btn-xs btn-primary" @click="search()">
+							<i class="bi-search"></i>
+							Search
+						</button>
+					</div>
 
-				<button class="btn btn-xs btn-primary" @click="search()">
-					<i class="bi-search"></i>
-					Search
-				</button>
+					<div v-if="search_results !== null" class="mt-2">
+						<strong>Search Results ([[ search_results.length ]]):</strong>
+
+						<div v-if="displayed_textbooks.length === 0" class="ms-1">
+							<em>No search results.</em>
+						</div>
+
+						<div v-else class="mt-2">
+							<ul class="list-unstyled">
+								<li v-for="(tb, index) in search_results" :key="tb.id"
+								  class="mb-2">
+									<div class="d-flex">
+										<div class="pt-1 px-2 border-end">
+											<button role="button" class="btn btn-outline-primary btn-sm"
+												 @click="addTextbook(tb)"
+												 :class="{ disabled: course_textbooks.find(t => (t.id === tb.id)) !== undefined}">
+												 Add</button>
+										</div>
+										<div class="ms-2 flex-grow-1">
+											<strong>[[ tb.title ]]</strong>
+											<br /><em>[[ tb.authors ]]</em>
+											<!-- FIXME: Display More Textbook info -->
+										</div>
+									</div>
+								</li>
+							</ul>
+
+							<pagination-control
+								class="mt-3"
+								description="Page navigation for textbook search results"
+								:num_items="search_results.length"
+								:items_per_page="textbooks_per_page"
+								@selected-page-num="pn => (current_page_num = pn)">
+							</pagination-control>
+						</div>
+					</div>
+				</div>
 			</div>
 
-			<div v-if="search_results !== null" class="mt-2">
-				<strong>Search Results ([[ search_results.length ]]):</strong>
-
-				<div v-if="displayed_textbooks.length === 0">
-					<em>No search results.</em>
-				</div>
-
-				<div v-else>
-					<ul class="list-unstyled">
-						<li v-for="(tb, index) in search_results" :key="tb.id"
-		  				  class="border rounded p-1 m-2">
+			<div class="col-4">
+				<div class="border p-2">
+					<h5>Selected Textbooks</h5>
+					<ol>
+						<li v-for="tb in course_textbooks" :key="tb.id">
 							<div class="d-flex">
-								<div>
-									<button role="button" class="btn btn-primary btn-sm"
-										@click="addTextbook(tb)" v-if="!course_textbooks.includes(tb.id)">Add</button>
-									<button role="button" class="btn btn-danger btn-sm"
-										@click="removeTextbook(tb)" v-else>Remove</button>
-								</div>
-								<div class="ms-2 flex-grow-1">
+								<div class="me-auto">
 									<strong>[[ tb.title ]]</strong>
 									<br /><em>[[ tb.authors ]]</em>
-									<!-- FIXME: Display More Textbook info -->
 								</div>
-							</div>
+								<div>
+									<button role="button" class="btn btn-link text-decoration-none link-danger"
+							   @click="removeTextbook(tb)">Remove</button>
+								</div>
 						</li>
+					</ol>
+				</div>
+				<div class="dropdown mt-2 d-flex justify-content-end">
+					<button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+						Continue...
+					</button>
+					<ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+						<li><a class="dropdown-item" href="#">Next Step: Set Course Topics</a></li>
+						<li><a class="dropdown-item" href="{{ url_for('user_views.course_overview', course_name=course.name) }}">Exit Course Setup</a></li>
 					</ul>
-
-					<pagination-control
-						class="mt-3"
-						description="Page navigation for textbook search results"
-						:num_items="search_results.length"
-						:items_per_page="textbooks_per_page"
-						@selected-page-num="pn => (current_page_num = pn)">
-					</pagination-control>
 				</div>
 			</div>
+
 		</div>
 	</div>
 
@@ -124,8 +156,8 @@
 					if (response.ok) {
 						const r = await response.json();
 						if (!r["invalid-ids"].includes(textbook.id)) {
-							if (!this.course_textbooks.includes(textbook.id)) {
-								this.course_textbooks.push(textbook.id);
+							if (this.course_textbooks.findIndex(tb => (tb.id === textbook.id)) === -1) {
+								this.course_textbooks.push(textbook);
 							}
 							showSnackbarMessage("Successfully added textbook to course.");
 						}
@@ -141,7 +173,7 @@
 				async removeTextbook(textbook) {
 					const response = await CadetApi.removeCourseTextbook(this.course_id, textbook.id);
 					if (response.ok) {
-						const located_at = this.course_textbooks.indexOf(textbook.id);
+						const located_at = this.course_textbooks.findIndex(tb => (tb.id === textbook.id));
 						if (located_at !== -1) {
 							this.course_textbooks.splice(located_at, 1);
 						}
@@ -156,7 +188,7 @@
 					const response = await CadetApi.getCourseTextbooks(this.course_id);
 					if (response.ok) {
 						const r_json = await response.json()
-						this.course_textbooks = r_json.textbooks.map(tb => tb.id);
+						this.course_textbooks = r_json.textbooks;
 					}
 					else {
 						showSnackbarMessage("Could not load course textbooks.");
