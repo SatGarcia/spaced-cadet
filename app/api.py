@@ -512,6 +512,9 @@ def init_app(flask_app):
     rf_api.add_resource(CourseTextbooksApi,
                         '/api/course/<int:course_id>/textbooks',
                         endpoint='course_textbooks')
+    rf_api.add_resource(CourseTextbookApi,
+                        '/api/course/<int:course_id>/textbook/<int:textbook_id>',
+                        endpoint='course_textbook')
     rf_api.add_resource(CourseMeetingsApi,
                         '/api/course/<int:course_id>/meetings',
                         endpoint='course_meetings')
@@ -1013,6 +1016,30 @@ class CourseQuestionApi(Resource):
         db.session.commit()
 
         return {"removed": deleted_q}
+
+
+class CourseTextbookApi(Resource):
+    @jwt_required()
+    def delete(self, course_id, textbook_id):
+        course = Course.query.filter_by(id=course_id).one_or_none()
+        if not course:
+            return {'message': f"Course {course_id} not found."}, 404
+
+        # Limit access to admins and course instructors
+        if not (current_user.admin \
+                or (current_user.instructor and (current_user in course.users))):
+            return {'message': 'Unauthorized access.'}, 401
+
+        tb = course.textbooks.filter_by(id=textbook_id).one_or_none()
+        if not tb:
+            return {'message': f"Textbook {textbook_id} not found in Course {course_id}."}, 404
+
+        deleted_tb = textbook_schema.dump(tb)
+        course.textbooks.remove(tb)
+        db.session.commit()
+
+        return {"removed": deleted_tb}
+
 
 class IdListSchema(Schema):
     ids = fields.List(fields.Int(), required=True)
