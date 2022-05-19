@@ -382,7 +382,8 @@ class TextbookSchema(Schema):
     isbn = fields.Str()
     url = fields.Str()
 
-    sections = fields.List(fields.Nested(TextbookSectionSchema),
+    sections = fields.List(fields.Nested("TextbookSectionSchema",
+                                         only=('id', 'number', 'title')),
                            dump_only=True)
 
 
@@ -527,6 +528,8 @@ def init_app(flask_app):
 
     rf_api.add_resource(TextbookApi, '/api/textbook/<int:textbook_id>')
     rf_api.add_resource(TextbooksApi, '/api/textbooks')
+    rf_api.add_resource(TextbookSearchApi, '/api/textbooks/search',
+                        endpoint='textbook_search_api')
     rf_api.add_resource(TextbookSectionsApi, '/api/textbook/<int:textbook_id>/sections')
     rf_api.add_resource(ClassMeetingsApi, '/api/class-meetings')
 
@@ -554,6 +557,20 @@ class TextbookApi(Resource):
             return textbook_schema.dump(t)
         else:
             return {"message": f"No textbook found with id {textbook_id}"}, 404
+
+
+class TextbookSearchApi(Resource):
+    @jwt_required()
+    def get(self):
+        query_str = request.args.get("q")
+
+        if query_str is None:
+            return {'message': "Missing query argument (q)"}, 400
+
+        textbooks = Textbook.search(query_str)[0]
+
+        result = textbook_schema.dump(textbooks.all(), many=True)
+        return {'textbooks': result}
 
 
 class TextbooksApi(Resource):
@@ -974,6 +991,7 @@ class QuestionApi(Resource):
         else:
             db.session.commit()
             return {"updated": schema.dump(q)}
+
 
 class CourseQuestionApi(Resource):
     @jwt_required()
