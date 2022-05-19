@@ -1102,7 +1102,7 @@ class CourseQuestionsApi(Resource):
 class CourseTextbooksApi(Resource):
     @jwt_required()
     def get(self, course_id):
-        schema = TextbookSchema(only=('id','title','edition'))
+        schema = TextbookSchema(only=('id','title','edition', 'authors'))
         return item_collection_getter(Course, course_id, schema, 'textbooks',
                                       admin_or_course_instructor)
 
