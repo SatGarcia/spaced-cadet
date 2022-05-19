@@ -137,3 +137,35 @@ export async function searchObjectives(search_string, topic_search_string="") {
 
     return await fetchOrRefresh(url, 'GET', refresh_url);
 }
+
+export async function getCourseTextbooks(course_id) {
+    const url = `/api/course/${course_id}/textbooks`; // FIXME: url_for
+    return await fetchOrRefresh(url, 'GET', refresh_url);
+}
+
+export async function addCourseTextbook(course_id, textbook_id) {
+    const url = `/api/course/${course_id}/textbooks`; // FIXME: url_for
+    
+    const config = {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            "Content-Type": "application/json",
+            'X-CSRF-TOKEN': getCookie('csrf_access_token'),
+        },
+        body: JSON.stringify({'ids': [textbook_id]})
+    };
+
+    return await fetchOrRefresh(url, 'PUT', refresh_url, config);
+}
+
+export async function removeCourseTextbook(course_id, textbook_id) {
+    const url = `/api/course/${course_id}/textbook/${textbook_id}`; // FIXME: url_for
+    return await fetchOrRefresh(url, 'DELETE', refresh_url);
+}
+
+export async function searchTextbooks(search_string) {
+    let url = "/api/textbooks/search";  // FIXME "{{ url_for('textbook_search_api') }}";
+    url = url + "?q=" + encodeURIComponent(search_string);
+    return await fetchOrRefresh(url, 'GET', refresh_url);
+}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}" class="text-decoration-none">Home</a></li>
+				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview', course_name=course.name) }}" class="text-decoration-none">{{ course.name }}</a></li>
+				<li class="breadcrumb-item active" aria-current="page">Select Textbook(s)</li>
+			</ol>
+		</nav>
+
+		<h5>Select Textbook(s)</h5>
+
+		<div class="row pb-2" id="textbookSetup">
+			<div class="input-group">
+				<label for="textbookSearchBar"
+		   			class="form-label visually-hidden">
+					Search Textbooks</label>
+				<input id="textbookSearchBar"
+				  v-model.trim="search_string" 
+				  @keyup.enter="search()"
+				  type="text"
+				  class="form-control"
+				  placeholder="Search textbooks (e.g. dive into systems)">
+
+				<button class="btn btn-xs btn-primary" @click="search()">
+					<i class="bi-search"></i>
+					Search
+				</button>
+			</div>
+
+			<div v-if="search_results !== null" class="mt-2">
+				<strong>Search Results ([[ search_results.length ]]):</strong>
+
+				<div v-if="displayed_textbooks.length === 0">
+					<em>No search results.</em>
+				</div>
+
+				<div v-else>
+					<ul class="list-unstyled">
+						<li v-for="(tb, index) in search_results" :key="tb.id"
+		  				  class="border rounded p-1 m-2">
+							<div class="d-flex">
+								<div>
+									<button role="button" class="btn btn-primary btn-sm"
+										@click="addTextbook(tb)" v-if="!course_textbooks.includes(tb.id)">Add</button>
+									<button role="button" class="btn btn-danger btn-sm"
+										@click="removeTextbook(tb)" v-else>Remove</button>
+								</div>
+								<div class="ms-2 flex-grow-1">
+									<strong>[[ tb.title ]]</strong>
+									<br /><em>[[ tb.authors ]]</em>
+									<!-- FIXME: Display More Textbook info -->
+								</div>
+							</div>
+						</li>
+					</ul>
+
+					<pagination-control
+						class="mt-3"
+						description="Page navigation for textbook search results"
+						:num_items="search_results.length"
+						:items_per_page="textbooks_per_page"
+						@selected-page-num="pn => (current_page_num = pn)">
+					</pagination-control>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="snackbar">Default message.</div> 
+
+    <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
+
+	<script type="module">
+		import { fetchOrRefresh, getCookie, showSnackbarMessage, findAndRemove } from '/static/js/helpers.js';
+		import { createApp, ref } from '/static/js/vue.esm-browser.js';
+		import * as CadetApi from '/static/js/cadet-api.js';
+		import { usePagination } from '/static/js/filterable-lists.js';
+		import PaginationControl from '/static/js/pagination-control.js';
+
+        const converter = new showdown.Converter();
+        const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
+
+        const app = createApp({
+			setup() {
+				const course_id = ref({{ course.id }});
+				const course_textbooks = ref([]);
+				const search_results = ref([]);
+				const search_string = ref("");
+				const selected_textbook_id = ref(undefined);
+
+				const textbooks_per_page = ref(10);
+				const current_page_num = ref(0);
+				const { current_page: displayed_textbooks } = usePagination(search_results, textbooks_per_page, current_page_num);
+				return { course_id, course_textbooks, search_results, displayed_textbooks, current_page_num, textbooks_per_page, search_string, selected_textbook_id };
+			},
+
+			components: {
+				PaginationControl,
+			},
+
+            methods: {
+				displayMessage(msg) {
+					showSnackbarMessage(msg);
+				},
+
+				async search() {
+				  	if (this.search_string !== "") {
+						// Only search if a non-empty string given
+						const response = await CadetApi.searchTextbooks(this.search_string);
+						if (response.ok) {
+							const r = await response.json();
+							this.search_results = r["textbooks"];
+						}
+						else {
+							showSnackbarMessage("Error retrieving search results.");
+						}
+				  	}
+				},
+
+				async addTextbook(textbook) {
+					const response = await CadetApi.addCourseTextbook(this.course_id, textbook.id);
+					if (response.ok) {
+						const r = await response.json();
+						if (!r["invalid-ids"].includes(textbook.id)) {
+							if (!this.course_textbooks.includes(textbook.id)) {
+								this.course_textbooks.push(textbook.id);
+							}
+							showSnackbarMessage("Successfully added textbook to course.");
+						}
+						else {
+							showSnackbarMessage("Could not add selected textbook.");
+						}
+					}
+					else {
+						showSnackbarMessage("Error adding textbook. Please try again.");
+					}
+				},
+
+				async removeTextbook(textbook) {
+					const response = await CadetApi.removeCourseTextbook(this.course_id, textbook.id);
+					if (response.ok) {
+						const located_at = this.course_textbooks.indexOf(textbook.id);
+						if (located_at !== -1) {
+							this.course_textbooks.splice(located_at, 1);
+						}
+						showSnackbarMessage("Textbook successfully removed from course.");
+					}
+					else {
+						showSnackbarMessage("Error removing textbook. Please try again.");
+					}
+				},
+
+				async fetchTextbooks() {
+					const response = await CadetApi.getCourseTextbooks(this.course_id);
+					if (response.ok) {
+						const r_json = await response.json()
+						this.course_textbooks = r_json.textbooks.map(tb => tb.id);
+					}
+					else {
+						showSnackbarMessage("Could not load course textbooks.");
+					}
+				},
+
+                convertToHtml(md_text) {
+                    return converter.makeHtml(md_text);
+				},
+            },
+
+			created() {
+				this.fetchTextbooks();
+			},
+
+            compilerOptions: {
+                delimiters: ["[[", "]]"]
+            },
+        });
+        
+        const vm = app.mount('#textbookSetup');
+	</script>
+{% endblock %}
