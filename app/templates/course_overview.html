@@ -18,5 +18,37 @@
             url_for('user_views.missions_overview', course_name=course.name)
             }}">View Course Missions</a>
         </div>
+
+        {% if current_user.instructor %}
+            <div class="mt-3">
+                <h5>Instructor:</h5>
+                <ul>
+                    <li>
+                        <a class="text-decoration-none"
+                            href="{{ url_for('instructor.manage_assessments', course_name=course.name) }}">
+                            Manage Assessments</a>
+                    </li>
+                    <li>
+                        <a class="text-decoration-none"
+                           href="{{ url_for('instructor.manage_roster', course_name=course.name) }}">
+                            Manage Roster
+                        </a>
+
+                    </li>
+                    <li>
+                        <a class="text-decoration-none"
+                           href="{{ url_for('instructor.edit_course', course_name=course.name) }}">
+                            Edit Settings
+                        </a>
+
+                    </li>
+                    <li>
+                        <a class="text-decoration-none"
+                            href="{{ url_for('instructor.setup_textbooks', course_name=course.name) }}">
+                            Course Setup (Textbooks and Topics)</a>
+                    </li>
+                </ul>
+            </div>
+        {% endif %}
     </div>
 {% endblock %}
