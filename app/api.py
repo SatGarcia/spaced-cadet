@@ -383,7 +383,7 @@ class TextbookSchema(Schema):
     url = fields.Str()
 
     sections = fields.List(fields.Nested("TextbookSectionSchema",
-                                         only=('id', 'number', 'title')),
+                                         only=('id', 'number', 'title', 'topics')),
                            dump_only=True)
 
 
@@ -1132,7 +1132,7 @@ class CourseQuestionsApi(Resource):
 class CourseTextbooksApi(Resource):
     @jwt_required()
     def get(self, course_id):
-        schema = TextbookSchema(only=('id','title','edition', 'authors'))
+        schema = TextbookSchema(only=('id','title','edition','authors','sections'))
         return item_collection_getter(Course, course_id, schema, 'textbooks',
                                       admin_or_course_instructor)
 
