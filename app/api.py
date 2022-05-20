@@ -456,7 +456,7 @@ class CourseSchema(Schema):
                                           only=('id', 'title')),
                            dump_only=True)
     topics = fields.List(fields.Nested("TopicSchema",
-                                       only=('id', 'description')),
+                                       only=('id', 'text')),
                          dump_only=True)
     textbooks = fields.List(fields.Nested("TextbookSchema",
                                           only=("id", "title", "edition")),
