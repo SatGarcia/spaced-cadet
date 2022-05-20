@@ -10,6 +10,7 @@
 		</nav>
 
 		<div class="row" id="topicSetup">
+				
 			<div class="col-8">
 				<!-- tab/pill navigation -->
 				<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
@@ -24,11 +25,60 @@
 
 				<div class="tab-content" id="pills-tabContent">
 					<div class="tab-pane fade show active" id="selectFromTextbooks" role="tabpanel" aria-labelledby="pills-textbooks-tab">
-						Textbooks
+
+						Add topics from the course textbooks shown below by
+						clicking on the individual topics.
+
+						<div v-if="course_textbooks.length === 0" class="mt-3">
+							<i class="bi-exclamation-circle-fill text-danger"></i> No course textbooks found.
+							<a class="text-decoration-none" href="{{ url_for('instructor.setup_textbooks', course_name=course.name) }}">
+								Add a Course Textbook
+							</a>
+						</div>
+
+						<ul class="list-unstyled mt-3">
+							<li v-for="textbook in course_textbooks" :key="textbook.id" class="mb-5">
+								<strong class="fs-5">[[ textbook.title ]]</strong>
+								<br/><em>[[ textbook.authors ]]</em>
+								<ul class="list-group mx-2">
+									<li class="list-group-item" v-for="section in textbook.sections" :key="section.id">
+										<strong>
+											<span v-if="section.number !== null">[[ section.number ]]</span>
+											[[ section.title ]]
+										</strong>
+										<div v-if="section.topics !== null"
+											class="mt-1">
+											Topics:
+											<span v-for="topic in section.topics" :key="topic.id"
+				 								role="button"
+			 									tabIndex="0"
+				 								class="badge bg-light text-dark border me-1"
+												@keydown.enter="addTopic(topic)"
+												@keydown.space="addTopic(topic)"
+												@click="addTopic(topic)">
+												[[ topic.text ]]
+											</span>
+											<button role="button" 
+				   								@click="section.topics.forEach(t => addTopic(t))"
+												class="btn btn-sm btn-link link-danger text-decoration-none">
+												Add All
+											</button>
+										</div>
+										<div v-else>
+											No Available Topics
+										</div>
+									</li>
+								</ul>
+							</li>
+						</ul>
 					</div>
 
 					<div class="tab-pane fade show" id="findOrCreate" role="tabpanel" aria-labelledby="pills-find-tab">
-						<div class="input-group mb-3">
+
+						Search the database of all topics. If your search does not find the
+						appropriate topic, you may create a new topic.
+
+						<div class="input-group my-3">
 							<label for="topicSearchBar"
 								class="form-label visually-hidden">
 								Search Topics</label>
@@ -92,9 +142,9 @@
 
 			<div class="col-4">
 				<div class="border p-2">
-					<h5>Selected Topics</h5>
+					<h5>Course Topics</h5>
 					<ol class="mt-3 ms-2" :start="current_topics_page * results_per_page + 1">
-						<li v-for="topic in course_topics" :key="topic.id">
+						<li v-for="topic in displayed_course_topics" :key="topic.id">
 							<div class="d-flex">
 								<div class="me-auto">
 									<strong>[[ topic.text ]]</strong>
@@ -106,6 +156,10 @@
 						</li>
 					</ol>
 
+					<div v-if="course_topics.length === 0" class="mt-3 ms-2">
+						No course topics found.
+					</div>
+
 					<pagination-control
 						class="mt-3"
 						description="Page navigation for course topics"
@@ -115,10 +169,11 @@
 					</pagination-control>
 				</div>
 				<div class="dropdown mt-2 d-flex justify-content-end">
-					<button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+					<button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown"  data-bs-display="static" aria-expanded="false">
 						Continue...
 					</button>
-					<ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+					<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton1">
+						<li><a class="dropdown-item" href="{{ url_for('instructor.setup_textbooks', course_name=course.name) }}">Previous Step: Set Course Textbooks</a></li>
 						<li><a class="dropdown-item" href="{{ url_for('user_views.course_overview', course_name=course.name) }}">Exit Course Setup</a></li>
 					</ul>
 				</div>
@@ -150,6 +205,8 @@
 				const current_topics_page = ref(0);
 				const { current_page: displayed_course_topics } = usePagination(course_topics, results_per_page, current_topics_page);
 
+				const course_textbooks = ref([]);
+
 				const search_bar_text = ref("");
 				const search_results = ref([]);
 				const search_string = ref("");
@@ -157,6 +214,8 @@
 				const { current_page: displayed_search_results } = usePagination(search_results, results_per_page, current_search_page);
 
 				return { course_id, course_topics, current_topics_page,
+							displayed_course_topics,
+							course_textbooks,
 							search_results, search_bar_text, search_string, results_per_page, current_search_page,
 							displayed_search_results};
 			},
@@ -239,10 +298,20 @@
 					if (response.ok) {
 						const r_json = await response.json()
 						this.course_topics = r_json.topics;
-						console.log(this.course_topics);
 					}
 					else {
 						showSnackbarMessage("Could not load course topics.");
+					}
+				},
+
+				async fetchTextbooks() {
+					const response = await CadetApi.getCourseTextbooks(this.course_id);
+					if (response.ok) {
+						const r_json = await response.json()
+						this.course_textbooks = r_json.textbooks;
+					}
+					else {
+						showSnackbarMessage("Could not load course textbooks.");
 					}
 				},
 
@@ -253,6 +322,7 @@
 
 			created() {
 				this.fetchTopics();
+				this.fetchTextbooks();
 			},
 
             compilerOptions: {
