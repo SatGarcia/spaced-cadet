@@ -11,9 +11,13 @@
 
 		<div class="row" id="textbookSetup">
 			<div class="col-8">
-				<h5>Find Textbook(s)</h5>
+				<h5>Select Textbook(s)</h5>
+
+				Search for your textbook below. Adding a textbook is optional
+				but will allow you to quickly add topics and learning
+				objectives to your course later.
 				<div class="row pb-2">
-					<div class="input-group">
+					<div class="input-group my-3">
 						<label for="textbookSearchBar"
 							class="form-label visually-hidden">
 							Search Textbooks</label>
@@ -71,8 +75,8 @@
 
 			<div class="col-4">
 				<div class="border p-2">
-					<h5>Selected Textbooks</h5>
-					<ol>
+					<h5>Course Textbooks</h5>
+					<ol class="mt-3 ms-2">
 						<li v-for="tb in course_textbooks" :key="tb.id">
 							<div class="d-flex">
 								<div class="me-auto">
@@ -85,13 +89,18 @@
 								</div>
 						</li>
 					</ol>
+
+					<div v-if="course_textbooks.length === 0" class="mt-3 ms-2">
+						No course textbooks found.
+					</div>
+
 				</div>
 				<div class="dropdown mt-2 d-flex justify-content-end">
 					<button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
 						Continue...
 					</button>
 					<ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-						<li><a class="dropdown-item" href="#">Next Step: Set Course Topics</a></li>
+						<li><a class="dropdown-item" href="{{ url_for('instructor.setup_topics', course_name=course.name) }}">Next Step: Set Course Topics</a></li>
 						<li><a class="dropdown-item" href="{{ url_for('user_views.course_overview', course_name=course.name) }}">Exit Course Setup</a></li>
 					</ul>
 				</div>
