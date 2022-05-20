@@ -434,7 +434,7 @@ def find_questions(course_name):
                            form=form)
 
 
-@instructor.route('/c/<course_name>/textbooks', methods=['GET', 'POST'])
+@instructor.route('/c/<course_name>/setup/textbooks')
 def setup_textbooks(course_name):
     course = Course.query.filter_by(name=course_name).first()
 
@@ -448,6 +448,23 @@ def setup_textbooks(course_name):
 
     return render_template("setup_textbook.html",
                            page_title="Cadet: Course Textbook Selection",
+                           course=course)
+
+
+@instructor.route('/c/<course_name>/setup/topics')
+def setup_topics(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    return render_template("setup_topics.html",
+                           page_title="Cadet: Course Topics Selection",
                            course=course)
 
 

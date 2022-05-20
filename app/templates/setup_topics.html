@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}" class="text-decoration-none">Home</a></li>
+				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview', course_name=course.name) }}" class="text-decoration-none">{{ course.name }}</a></li>
+				<li class="breadcrumb-item active" aria-current="page">Select Topics(s)</li>
+			</ol>
+		</nav>
+
+		<div class="row" id="topicSetup">
+			<div class="col-8">
+				<!-- tab/pill navigation -->
+				<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+					<li class="nav-item" role="presentation">
+						<button class="nav-link active" id="pills-textbooks-tab" data-bs-toggle="pill" data-bs-target="#selectFromTextbooks" type="button" role="tab" aria-controls="selectFromTextbooks" aria-selected="true">Textbooks</button>
+					</li>
+
+					<li class="nav-item" role="presentation">
+						<button class="nav-link" id="pills-find-tab" data-bs-toggle="pill" data-bs-target="#findOrCreate" type="button" role="tab" aria-controls="findOrCreate" aria-selected="false">Search / Create</button>
+					</li>
+				</ul>
+
+				<div class="tab-content" id="pills-tabContent">
+					<div class="tab-pane fade show active" id="selectFromTextbooks" role="tabpanel" aria-labelledby="pills-textbooks-tab">
+						Textbooks
+					</div>
+
+					<div class="tab-pane fade show" id="findOrCreate" role="tabpanel" aria-labelledby="pills-find-tab">
+						<div class="input-group mb-3">
+							<label for="topicSearchBar"
+								class="form-label visually-hidden">
+								Search Topics</label>
+							<input id="topicSearchBar"
+							  v-model.trim="search_bar_text" 
+							  @keyup.enter="search()"
+							  type="text"
+							  class="form-control"
+							  placeholder="Search topics">
+
+							<button class="btn btn-xs btn-primary" @click="search()">
+								<i class="bi-search"></i>
+								Search
+							</button>
+						</div>
+
+						<div v-if="search_results !== null" class="ms-2">
+							<strong>Search Results ([[ search_results.length ]]):</strong>
+
+							<div v-if="displayed_search_results.length === 0" class="ms-1">
+								<em>No search results.</em>
+							</div>
+
+							<div v-else class="mt-2">
+								<ul class="list-unstyled ms-2">
+									<li v-for="topic in search_results" :key="topic.id" class="border-bottom">
+										<button role="button" class="btn btn-link link-primary text-decoration-none"
+											 @click="addTopic(topic)"
+											 :class="{ disabled: course_topics.find(t => (t.id === topic.id)) !== undefined}">
+											 <span class="visually-hidden">Add</span>
+											 <i class="bi-plus-circle"></i>
+										</button>
+										<strong>[[ topic.text ]]</strong>
+									</li>
+
+								</ul>
+
+
+								<pagination-control
+									class="mt-3"
+									description="Page navigation for topic search results"
+									:num_items="search_results.length"
+									:items_per_page="results_per_page"
+									@selected-page-num="page_num => (current_search_page = page_num)">
+								</pagination-control>
+							</div>
+
+							<div v-if="search_string !== '' && search_results.find(t => (t.text.trim().toLowerCase() === search_string.toLowerCase())) === undefined"
+								class="mt-2">
+								<button role="button" class="btn btn-link text-style-none"
+									@click="createTopic(search_string)">
+									<i class="bi-bag-plus text-danger"></i>
+									<span class="visually-hidden">Create and Add Topic</span>
+								</button>
+								<strong>Create New Topic:</strong> [[ search_string ]]
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="col-4">
+				<div class="border p-2">
+					<h5>Selected Topics</h5>
+					<ol class="mt-3 ms-2" :start="current_topics_page * results_per_page + 1">
+						<li v-for="topic in course_topics" :key="topic.id">
+							<div class="d-flex">
+								<div class="me-auto">
+									<strong>[[ topic.text ]]</strong>
+								</div>
+								<div>
+									<button role="button" class="btn btn-link text-decoration-none link-danger"
+							   			@click="removeTopic(topic)">Remove</button>
+								</div>
+						</li>
+					</ol>
+
+					<pagination-control
+						class="mt-3"
+						description="Page navigation for course topics"
+						:num_items="course_topics.length"
+						:items_per_page="results_per_page"
+						@selected-page-num="page_num => (current_topics_page = page_num)">
+					</pagination-control>
+				</div>
+				<div class="dropdown mt-2 d-flex justify-content-end">
+					<button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+						Continue...
+					</button>
+					<ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+						<li><a class="dropdown-item" href="{{ url_for('user_views.course_overview', course_name=course.name) }}">Exit Course Setup</a></li>
+					</ul>
+				</div>
+			</div>
+
+		</div>
+	</div>
+
+	<div id="snackbar">Default message.</div> 
+
+    <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
+
+	<script type="module">
+		import { fetchOrRefresh, getCookie, showSnackbarMessage, findAndRemove } from '/static/js/helpers.js';
+		import { createApp, ref } from '/static/js/vue.esm-browser.js';
+		import * as CadetApi from '/static/js/cadet-api.js';
+		import { useFilterableList, usePagination } from '/static/js/filterable-lists.js';
+		import PaginationControl from '/static/js/pagination-control.js';
+
+        const converter = new showdown.Converter();
+        const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
+
+        const app = createApp({
+			setup() {
+				const course_id = ref({{ course.id }});
+
+				const course_topics = ref([]);
+				const results_per_page = ref(10);
+				const current_topics_page = ref(0);
+				const { current_page: displayed_course_topics } = usePagination(course_topics, results_per_page, current_topics_page);
+
+				const search_bar_text = ref("");
+				const search_results = ref([]);
+				const search_string = ref("");
+				const current_search_page = ref(0);
+				const { current_page: displayed_search_results } = usePagination(search_results, results_per_page, current_search_page);
+
+				return { course_id, course_topics, current_topics_page,
+							search_results, search_bar_text, search_string, results_per_page, current_search_page,
+							displayed_search_results};
+			},
+
+			components: {
+				PaginationControl,
+			},
+
+            methods: {
+				displayMessage(msg) {
+					showSnackbarMessage(msg);
+				},
+
+				async search() {
+				  	if (this.search_bar_text !== "") {
+						// Only search if a non-empty string given
+						this.search_string = this.search_bar_text;
+
+						const response = await CadetApi.searchTopics(this.search_string);
+						if (response.ok) {
+							const r = await response.json();
+							this.search_results = r["topics"];
+						}
+						else {
+							showSnackbarMessage("Error retrieving search results.");
+						}
+				  	}
+				},
+
+				async createTopic(topic_text) {
+					const response = await CadetApi.createNewTopic(topic_text);
+					if (response.ok) {
+						const r = await response.json();
+						this.search_results.push(r.topic);
+						showSnackbarMessage("Successfully created topic.");
+						this.addTopic(r.topic);
+					}
+					else {
+						showSnackbarMessage("Error creating new topic. Please try again.");
+					}
+				},
+
+				async addTopic(topic) {
+					const response = await CadetApi.addCourseTopic(this.course_id, topic.id);
+					if (response.ok) {
+						const r = await response.json();
+						if (!r["invalid-ids"].includes(topic.id)) {
+							if (this.course_topics.findIndex(t => (t.id === topic.id)) === -1) {
+								this.course_topics.push(topic);
+							}
+							showSnackbarMessage("Successfully added topic to course.");
+						}
+						else {
+							showSnackbarMessage("Could not add selected topic.");
+						}
+					}
+					else {
+						showSnackbarMessage("Error adding topic. Please try again.");
+					}
+				},
+
+				async removeTopic(topic) {
+					const response = await CadetApi.removeCourseTopic(this.course_id, topic.id);
+					if (response.ok) {
+						const located_at = this.course_topics.findIndex(t => (t.id === topic.id));
+						if (located_at !== -1) {
+							this.course_topics.splice(located_at, 1);
+						}
+						showSnackbarMessage("Topic successfully removed from course.");
+					}
+					else {
+						showSnackbarMessage("Error removing topic. Please try again.");
+					}
+				},
+
+				async fetchTopics() {
+					const url = "{{ url_for('course', course_id=course.id) }}";
+    				const response = await fetchOrRefresh(url, 'GET', refresh_url);
+
+					if (response.ok) {
+						const r_json = await response.json()
+						this.course_topics = r_json.topics;
+						console.log(this.course_topics);
+					}
+					else {
+						showSnackbarMessage("Could not load course topics.");
+					}
+				},
+
+                convertToHtml(md_text) {
+                    return converter.makeHtml(md_text);
+				},
+            },
+
+			created() {
+				this.fetchTopics();
+			},
+
+            compilerOptions: {
+                delimiters: ["[[", "]]"]
+            },
+        });
+        
+        const vm = app.mount('#topicSetup');
+	</script>
+{% endblock %}
