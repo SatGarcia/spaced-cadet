@@ -86,16 +86,22 @@
                                             <i class="bi-people"></i>
                                             Manage Roster
                                         </a>
-									
 									</li>
 
 									<li>
 										<a class="dropdown-item" 
 											href="{{ url_for('instructor.edit_course', course_name=course.name) }}">
-                                            <i class="bi-tools"></i>
+                                            <i class="bi-sliders"></i>
                                             Edit Settings
                                         </a>
-									
+									</li>
+
+									<li>
+										<a class="dropdown-item" 
+											href="{{ url_for('instructor.setup_textbooks', course_name=course.name) }}">
+                                            <i class="bi-tools"></i>
+                                            Course Setup
+                                        </a>
 									</li>
 								</ul>
 							</li>
