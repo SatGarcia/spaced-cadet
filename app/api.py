@@ -495,7 +495,8 @@ def init_app(flask_app):
     rf_api.add_resource(UserApi, '/api/user/<int:user_id>')
     rf_api.add_resource(UsersApi, '/api/users')
 
-    rf_api.add_resource(CourseApi, '/api/course/<int:course_id>')
+    rf_api.add_resource(CourseApi, '/api/course/<int:course_id>',
+                        endpoint="course")
     rf_api.add_resource(CoursesApi, '/api/courses')
 
     rf_api.add_resource(RosterApi,
@@ -515,6 +516,12 @@ def init_app(flask_app):
     rf_api.add_resource(CourseTextbookApi,
                         '/api/course/<int:course_id>/textbook/<int:textbook_id>',
                         endpoint='course_textbook')
+    rf_api.add_resource(CourseTopicsApi,
+                        '/api/course/<int:course_id>/topics',
+                        endpoint='course_topics')
+    rf_api.add_resource(CourseTopicApi,
+                        '/api/course/<int:course_id>/topic/<int:topic_id>',
+                        endpoint='course_topic')
     rf_api.add_resource(CourseMeetingsApi,
                         '/api/course/<int:course_id>/meetings',
                         endpoint='course_meetings')
@@ -1041,6 +1048,29 @@ class CourseTextbookApi(Resource):
         return {"removed": deleted_tb}
 
 
+class CourseTopicApi(Resource):
+    @jwt_required()
+    def delete(self, course_id, topic_id):
+        course = Course.query.filter_by(id=course_id).one_or_none()
+        if not course:
+            return {'message': f"Course {course_id} not found."}, 404
+
+        # Limit access to admins and course instructors
+        if not (current_user.admin \
+                or (current_user.instructor and (current_user in course.users))):
+            return {'message': 'Unauthorized access.'}, 401
+
+        topic = course.topics.filter_by(id=topic_id).one_or_none()
+        if not topic:
+            return {'message': f"Topic {topic_id} not found in Course {course_id}."}, 404
+
+        deleted_topic = topic_schema.dump(topic)
+        course.topics.remove(topic)
+        db.session.commit()
+
+        return {"removed": deleted_topic}
+
+
 class IdListSchema(Schema):
     ids = fields.List(fields.Int(), required=True)
 
@@ -1111,6 +1141,20 @@ class CourseTextbooksApi(Resource):
         schema = TextbookSchema(only=('id','title','edition'))
         return item_collection_poster(Course, course_id, schema, 'textbooks',
                                          Textbook, admin_or_course_instructor)
+
+
+class CourseTopicsApi(Resource):
+    @jwt_required()
+    def get(self, course_id):
+        schema = TopicSchema(only=('id','text'))
+        return item_collection_getter(Course, course_id, schema, 'topics',
+                                      admin_or_course_instructor)
+
+    @jwt_required()
+    def post(self, course_id):
+        schema = TopicSchema(only=('id','text'))
+        return item_collection_poster(Course, course_id, schema, 'topics',
+                                         Topic, admin_or_course_instructor)
 
 
 class CourseMeetingsApi(Resource):
