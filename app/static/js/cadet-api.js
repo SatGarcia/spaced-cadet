@@ -138,7 +138,7 @@ export async function getCourseTextbooks(course_id) {
     return await fetchOrRefresh(url, 'GET', refresh_url);
 }
 
-export async function addToCollection(url, item_id) {
+async function addToCollection(url, item_ids) {
     const config = {
         method: 'POST',
         credentials: 'same-origin',
@@ -146,7 +146,7 @@ export async function addToCollection(url, item_id) {
             "Content-Type": "application/json",
             'X-CSRF-TOKEN': getCookie('csrf_access_token'),
         },
-        body: JSON.stringify({'ids': [item_id]})
+        body: JSON.stringify({'ids': item_ids})
     };
 
     return await fetchOrRefresh(url, 'PUT', refresh_url, config);
@@ -154,12 +154,17 @@ export async function addToCollection(url, item_id) {
 
 export async function addCourseTextbook(course_id, textbook_id) {
     const url = `/api/course/${course_id}/textbooks`; // FIXME: url_for
-    return await addToCollection(url, textbook_id);
+    return await addToCollection(url, [textbook_id]);
 }
 
 export async function addCourseTopic(course_id, topic_id) {
     const url = `/api/course/${course_id}/topics`; // FIXME: url_for
-    return await addToCollection(url, topic_id);
+    return await addToCollection(url, [topic_id]);
+}
+
+export async function addCourseTopics(course_id, topic_ids) {
+    const url = `/api/course/${course_id}/topics`; // FIXME: url_for
+    return await addToCollection(url, topic_ids);
 }
 
 export async function removeCourseTextbook(course_id, textbook_id) {
