@@ -38,9 +38,20 @@
 
 						<ul class="list-unstyled mt-3">
 							<li v-for="textbook in course_textbooks" :key="textbook.id" class="mb-5">
-								<strong class="fs-5">[[ textbook.title ]]</strong>
-								<br/><em>[[ textbook.authors ]]</em>
-								<ul class="list-group mx-2">
+								<div class="d-flex">
+									<div class="me-auto">
+										<strong class="fs-5">[[ textbook.title ]]</strong>
+										<br/><em>[[ textbook.authors ]]</em>
+									</div>
+									<div>
+										<button role="button" 
+											@click="addAllTopics(textbook)"
+											class="btn btn-sm btn-outline-danger">
+											Add All Textbook Topics
+										</button>
+									</div>
+								</div>
+								<ul class="list-group mx-2 mt-2">
 									<li class="list-group-item" v-for="section in textbook.sections" :key="section.id">
 										<strong>
 											<span v-if="section.number !== null">[[ section.number ]]</span>
@@ -275,6 +286,30 @@
 					else {
 						showSnackbarMessage("Error adding topic. Please try again.");
 					}
+				},
+
+				async addAllTopics(textbook) {
+					const topic_ids = [];
+					textbook.sections.forEach(s => s.topics.forEach(t => { if (!topic_ids.includes(t.id)) topic_ids.push(t.id) }));
+					const response = await CadetApi.addCourseTopics(this.course_id, topic_ids);
+					if (response.ok) {
+						const r = await response.json();
+						const num_added = r["added"].length;
+						const num_skipped = r["previously-added"].length;
+						const num_bad_ids = r["invalid-ids"].length;
+
+						showSnackbarMessage(`Succeessfully added ${num_added} topics. Ignored ${num_skipped} that were already added.`);
+
+						for (const topic of r["added"]) {
+							if (this.course_topics.findIndex(t => (t.id === topic.id)) === -1) {
+								this.course_topics.push(topic);
+							}
+						}
+					}
+					else {
+						showSnackbarMessage("Error adding topics. Please try again.");
+					}
+
 				},
 
 				async removeTopic(topic) {
