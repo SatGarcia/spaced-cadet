@@ -492,12 +492,14 @@ def init_app(flask_app):
     rf_api.add_resource(LoginApi, '/api/login')
     rf_api.add_resource(LogoutApi, '/api/logout')
 
-    rf_api.add_resource(UserApi, '/api/user/<int:user_id>')
-    rf_api.add_resource(UsersApi, '/api/users')
+    rf_api.add_resource(UserApi, '/api/user/<int:user_id>',
+                        endpoint='user_api')
+    rf_api.add_resource(UsersApi, '/api/users', endpoint='users_api')
 
     rf_api.add_resource(CourseApi, '/api/course/<int:course_id>',
                         endpoint="course")
-    rf_api.add_resource(CoursesApi, '/api/courses')
+    rf_api.add_resource(CoursesApi, '/api/courses',
+                        endpoint='courses_api')
 
     rf_api.add_resource(RosterApi,
                         '/api/course/<int:course_id>/students')
@@ -526,7 +528,8 @@ def init_app(flask_app):
                         '/api/course/<int:course_id>/meetings',
                         endpoint='course_meetings')
 
-    rf_api.add_resource(TopicApi, '/api/topic/<int:topic_id>')
+    rf_api.add_resource(TopicApi, '/api/topic/<int:topic_id>',
+                        endpoint='topic_api')
     rf_api.add_resource(TopicsApi, '/api/topics',
                         endpoint='topics_api')
     rf_api.add_resource(ObjectiveTopicApi,
@@ -536,19 +539,25 @@ def init_app(flask_app):
                         '/api/source/<int:source_id>/topics',
                         endpoint='source_topics')
 
-    rf_api.add_resource(TextbookApi, '/api/textbook/<int:textbook_id>')
-    rf_api.add_resource(TextbooksApi, '/api/textbooks')
+    rf_api.add_resource(TextbookApi, '/api/textbook/<int:textbook_id>',
+                        endpoint='textbook_api')
+    rf_api.add_resource(TextbooksApi, '/api/textbooks',
+                        endpoint='textbooks_api')
     rf_api.add_resource(TextbookSearchApi, '/api/textbooks/search',
                         endpoint='textbook_search_api')
-    rf_api.add_resource(TextbookSectionsApi, '/api/textbook/<int:textbook_id>/sections')
-    rf_api.add_resource(ClassMeetingsApi, '/api/class-meetings')
+    rf_api.add_resource(TextbookSectionsApi,
+                        '/api/textbook/<int:textbook_id>/sections',
+                        endpoint='textbook_sections')
+    rf_api.add_resource(ClassMeetingsApi, '/api/class-meetings',
+                        endpoint='class_meetings')
 
     rf_api.add_resource(QuestionApi, '/api/question/<int:question_id>',
                         endpoint='question_api')
     rf_api.add_resource(QuestionsApi, '/api/questions',
                         endpoint='questions_api')
 
-    rf_api.add_resource(ObjectiveApi, '/api/objective/<int:objective_id>')
+    rf_api.add_resource(ObjectiveApi, '/api/objective/<int:objective_id>',
+                        endpoint='objective_api')
     rf_api.add_resource(ObjectivesApi, '/api/objectives',
                         endpoint='objectives_api')
     rf_api.add_resource(ObjectiveSearchApi, '/api/objectives/search',
