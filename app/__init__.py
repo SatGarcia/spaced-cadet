@@ -4,11 +4,13 @@ import logging, logging.handlers
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
+from flask_jsglue import JSGlue
 
 from elasticsearch import Elasticsearch
 
 db = SQLAlchemy()
 mail = Mail()
+jsglue = JSGlue()
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -36,6 +38,7 @@ def create_app(test_config=None):
     os.makedirs(app.instance_path, exist_ok=True)
 
     mail.init_app(app)
+    jsglue.init_app(app)
 
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
         if app.config['ELASTICSEARCH_URL'] else None

@@ -1,6 +1,6 @@
 import { getCookie, fetchOrRefresh } from './helpers.js';
 
-const refresh_url = "/auth/refresh";
+const refresh_url = Flask.url_for('auth.refresh_jwts');
 
 export async function postItem(url, item) {
     const config = {
@@ -158,12 +158,12 @@ export async function addCourseTextbook(course_id, textbook_id) {
 }
 
 export async function addCourseTopic(course_id, topic_id) {
-    const url = `/api/course/${course_id}/topics`; // FIXME: url_for
+    const url = Flask.url_for("course_topics", { "course_id": course_id });
     return await addToCollection(url, [topic_id]);
 }
 
 export async function addCourseTopics(course_id, topic_ids) {
-    const url = `/api/course/${course_id}/topics`; // FIXME: url_for
+    const url = Flask.url_for("course_topics", { "course_id": course_id });
     return await addToCollection(url, topic_ids);
 }
 
