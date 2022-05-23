@@ -55,11 +55,11 @@
 									</button>
 									<ul class="dropdown-menu">
 										<li><button class="dropdown-item" type="button"
-														@click="updateSelectedQuestions('public', true)">
+														@click="updateSelectedObjectives('public', true)">
 												<i class="bi-people"></i>
 												Mark as Public</button></li>
 										<li><button class="dropdown-item" type="button"
-														@click="updateSelectedQuestions('public', false)">
+														@click="updateSelectedObjectives('public', false)">
 												<i class="bi-person"></i>
 												Mark as Private</button></li>
 									</ul>
@@ -322,10 +322,13 @@
 					showSnackbarMessage(`Successfully removed topic from ${updated_indices.length} objectives. Failures: ${failed_indices.length}`);
 				},
 
-                async updateSelectedQuestions(field_name, field_value) {
+                async updateSelectedObjectives(field_name, field_value) {
 					let updated_indices = [];
 					let failed_indices = [];
 
+					// TRICKY: reverse sort the list so to avoid issues with
+					// non-existent indices
+					this.selected_indices.sort((a,b) => b - a);
 					for (const index of this.selected_indices) {
 						if (this.displayed_objectives[index][field_name] === field_value) {
 							// skip updating those objectives whose field value is
@@ -335,16 +338,16 @@
 						}
 
 						const o_id = this.displayed_objectives[index].id;
-						const response = await CadetApi.updateObjectiveField(field_name, field_value, o_id);
 
-						if (response.ok) {
-							updated_indices.push(index);
-							this.displayed_objectives[index][field_name] = field_value;
-
-						}
-						else {
+						try {
+							await CadetApi.updateObjectiveField(field_name, field_value, o_id);
+						} catch(e) {
 							failed_indices.push(index);
+							continue;
 						}
+
+						updated_indices.push(index);
+						this.displayed_objectives[index][field_name] = field_value;
 					}
 
 					showSnackbarMessage(`Successfully updated ${updated_indices.length} objectives. Failures: ${failed_indices.length}`);

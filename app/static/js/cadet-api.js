@@ -1,4 +1,4 @@
-import { getCookie, fetchOrRefresh } from './helpers.js';
+import { getCookie, fetchOrRefresh, authenticatedFetch } from './helpers.js';
 
 const refresh_url = Flask.url_for('auth.refresh_jwts');
 
@@ -18,16 +18,13 @@ export async function postItem(url, item) {
 
 async function updateField(url, field_name, field_value) {
     const config = {
-        method: 'PATCH',
-        credentials: 'same-origin',
         headers: {
             "Content-Type": "application/json",
-            'X-CSRF-TOKEN': getCookie('csrf_access_token'),
         },
         body: JSON.stringify({[field_name]: field_value})
     }
 
-    return await fetchOrRefresh(url, 'PATCH', refresh_url, config);
+    return await authenticatedFetch(url, 'PATCH', config);
 }
 
 

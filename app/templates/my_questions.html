@@ -374,6 +374,9 @@
 					let updated_indices = [];
 					let failed_indices = [];
 
+					// TRICKY: reverse sort the list so to avoid issues with
+					// non-existent indices
+					this.selected_indices.sort((a,b) => b - a);
 					for (const index of this.selected_indices) {
 						if (this.displayed_questions[index][field_name] === field_value) {
 							// skip updating those questions whose field value is
@@ -383,15 +386,15 @@
 						}
 
 						const q_id = this.displayed_questions[index].id;
-						const response = await CadetApi.updateQuestionField(field_name, field_value, q_id);
-
-						if (response.ok) {
-							updated_indices.push(index);
-							this.displayed_questions[index][field_name] = field_value;
-						}
-						else {
+						try {
+							await CadetApi.updateQuestionField(field_name, field_value, q_id);
+						} catch {
 							failed_indices.push(index);
+							continue;
 						}
+
+						updated_indices.push(index);
+						this.displayed_questions[index][field_name] = field_value;
 					}
 
 					showSnackbarMessage(`Successfully updated ${updated_indices.length} questions. Failures: ${failed_indices.length}`);
