@@ -1,8 +1,6 @@
 import { showSnackbarMessage, fetchOrRefresh } from './helpers.js';
 import { createNewObjective, searchObjectives } from './cadet-api.js';
 
-const refresh_url = '/auth/refresh';
-
 export default {
   compilerOptions: {
     delimiters: ["[[", "]]"]

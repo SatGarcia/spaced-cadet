@@ -188,7 +188,7 @@
 
 				const { all_data: all_objectives,
 						filtered_data: filtered_objectives,
-						error: fetch_errors } = useFilterableList("/api/objectives?author=self", "learning_objectives", current_filter);
+						error: fetch_errors } = useFilterableList(Flask.url_for('objectives_api', {'author': 'self'}), "learning_objectives", current_filter);
 
 				const objectives_per_page = ref(10);
 				const current_page_num = ref(0);

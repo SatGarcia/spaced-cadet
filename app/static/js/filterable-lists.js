@@ -10,7 +10,7 @@ export function useFilterableList(url, name, filter_func) {
     all_data.value = [];
     error.value = [];
     
-    fetchOrRefresh(unref(url), 'GET', '/auth/refresh')
+    fetchOrRefresh(unref(url), 'GET', Flask.url_for('auth.refresh_jwts'))
       .then((res) => res.json())
       .then((json) => (all_data.value = json[name]))
       .catch((err) => (error.value = err));

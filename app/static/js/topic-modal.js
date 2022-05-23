@@ -1,7 +1,7 @@
 import { showSnackbarMessage, fetchOrRefresh } from './helpers.js';
 import { createNewTopic } from './cadet-api.js';
 
-const refresh_url = '/auth/refresh';
+const refresh_url = Flask.url_for('auth.refresh_jwts');
 
 export default {
   compilerOptions: {
@@ -48,7 +48,7 @@ export default {
     },
 
     async searchTopics() {
-      let url = "/api/topics";  // FIXME "{{ url_for('topics_api') }}";
+      let url = Flask.url_for('topics_api');
       if (this.search_string) {
         url = url + "?q=" + encodeURIComponent(this.search_string);
       }
