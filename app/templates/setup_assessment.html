@@ -387,17 +387,10 @@
                     }
                 },
 
-                async getTopics() {
-                    const url = "{{ url_for('topics_api') }}";
-                    const response = await fetchOrRefresh(url, 'GET', refresh_url);
-                    if (response.ok) {
-                        const r = await response.json();
-                        this.all_topics = r["topics"];
-                        this.setDisplayedTopics(0, Math.min(this.all_topics.length, 25));
-                    }
-                    else {
-                        showSnackbarMessage("Error retrieving topics.");
-                    }
+                getTopics() {
+                    CadetApi.getCourseTopics({{ course.id }})
+                        .then(topics => this.all_topics = topics)
+                        .catch(e => showSnackbarMessage("Error retrieving topics."));
                 },
 
                 async getObjectives() {
