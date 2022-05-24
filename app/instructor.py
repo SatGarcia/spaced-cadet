@@ -389,51 +389,6 @@ def edit_assessment(course_name, assessment_id):
                            form=form)
 
 
-@instructor.route('/c/<course_name>/find-questions', methods=['GET', 'POST'])
-def find_questions(course_name):
-    course = Course.query.filter_by(name=course_name).first()
-    if not course:
-        abort(404)
-
-    try:
-        check_authorization(current_user, course=course, instructor=True)
-    except AuthorizationError:
-        abort(401)
-
-    form = AddQuestionsToCourseForm()
-    if form.validate_on_submit():
-        q_ids = [int(i) for i in form.selected_questions.data.split(',')]
-        print(q_ids)
-
-        questions = [Question.query.filter_by(id=i).first() for i in q_ids]
-
-        if None in questions:
-            flash("ERROR: Invalid question(s) added.", "danger")
-        else:
-            # check that all questions are either public or have current user
-            # as the author
-            correct_permissions = [(q.public or q.author == current_user) for q in questions]
-            if False in correct_permissions:
-                flash("ERROR: Cannot add other user's private questions.",
-                      "danger")
-            else:
-                num_added = 0
-                for q in questions:
-                    if q not in course.questions:
-                        num_added += 1
-                        course.questions.append(q)
-
-                db.session.commit()
-                flash(f"Added {num_added} questions to course. Ignored {len(questions)-num_added} duplicates.", "success")
-
-        return redirect(url_for(f'.manage_questions', course_name=course_name))
-
-    return render_template("find_questions.html",
-                           page_title="Cadet: Find Questions",
-                           course=course,
-                           form=form)
-
-
 @instructor.route('/c/<course_name>/setup/textbooks')
 def setup_textbooks(course_name):
     course = Course.query.filter_by(name=course_name).first()
@@ -528,27 +483,6 @@ def setup_assessment(course_name, assessment_id):
                            course=course,
                            assessment=a,
                            form=form)
-
-
-@instructor.route('/c/<course_name>/add-question')
-@login_required
-def add_question(course_name):
-    course = Course.query.filter_by(name=course_name).first()
-    if not course:
-        abort(404)
-
-    try:
-        check_authorization(current_user, course=course, instructor=True)
-    except AuthorizationError:
-        abort(401)
-
-    # query all (public questions + authored questions) - course questions
-    all_questions = Question.query.filter_by(public=True).union(current_user.authored_questions).except_(course.questions).all()
-
-    return render_template("browse_questions.html",
-                           page_title="Cadet: Available Questions",
-                           course=course,
-                           questions=all_questions)
 
 
 @instructor.route('/q/<int:question_id>/edit', methods=['GET', 'POST'])
@@ -729,24 +663,6 @@ def manage_assessments(course_name):
                            page_title="Cadet: Manage Course Assessments",
                            course=course)
 
-@instructor.route('/c/<course_name>/admin/questions')
-@login_required
-def manage_questions(course_name):
-    course = Course.query.filter_by(name=course_name).first()
-    if not course:
-        abort(404)
-
-    try:
-        check_authorization(current_user, course=course, instructor=True)
-    except AuthorizationError:
-        abort(401)
-
-    all_questions = course.questions.all()
-    return render_template("manage_questions.html",
-                           page_title="Cadet: Manage Course Questions",
-                           course=course,
-                           questions=all_questions)
-
 
 @instructor.route('/u/<int:user_id>/questions')
 @login_required
@@ -811,11 +727,6 @@ class SetupAssessmentForm(FlaskForm):
                                      [Regexp("(^\d+(,\d+)*$|^$)")])
     submit = SubmitField("Set Topics, Objectives, and Questions")
     #[Regexp("^\d+(,\d+)*$")])
-
-
-class AddQuestionsToCourseForm(FlaskForm):
-    selected_questions = HiddenField("Question IDs", [Regexp("^\d+(,\d+)*$")])
-    submit = SubmitField("Add Questions")
 
 
 class AssessmentForm(FlaskForm):
