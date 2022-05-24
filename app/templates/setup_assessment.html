@@ -50,7 +50,7 @@
 
             <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="pills-topics-tab" data-bs-toggle="pill" data-bs-target="#selectTopics" type="button" role="tab" aria-controls="selectTopics" aria-selected="true">Topics ([[ all_topics.length ]])</button>
+                    <button class="nav-link active" id="pills-topics-tab" data-bs-toggle="pill" data-bs-target="#selectTopics" type="button" role="tab" aria-controls="selectTopics" aria-selected="true">Topics ([[ course_topics.length ]])</button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="pills-objectives-tab" data-bs-toggle="pill" data-bs-target="#selectObjectives" type="button" role="tab" aria-controls="selectObjectives" aria-selected="false">Learning Objectives ([[ all_objectives.length ]])</button>
@@ -72,15 +72,15 @@
                             </h5>
                             <button type="button" class="btn btn-sm btn-light m-2"
                                    v-for="(topic, index) in displayed_topics" :key="topic.id"
-                                   @click="toggleTopicSelect(index)">
+                                   @click="toggleItemSelect(topic, selected_topics)">
                                 [[ topic.text ]]
                             </button>
                             <pagination-control
                                 class="mt-3"
                                 description="Page navigation for topics"
-                                :num_items="all_topics.length"
-                                :items_per_page="25"
-                                @selected-page="setDisplayedTopics">
+                                :num_items="course_topics.length"
+                                :items_per_page="topics_per_page"
+                                @selected-page-num="page_num => (current_topics_page = page_num)">
                             </pagination-control>
                         </div>
 
@@ -121,7 +121,7 @@
                             <div class="list-group" v-if="all_objectives.length !== 0">
                                 <button type="button" class="list-group-item list-group-item-action"
                                                       v-for="(lo, index) in displayed_objectives" :key="lo.id"
-                                                      @click="toggleObjectiveSelect(lo)">
+                                                      @click="toggleItemSelect(lo, selected_objectives)">
                                     <span class="text-primary" v-if="objective_is_selected[index]">
                                         <i class="bi-check-circle"></i>
                                     </span>
@@ -140,8 +140,8 @@
                                     class="mt-2"
                                     description="Page navigation for objectives"
                                     :num_items="all_objectives.length"
-                                    :items_per_page="10"
-                                    @selected-page="setDisplayedObjectives">
+                                    :items_per_page="objectives_per_page"
+                                    @selected-page-num="page_num => (current_objectives_page = page_num)">
                                 </pagination-control>
                             </div>
                             <div v-else>
@@ -185,7 +185,7 @@
                             <div class="list-group" v-if="all_questions.length !== 0">
                                 <button type="button" class="list-group-item list-group-item-action"
                                                       v-for="(q, index) in displayed_questions" :key="q.id"
-                                                      @click="toggleQuestionSelect(q)">
+                                                      @click="toggleItemSelect(q, selected_questions)">
                                     <div class="d-flex">
                                         <div class="mt-1">
                                             <span class="text-primary" v-if="question_is_selected[index]">
@@ -233,8 +233,8 @@
                                 class="mt-2"
                                 description="Page navigation for questions"
                                 :num_items="all_questions.length"
-                                :items_per_page="5"
-                                @selected-page="setDisplayedQuestions">
+                                :items_per_page="questions_per_page"
+                                @selected-page-num="page_num => (current_questions_page = page_num)">
                             </pagination-control>
                         </div>
 
@@ -266,34 +266,47 @@
 	<div id="snackbar">Default message.</div> 
 
     <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
-    <script src="https://unpkg.com/vue@3"></script>
-
-	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
-	<script src="{{ url_for('static', filename='js/cadet-api.js') }}" type="module"></script>
 
 	<script type="module">
-		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+		import { createApp, ref } from '/static/js/vue.esm-browser.js';
+		import { showSnackbarMessage } from '/static/js/helpers.js';
+		import { useFilterableList, usePagination } from '/static/js/filterable-lists.js';
 		import PaginationControl from '/static/js/pagination-control.js';
 		import * as CadetApi from '/static/js/cadet-api.js';
 
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
 
-        const app = Vue.createApp({
-            data() {
-                return {
-					all_topics: [],
-                    displayed_topics: [],
-                    selected_topics: [],
+        const app = createApp({
+			setup() {
+				const course_id = ref({{ course.id }});
 
-                    all_objectives: [],
-                    displayed_objectives: [],
-                    selected_objectives: [],
+				const course_topics = ref([]);
+                const selected_topics = ref([]);
+				const topics_per_page = ref(25);
+				const current_topics_page = ref(0);
+				const { current_page: displayed_topics } = usePagination(course_topics, topics_per_page, current_topics_page);
 
-                    all_questions: [],
-                    displayed_questions: [],
-                    selected_questions: [],
-                }
+				const all_objectives = ref([]);
+                const selected_objectives = ref([]);
+				const objectives_per_page = ref(10);
+				const current_objectives_page = ref(0);
+				const { current_page: displayed_objectives } = usePagination(all_objectives, objectives_per_page, current_objectives_page);
+
+				const all_questions = ref([]);
+                const selected_questions = ref([]);
+				const questions_per_page = ref(10);
+				const current_questions_page = ref(0);
+				const { current_page: displayed_questions } = usePagination(all_questions, questions_per_page, current_questions_page);
+
+                return { course_id,
+                            course_topics, selected_topics, topics_per_page,
+                            current_topics_page, displayed_topics,
+                            all_objectives, selected_objectives, objectives_per_page,
+                            current_objectives_page, displayed_objectives,
+                            all_questions, selected_questions, questions_per_page,
+                            current_questions_page, displayed_questions
+                            }
             },
 
             components: {
@@ -333,84 +346,34 @@
 					showSnackbarMessage(msg);
 				},
 
-                setDisplayedTopics(start, end) {
-                    this.displayed_topics = this.all_topics.slice(start, end);
-                },
-
-                setDisplayedObjectives(start, end) {
-                    this.displayed_objectives = this.all_objectives.slice(start, end);
-                },
-
-                setDisplayedQuestions(start, end) {
-                    this.displayed_questions = this.all_questions.slice(start, end);
-                },
-
-                toggleTopicSelect(index) {
-                    const target_topic = this.displayed_topics[index];
-                    const found_index = this.selected_topics.findIndex((topic) => topic.id === target_topic.id);
+                toggleItemSelect(target_item, selected_items) {
+                    const found_index = selected_items.findIndex((item) => item.id === target_item.id);
 
                     if (found_index === -1) {
                         // wasn't selected before, so add it to selected list
-                        this.selected_topics.push(target_topic);
+                        selected_items.push(target_item);
                     }
                     else {
                         // it was already in there so remove it
-                        this.selected_topics.splice(found_index, 1);
-                    }
-                },
-
-                toggleObjectiveSelect(target_objective) {
-                    // FIXME: code duplication with toggleTopicSelect
-                    const found_index = this.selected_objectives.findIndex((objective) => objective.id === target_objective.id);
-
-                    if (found_index === -1) {
-                        // wasn't selected before, so add it to selected list
-                        this.selected_objectives.push(target_objective);
-                    }
-                    else {
-                        // it was already in there so remove it
-                        this.selected_objectives.splice(found_index, 1);
-                    }
-                },
-
-                toggleQuestionSelect(target_question) {
-                    // FIXME: code duplication with toggleObjectiveSelect
-                    const found_index = this.selected_questions.findIndex((question) => question.id === target_question.id);
-
-                    if (found_index === -1) {
-                        // wasn't selected before, so add it to selected list
-                        this.selected_questions.push(target_question);
-                    }
-                    else {
-                        // it was already in there so remove it
-                        this.selected_questions.splice(found_index, 1);
+                        selected_items.splice(found_index, 1);
                     }
                 },
 
                 getTopics() {
                     CadetApi.getCourseTopics({{ course.id }})
-                        .then(topics => this.all_topics = topics)
+                        .then(topics => this.course_topics = topics)
                         .catch(e => showSnackbarMessage("Error retrieving topics."));
                 },
 
                 async getObjectives() {
                     if (this.selected_topics.length > 0) {
                         const topic_ids = this.selected_topics.map(t => t.id);
-                        let url = `{{ url_for('objectives_api') }}?topics=${topic_ids[0]}`;
 
-                        for (let i = 1; i < topic_ids.length; i++) {
-                            url = url + `,${topic_ids[i]}`;
-                        }
-                        const response = await fetchOrRefresh(url, 'GET', refresh_url);
-
-                        if (response.ok) {
-                            const r = await response.json();
-                            this.all_objectives = r["learning_objectives"];
-                            this.setDisplayedObjectives(0, Math.min(this.all_objectives.length, 10));
-                        }
-                        else {
-                            showSnackbarMessage("Error retrieving learning objectives.");
+                        try {
+                            this.all_objectives = await CadetApi.getObjectivesForTopics(topic_ids);
+                        } catch (e) {
                             this.all_objectives = [];
+                            showSnackbarMessage("Error retrieving learning objectives.");
                         }
                     }
                     else {
@@ -421,21 +384,12 @@
                 async getQuestions() {
                     if (this.selected_objectives.length > 0) {
                         const objective_ids = this.selected_objectives.map(t => t.id);
-                        let url = `{{ url_for('questions_api') }}?objectives=${objective_ids[0]}`;
 
-                        for (let i = 1; i < objective_ids.length; i++) {
-                            url = url + `,${objective_ids[i]}`;
-                        }
-                        const response = await fetchOrRefresh(url, 'GET', refresh_url);
-
-                        if (response.ok) {
-                            const r = await response.json();
-                            this.all_questions = r["questions"];
-                            this.setDisplayedQuestions(0, Math.min(this.all_questions.length, 10));
-                        }
-                        else {
-                            showSnackbarMessage("Error retrieving questions.");
+                        try {
+                            this.all_questions = await CadetApi.getQuestionsForObjectives(objective_ids);
+                        } catch (e) {
                             this.all_questions = [];
+                            showSnackbarMessage("Error retrieving questions.");
                         }
                     }
                     else {
