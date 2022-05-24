@@ -140,6 +140,12 @@ export async function addCourseTextbook(course_id, textbook_id) {
     return await addToCollection(url, [textbook_id]);
 }
 
+export async function getCourseTopics(course_id) {
+    const url = Flask.url_for("course_topics", { "course_id": course_id });
+    const response = await authenticatedFetch(url);
+    return response.topics;
+}
+
 export async function addCourseTopic(course_id, topic_id) {
     const url = Flask.url_for("course_topics", { "course_id": course_id });
     return await addToCollection(url, [topic_id]);
