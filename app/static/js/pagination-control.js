@@ -29,6 +29,12 @@ export default {
         this.$emit('selected-page', 0, 0);
         this.$emit('selected-page-num', 0);
       }
+
+      else if (new_pages.length > 0 && old_pages.length === 0) {
+        // if going from no pages to some pages set page number as 0
+        this.setSelectedPage(0);
+      }
+
       else if (this.selected_page_num >= new_pages.length) {
         // if the page we were on doesn't exist anymore, switch to whatever
         // page is the last one now
