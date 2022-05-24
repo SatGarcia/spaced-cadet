@@ -116,6 +116,18 @@ export async function searchObjectives(search_string, topic_search_string="") {
     return await fetchOrRefresh(url, 'GET', refresh_url);
 }
 
+export async function getObjectivesForTopics(topic_ids) {
+    const url = Flask.url_for('objectives_api', {"topics": topic_ids.join()});
+    const response = await authenticatedFetch(url);
+    return response["learning_objectives"];
+}
+
+export async function getQuestionsForObjectives(objective_ids) {
+    const url = Flask.url_for('questions_api', {"objectives": objective_ids.join()});
+    const response = await authenticatedFetch(url);
+    return response.questions;
+}
+
 export async function getCourseTextbooks(course_id) {
     const url = Flask.url_for('course_textbooks', {"course_id": course_id});
     return await fetchOrRefresh(url, 'GET', refresh_url);
