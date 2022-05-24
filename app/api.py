@@ -50,6 +50,12 @@ def admin_or_course_instructor(course):
         raise AuthorizationError()
 
 
+def admin_or_course_instructor_nested(course_collection):
+    if not (current_user.admin\
+            or (current_user.instructor and current_user in course_collection.course.users)):
+        raise AuthorizationError()
+
+
 def admin_or_author(obj):
     if not (current_user.admin or obj.author == current_user):
         raise AuthorizationError()
@@ -506,12 +512,12 @@ def init_app(flask_app):
     rf_api.add_resource(EnrolledStudentApi,
                         '/api/course/<int:course_id>/student/<int:student_id>',
                         endpoint="enrolled_student")
-    rf_api.add_resource(CourseQuestionsApi,
-                        '/api/course/<int:course_id>/questions',
-                        endpoint='course_questions')
-    rf_api.add_resource(CourseQuestionApi,
-                        '/api/course/<int:course_id>/question/<int:question_id>',
-                        endpoint='course_question')
+    rf_api.add_resource(CourseAssessmentQuestionsApi,
+                        '/api/course/<int:course_id>/assessment/<int:assessment_id>/questions',
+                        endpoint='course_assessment_questions')
+    rf_api.add_resource(CourseAssessmentQuestionApi,
+                        '/api/course/<int:course_id>/assessment/<int:assessment_id>/question/<int:question_id>',
+                        endpoint='course_assessment_question')
     rf_api.add_resource(CourseTextbooksApi,
                         '/api/course/<int:course_id>/textbooks',
                         endpoint='course_textbooks')
@@ -1012,23 +1018,27 @@ class QuestionApi(Resource):
             return {"updated": schema.dump(q)}
 
 
-class CourseQuestionApi(Resource):
+class CourseAssessmentQuestionApi(Resource):
     @jwt_required()
-    def delete(self, course_id, question_id):
+    def delete(self, course_id, assessment_id, question_id):
         course = Course.query.filter_by(id=course_id).one_or_none()
         if not course:
             return {'message': f"Course {course_id} not found."}, 404
+
+        assessment = course.assessments.filter_by(id=assessment_id).first()
+        if not assessment:
+            return {'message': f"Assessment with id {assessment_id} not found in Course {course_id}."}, 404
 
         # Limit access to admins and course instructors
         if not (current_user.admin \
                 or (current_user.instructor and (current_user in course.users))):
             return {'message': 'Unauthorized access.'}, 401
 
-        q = course.questions.filter_by(id=question_id).one_or_none()
+        q = assessment.questions.filter_by(id=question_id).one_or_none()
         if not q:
-            return {'message': f"Question {question_id} not found in Course {course_id}."}, 404
+            return {'message': f"Question {question_id} not found in Assessment {assessment_id}."}, 404
         deleted_q = QuestionApi.dump_by_type(q)
-        course.questions.remove(q)
+        assessment.questions.remove(q)
         db.session.commit()
 
         return {"removed": deleted_q}
@@ -1124,18 +1134,30 @@ class EnrolledStudentApi(Resource):
         return {"removed": removed_student}
 
 
-class CourseQuestionsApi(Resource):
+class CourseAssessmentQuestionsApi(Resource):
     @jwt_required()
-    def get(self, course_id):
+    def get(self, course_id, assessment_id):
+        course = Course.query.filter_by(id=course_id).first()
+        if not course:
+            return {'message': f"Course with id {course_id} not found."}, 404
+        elif not course.assessments.filter_by(id=assessment_id).first():
+            return {'message': f"Assessment with id {assessment_id} not found in Course {course_id}."}, 404
+
         schema = QuestionSchema(only=('id','prompt'))
-        return item_collection_getter(Course, course_id, schema, 'questions',
-                                      admin_or_course_instructor)
+        return item_collection_getter(Assessment, assessment_id, schema, 'questions',
+                                      admin_or_course_instructor_nested)
 
     @jwt_required()
-    def post(self, course_id):
+    def post(self, course_id, assessment_id):
+        course = Course.query.filter_by(id=course_id).first()
+        if not course:
+            return {'message': f"Course with id {course_id} not found."}, 404
+        elif not course.assessments.filter_by(id=assessment_id).first():
+            return {'message': f"Assessment with id {assessment_id} not found in Course {course_id}."}, 404
+
         schema = QuestionSchema(only=('id','prompt'))
-        return item_collection_poster(Course, course_id, schema, 'questions',
-                                         Question, admin_or_course_instructor)
+        return item_collection_poster(Assessment, assessment_id, schema, 'questions',
+                                         Question, admin_or_course_instructor_nested)
 
 
 class CourseTextbooksApi(Resource):
@@ -1534,5 +1556,5 @@ from app.db_models import (
     QuestionType, AnswerOption, Course, ShortAnswerQuestion,
     AutoCheckQuestion, MultipleChoiceQuestion, User, Question, JumbleBlock,
     CodeJumbleQuestion, Textbook, TextbookSection, SourceType, Objective,
-    Topic, ClassMeeting, Source
+    Topic, ClassMeeting, Source, Assessment
 )

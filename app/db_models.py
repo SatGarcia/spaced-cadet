@@ -92,21 +92,12 @@ enrollments = db.Table(
               primary_key=True)
 )
 
-# association table for questions in a course
+# association table for topics in a course
 course_topics = db.Table(
     'course_topics',
     db.Column('course_id', db.Integer, db.ForeignKey('course.id'),
               primary_key=True),
     db.Column('topic_id', db.Integer, db.ForeignKey('topic.id'),
-              primary_key=True)
-)
-
-# association table for questions in a course
-assigned_questions = db.Table(
-    'assigned_questions',
-    db.Column('course_id', db.Integer, db.ForeignKey('course.id'),
-              primary_key=True),
-    db.Column('question_id', db.Integer, db.ForeignKey('question.id'),
               primary_key=True)
 )
 
@@ -124,7 +115,7 @@ assessment_objectives = db.Table(
     db.Column('objective_id', db.Integer, db.ForeignKey('objective.id'))
 )
 
-# association table for topics associated with an assessment
+# association table for questions associated with an assessment
 assessment_questions = db.Table(
     'assessment_questions',
     db.Column('assessment_id', db.Integer, db.ForeignKey('assessment.id')),
@@ -445,13 +436,6 @@ class Course(SearchableMixin, db.Model):
                                     foreign_keys='Assessment.course_id',
                                     backref='course', lazy='dynamic',
                                     order_by='Assessment.time')
-
-    questions = db.relationship('Question',
-                               secondary=assigned_questions,
-                               primaryjoin=('assigned_questions.c.course_id == Course.id'),
-                               secondaryjoin=('assigned_questions.c.question_id == Question.id'),
-                               backref=db.backref('courses', lazy='dynamic'),
-                               lazy='dynamic')
 
     def __repr__(self):
         return f"<Course {self.id}: {self.name} ({self.title})>"
