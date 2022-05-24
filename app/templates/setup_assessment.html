@@ -68,10 +68,14 @@
                         <div class="col-8">
                             <h5>
                                 <i class="bi-list-task"></i>
-                                Available Topics:
+                                Course Topics:
                             </h5>
+                            <div class="mb-2">
+                                Click a topics to toggle its selected status.
+                            </div>
                             <button type="button" class="btn btn-sm btn-light m-2"
                                    v-for="(topic, index) in displayed_topics" :key="topic.id"
+                                   tabIndex="0"
                                    @click="toggleItemSelect(topic, selected_topics)">
                                 [[ topic.text ]]
                             </button>
@@ -82,9 +86,14 @@
                                 :items_per_page="topics_per_page"
                                 @selected-page-num="page_num => (current_topics_page = page_num)">
                             </pagination-control>
-                        </div>
 
-                        <!-- TODO: area for adding new topics to course -->
+                            <div class="mt-3">
+                                <em>Looking for a different topic?
+                                <a href="{{ url_for('instructor.setup_topics', course_name=course.name) }}"
+                                   class="text-decoration-none">Update this course's topics.</a>
+                                </em>
+                            </div>
+                        </div>
 
                         <!-- area for selected topics -->
                         <div class="col-4">
@@ -99,8 +108,9 @@
                                         [[ t.text ]]
                                     </div>
                                     <div>
-                                        <i role="button" class="bi-x mx-2 fs-6 text-danger"
-                                                         @click="selected_topics.splice(index,1)"></i>
+                                        <i role="button" tabIndex="0" class="bi-x mx-2 fs-6 text-danger"
+                                                                      @click="selected_topics.splice(index,1)"
+                                                                      @keydown.enter="selected_topics.splice(index,1)"></i>
                                         <span class="visually-hidden">Remove</span>
                                     </div>
                                 </li>
@@ -117,6 +127,12 @@
                                 <i class="bi-list-task"></i>
                                 All Objectives of Selected Topics:
                             </h5>
+
+                            <div class="ms-1 my-3">
+                                <strong>Key: </strong>
+                                <i class="bi-check-circle ms-2 text-primary"></i> Selected 
+                                <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
+                            </div>
 
                             <div class="list-group" v-if="all_objectives.length !== 0">
                                 <button type="button" class="list-group-item list-group-item-action"
@@ -165,8 +181,11 @@
                                             [[ lo.topic.text ]]
                                         </span>
                                     </div>
-                                    <i role="button" class="bi-x mx-2 fs-6 text-danger"
-                                                     @click="selected_objectives.splice(index,1)"></i>
+
+                                    <i role="button" tabIndex="0" class="bi-x mx-2 fs-6 text-danger"
+                                                     @click="selected_objectives.splice(index,1)"
+                                                      @keydown.enter="selected_topics.splice(index,1)"></i>
+                                    <span class="visually-hidden">Remove</span>
                                 </li>
                             </ol>
                         </div>
@@ -182,10 +201,21 @@
                                 All Questions of Selected Objectives:
                             </h5>
 
+                            <div class="ms-1 my-3">
+                                <strong>Key: </strong>
+                                <i class="bi-check-circle ms-2 text-primary"></i> Selected 
+                                <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
+
+                                <div class="visually-hidden">
+                                    You may preview a question by selecting it and pressing the 'p' key.
+                                </div>
+                            </div>
+
                             <div class="list-group" v-if="all_questions.length !== 0">
                                 <button type="button" class="list-group-item list-group-item-action"
                                                       v-for="(q, index) in displayed_questions" :key="q.id"
-                                                      @click="toggleItemSelect(q, selected_questions)">
+                                                      @click="toggleItemSelect(q, selected_questions)"
+                                                      @keydown="previewQuestion(q, $event)">
                                     <div class="d-flex">
                                         <div class="mt-1">
                                             <span class="text-primary" v-if="question_is_selected[index]">
@@ -219,7 +249,7 @@
 
                                         <div class="ms-1" style="white-space: nowrap">
                                             <i class="bi-eye"></i>
-                                            <a :href=`/q/${q.id}/preview` target="_blank"
+                                            <a :href="preview_url[index]" target="_blank"
                                                 class="link-secondary text-decoration-none">
                                                 Preview
                                             </a>
@@ -251,7 +281,9 @@
 
                                     <span class="ms-2 me-auto" v-html="convertToHtml(question.prompt)"></span>
                                     <i role="button" class="bi-x fs-6 text-danger"
-                                                     @click="selected_questions.splice(index,1)"></i>
+                                                     @click="selected_questions.splice(index,1)"
+                                                     @keydown.enter="selected_topics.splice(index,1)"></i>
+                                    <span class="visually-hidden">Remove</span>
                                 </li>
                             </ol>
                         </div>
@@ -336,8 +368,13 @@
                 },
 
                 question_is_selected() {
-                    const selected_ids = this.selected_questions.map(o => o.id);
-                    return this.displayed_questions.map(o => selected_ids.includes(o.id))
+                    const selected_ids = this.selected_questions.map(q => q.id);
+                    return this.displayed_questions.map(q => selected_ids.includes(q.id))
+                },
+
+                preview_url() {
+                    return this.displayed_questions.map(q => 
+                        Flask.url_for('instructor.preview_question', {'question_id': q.id}))
                 },
             },
 
@@ -345,6 +382,13 @@
 				displayMessage(msg) {
 					showSnackbarMessage(msg);
 				},
+
+                previewQuestion(question, e) {
+                    if (e.key === 'p') {
+                        const url = Flask.url_for('instructor.preview_question', {"question_id": question.id});
+                        window.open(url);
+                    }
+                },
 
                 toggleItemSelect(target_item, selected_items) {
                     const found_index = selected_items.findIndex((item) => item.id === target_item.id);
