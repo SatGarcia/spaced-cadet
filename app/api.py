@@ -45,6 +45,11 @@ class ImmutableFieldError(Exception):
     pass
 
 
+def admin_only(item):
+    if not current_user.admin:
+        raise AuthorizationError()
+
+
 def admin_or_course_instructor(course):
     if not (current_user.admin or (current_user.instructor and current_user in course.users)):
         raise AuthorizationError()
@@ -554,6 +559,9 @@ def init_app(flask_app):
     rf_api.add_resource(TextbookSectionsApi,
                         '/api/textbook/<int:textbook_id>/sections',
                         endpoint='textbook_sections')
+    rf_api.add_resource(TextbookSectionTopicsApi,
+                        '/api/textbook/<int:textbook_id>/section/<int:section_id>/topics',
+                        endpoint='textbook_section_topics')
     rf_api.add_resource(ClassMeetingsApi, '/api/class-meetings',
                         endpoint='class_meetings')
 
@@ -1159,6 +1167,29 @@ class CourseAssessmentQuestionsApi(Resource):
         return item_collection_poster(Assessment, assessment_id, schema, 'questions',
                                          Question, admin_or_course_instructor_nested)
 
+class TextbookSectionTopicsApi(Resource):
+    @jwt_required()
+    def get(self, textbook_id, section_id):
+        textbook = Textbook.query.filter_by(id=textbook_id).first()
+        if not textbook:
+            return {'message': f"Textbook with id {textbook_id} not found."}, 404
+        elif not textbook.sections.filter_by(id=section_id).first():
+            return {'message': f"TextbookSection with id {section_id} not found in Textbook {textbook_id}."}, 404
+
+        schema = TextbookSectionSchema(only=('id','number','title'))
+        return item_collection_getter(TextbookSection, section_id, schema, 'topics', admin_only)
+
+    @jwt_required()
+    def post(self, textbook_id, section_id):
+        textbook = Textbook.query.filter_by(id=textbook_id).first()
+        if not textbook:
+            return {'message': f"Textbook with id {textbook_id} not found."}, 404
+        elif not textbook.sections.filter_by(id=section_id).first():
+            return {'message': f"TextbookSection with id {section_id} not found in Textbook {textbook_id}."}, 404
+
+        schema = TextbookSectionSchema(only=('id','number','title'))
+        return item_collection_poster(TextbookSection, section_id, schema,
+                                      'topics', Topic, admin_only)
 
 class CourseTextbooksApi(Resource):
     @jwt_required()
