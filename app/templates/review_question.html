@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}" class="text-decoration-none">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('instructor.user_questions', user_id=current_user.id) }}" class="text-decoration-none">My Questions</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Review Question</li>
+            </ol>
+        </nav>
+
 		<h4>Review Question</h4>
 		<div class="container">
 			<h5>Preview:</h5>
@@ -89,6 +97,13 @@
                     <em>enabled</em> are available for use.
                 </span>
             </div>
+        </div>
+
+        <div class="mt-3 ms-3">
+            <button role="button" class="btn btn-sm btn-primary"
+                                  onclick="window.open('{{ url_for('instructor.user_questions', user_id=current_user.id) }}', '_self')">
+                Finish Review
+            </button>
         </div>
 
     </div>
