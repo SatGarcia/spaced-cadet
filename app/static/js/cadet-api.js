@@ -74,7 +74,8 @@ export async function removeQuestionObjective(question_id) {
 
 export async function updateQuestionField(field_name, field_value, question_id) {
     const url = Flask.url_for('question_api', {"question_id": question_id});
-    return await updateField(url, field_name, field_value);
+    const response = await updateField(url, field_name, field_value);
+    return response.updated;
 }
 
 export async function deleteQuestion(question_id) {
@@ -94,7 +95,8 @@ export async function removeObjectiveTopic(objective_id) {
 
 export async function updateObjectiveField(field_name, field_value, objective_id) {
     const url = Flask.url_for('objective_api', {"objective_id": objective_id});
-    return await updateField(url, field_name, field_value);
+    const response = await updateField(url, field_name, field_value);
+    return response.updated;
 }
 
 export async function deleteObjective(objective_id) {
