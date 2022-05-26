@@ -1,5 +1,5 @@
 import { ref, isRef, unref, watchEffect } from './vue.esm-browser.js';
-import { fetchOrRefresh } from './helpers.js';
+import { authenticatedFetch } from './helpers.js';
 
 export function useFilterableList(url, name, filter_func) {
   const all_data = ref([]);
@@ -10,10 +10,9 @@ export function useFilterableList(url, name, filter_func) {
     all_data.value = [];
     error.value = [];
     
-    fetchOrRefresh(unref(url), 'GET', Flask.url_for('auth.refresh_jwts'))
-      .then((res) => res.json())
-      .then((json) => (all_data.value = json[name]))
-      .catch((err) => (error.value = err));
+    authenticatedFetch(unref(url))
+      .then(res => all_data.value = res[name])
+      .catch(e => error.value = e);
   }
 
   function filterData() {
