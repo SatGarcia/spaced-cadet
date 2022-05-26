@@ -277,24 +277,22 @@
 				},
 
 				async setTopicInSelected(topic_id) {
-					let updated_indices = [];
-					let failed_indices = [];
+					let failures = [];
 
-					for (const index of this.selected_indices) {
-						const o_id = this.displayed_objectives[index].id;
-						const response = await CadetApi.setObjectiveTopic(o_id, topic_id);
+					const objectives_to_update = this.selected_indices.map(index => this.displayed_objectives[index]);
 
-						if (response.ok) {
-							updated_indices.push(index);
-							const r = await response.json()
-							this.displayed_objectives[index].topic = r["updated"].topic;
-						}
-						else {
-							failed_indices.push(index);
+					for (const lo of objectives_to_update) {
+						try {
+							const updated_objective = await CadetApi.setObjectiveTopic(lo.id, topic_id);
+							lo.topic = updated_objective.topic;
+						} catch {
+							failures.push(lo);
 						}
 					}
 
-					showSnackbarMessage(`Successfully updated ${updated_indices.length} topics. Failures: ${failed_indices.length}`);
+					if (failures.length > 0) {
+						showSnackbarMessage(`Failed to update ${failures.length} objectives.`);
+					}
 				},
 
 				async removeTopicFromSelected() {

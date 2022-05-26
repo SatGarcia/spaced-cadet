@@ -155,15 +155,12 @@
 				},
 
                 async setObjective(objective_id) {
-                    const response = await CadetApi.setQuestionObjective({{ question.id }}, objective_id);
-
-                    if (response.ok) {
-                        const r = await response.json()
-                        this.objective_text = this.convertToHtml(r["updated"].objective.description);
+                    try {
+                        const updated_question = await CadetApi.setQuestionObjective({{ question.id }}, objective_id);
+                        this.objective_text = this.convertToHtml(updated_question.objective.description);
                         showSnackbarMessage("Successfully updated learning objective.");
-                    }
-                    else {
-                        showSnackbarMessage(`Error updating learning objective. Try again. (HTTP Status: ${response.status})`);
+                    } catch {
+                        showSnackbarMessage("Failed to update learning objective.");
                     }
                 },
 

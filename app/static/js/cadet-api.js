@@ -30,16 +30,14 @@ async function updateField(url, field_name, field_value) {
 
 async function setItemInObject(url, item_id) {
     const config = {
-        method: 'PUT',
-        credentials: 'same-origin',
         headers: {
             "Content-Type": "application/json",
-            'X-CSRF-TOKEN': getCookie('csrf_access_token'),
         },
         body: JSON.stringify({'id': item_id})
     };
 
-    return await fetchOrRefresh(url, 'PUT', refresh_url, config);
+    const response = await authenticatedFetch(url, 'PUT', config);
+    return response.updated;
 }
 
 

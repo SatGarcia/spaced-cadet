@@ -311,24 +311,22 @@
 				},
 
 				async setObjectiveInSelected(objective_id) {
-					let updated_indices = [];
-					let failed_indices = [];
+					let failures = [];
 
-					for (const index of this.selected_indices) {
-						const q_id = this.displayed_questions[index].id;
-						const response = await CadetApi.setQuestionObjective(q_id, objective_id);
+					const questions_to_update = this.selected_indices.map(index => this.displayed_questions[index]);
 
-						if (response.ok) {
-							updated_indices.push(index);
-							const r = await response.json()
-							this.displayed_questions[index].objective = r["updated"].objective;
-						}
-						else {
-							failed_indices.push(index);
+					for (const q of questions_to_update) {
+						try {
+							const updated_question = await CadetApi.setQuestionObjective(q.id, objective_id);
+							q.objective = updated_question.objective;
+						} catch {
+							failures.push(q);
 						}
 					}
 
-					showSnackbarMessage(`Successfully updated ${updated_indices.length} questions. Failures: ${failed_indices.length}`);
+					if (failures.length > 0) {
+						showSnackbarMessage(`Failed to update ${failures.length} questions.`);
+					}
 				},
 
 				async removeObjectiveFromSelected() {
