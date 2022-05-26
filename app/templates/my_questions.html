@@ -27,47 +27,25 @@
 			</confirmation-dialog>
 
 
-			<ul class="list-unstyled" v-if="all_questions.length > 0">
+			<ul class="list-unstyled">
 				<li class="m-2">
 					<div class="container row">
 						<div class="col-auto border pt-2"
-							:class="{'bg-light': selected_indices.length !== displayed_questions.length, 'bg-primary bg-gradient': selected_indices.length === displayed_questions.length}">
-							<input id="massSelect" type="checkbox"
-								v-model="mass_select"
-								:checked="selected_indices.length === displayed_questions.length">
+							:class="{'bg-light': mass_select_state !== 'checked', 'bg-primary bg-gradient': mass_select_state === 'checked'}">
+							<input id="massSelect" type="checkbox" @click="toggle_mass_select">
 							<label for="massSelect" class="visually-hidden">Select All/None</label>
 						</div>
 
 						<div class="col-10 p-1 border-top border-bottom d-flex align-items-center"
 							style="min-height: 2.75rem">
-							<div v-if="selected_indices.length === 0" class="mx-2">
-								Filter:
-								<span class="pb-2" :class="noActiveFilter">
-									<button role="button" class="btn btn-link text-decoration-none link-secondary"
-							   				:class="current_filter === '' ?  'link-dark' : 'link-secondary'"
-										   @click="setFilteredQuestions(all_questions); current_filter = ''">
-										All
-									</button>
-								</span>
+							<keep-alive>
+								<filter-control v-if="selected_indices.length === 0" class="ms-2"
+								  :filters="[{name: 'All', func: () => true}, {name: 'Missing Learning Objective', func: q => q.objective === null}, {name: 'Private', func: q => !q.public}, {name: 'Disabled', func: q => !q.enabled}]"
+									@selected-filter="f => (current_filter = f)">
+								</component>
+							</keep-alive>
 
-								<span class="pb-2" :class="filterNoObjective">
-									<button role="button" class="btn btn-link text-decoration-none link-secondary"
-												:class="current_filter === 'no_lo' ?  'link-dark' : 'link-secondary'"
-										@click="filterByMissingObjective">
-										Missing Learning Objective
-									</button>
-								</span>
-
-								<span class="pb-2" :class="filterDisabled">
-									<button role="button" class="btn btn-link text-decoration-none link-secondary"
-											:class="current_filter === 'disabled' ?  'link-dark' : 'link-secondary'"
-										@click="filterByDisabled">
-										Disabled
-									</button>
-								</span>
-							</div>
-
-							<div v-else class="mx-2">
+							<div v-if="selected_indices.length > 0" class="mx-2">
 								<div class="btn-group mx-2">
 									<button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
 										<i class="bi-tag"></i>
@@ -197,10 +175,10 @@
 
 			<pagination-control
 				class="mt-3"
-				description="Page navigation for questions"
+				description="Pages of Questions"
 				:num_items="filtered_questions.length"
 				:items_per_page="questions_per_page"
-				@selected-page="setDisplayedQuestions">
+				@selected-page-num="pn => (current_page_num = pn)">
 			</pagination-control>
 
 			<set-objective-modal 
@@ -218,35 +196,42 @@
 	<div id="snackbar">Default message.</div> 
 
     <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
-    <script src="https://unpkg.com/vue@3"></script>
-
-	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
-	<script src="{{ url_for('static', filename='js/cadet-api.js') }}" type="module"></script>
-	<script src="{{ url_for('static', filename='js/confirmation-dialog.js') }}" type="module"></script>
-
 
 	<script type="module">
-		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+		import { createApp, ref } from '/static/js/vue.esm-browser.js';
+		import { fetchOrRefresh, authenticatedFetch, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
 		import * as CadetApi from '/static/js/cadet-api.js';
+		import { useFilterableList, usePagination } from '/static/js/filterable-lists.js';
 		import ConfirmationDialog from '/static/js/confirmation-dialog.js';
 		import SetObjectiveModal from '/static/js/objective-modal.js';
 		import PaginationControl from '/static/js/pagination-control.js';
+		import FilterControl from '/static/js/filter-control.js';
 
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
 
-        const app = Vue.createApp({
+        const app = createApp({
+			setup() {
+				const current_filter = ref(() => true);
+
+				const { all_data: all_questions,
+						filtered_data: filtered_questions,
+						error: fetch_errors } = useFilterableList(Flask.url_for('questions_api', {'author': '{{ target_author }}'}), "questions", current_filter);
+
+				const selected_indices = ref([]);
+
+				const questions_per_page = ref(10);
+				const current_page_num = ref(0);
+				const { current_page: displayed_questions } = usePagination(filtered_questions, questions_per_page, current_page_num);
+				return { all_questions,
+						filtered_questions, current_filter,
+						current_page_num, displayed_questions, questions_per_page,
+						selected_indices};
+			},
+
             data() {
                 return {
-					all_questions: [],
-                    filtered_questions: [], // subset of all_questions that may be displayed
-					displayed_questions: [], // subset of filtered_questions that are actually displayed
-					questions_per_page: 10,
-
 					target_user: {{ target_author }},
-					selected_indices: [],
-					mass_select: false,
-					current_filter: "",
 					resolveConfirmation: undefined,
                 }
             },
@@ -255,6 +240,7 @@
 				ConfirmationDialog,
 				SetObjectiveModal,
 				PaginationControl,
+				FilterControl,
 			},
 
 			computed: {
@@ -262,26 +248,37 @@
 					return this.displayed_questions.map(this.getTypeString);
 				},
 
-				noActiveFilter() {
-					return this.getStyle(this.current_filter === '');
-				},
-
-				filterNoObjective() {
-					return this.getStyle(this.current_filter === 'no_lo');
-				},
-
-				filterDisabled() {
-					return this.getStyle(this.current_filter === 'disabled');
+				mass_select_state() {
+					if (this.selected_indices.length === this.displayed_questions.length) {
+						return "checked";
+					}
+					else if (this.selected_indices.length === 0) {
+						return "unchecked";
+					}
+					else {
+						return "indeterminate";
+					}
 				},
 			},
 
 			watch: {
-				mass_select(checkedNow, wasChecked) {
+				displayed_questions(newDisplayed, oldDisplayed) {
 					this.selected_indices = [];
-					if (checkedNow) {
-						for (let i = 0; i < this.displayed_questions.length; i++) {
-							this.selected_indices.push(i);
-						}
+				},
+
+				mass_select_state(newVal, oldVal) {
+					const checkbox = document.getElementById('massSelect');
+					if (newVal === "checked") {
+						checkbox.checked = true;
+						checkbox.indeterminate = false;
+					}
+					else if (newVal === "unchecked") {
+						checkbox.checked = false;
+						checkbox.indeterminate = false;
+					}
+					else {
+						checkbox.checked = false;
+						checkbox.indeterminate = true;
 					}
 				},
 			},
@@ -299,29 +296,18 @@
 					}
 				},
 
-                setDisplayedQuestions(start, end) {
-                    this.displayed_questions = this.filtered_questions.slice(start, end);
-                },
-
-				/* Update array of questions to display and deselects all
-				questions. */
-				setFilteredQuestions(questions_to_display) {
-					this.filtered_questions.length = 0;
-					this.filtered_questions.push(...questions_to_display);
-					this.selected_indices.length = 0;
-					this.setDisplayedQuestions(0, Math.min(this.filtered_questions.length, this.questions_per_page));
-				},
-
-				filterByMissingObjective() {
-					const without_objectives = this.all_questions.filter(q => q.objective === null);
-					this.setFilteredQuestions(without_objectives);
-					this.current_filter = "no_lo";
-				},
-
-				filterByDisabled() {
-					const disabled_questions = this.all_questions.filter(q => !q.enabled);
-					this.setFilteredQuestions(disabled_questions);
-					this.current_filter = "disabled";
+				toggle_mass_select() {
+					if (this.mass_select_state === "unchecked") {
+						// was unchecked so select all!
+						this.selected_indices = [];
+						for (let index = 0; index < this.displayed_questions.length; index++) {
+							this.selected_indices.push(index);
+						}
+					}
+					else {
+						// was partially or fully checked so deselect all
+						this.selected_indices = [];
+					}
 				},
 
 				async setObjectiveInSelected(objective_id) {
@@ -438,7 +424,6 @@
 								deleted_indices.push(index);
 								this.displayed_questions.splice(index, 1);
 								this.removeQuestion(this.all_questions, q_id);
-								this.removeQuestion(this.filtered_questions, q_id);
 							}
 							else {
 								failed_indices.push(index);
@@ -449,22 +434,6 @@
 						this.selected_indices = failed_indices;
 					}
 				},
-
-                async getQuestions() {
-                    let url = "{{ url_for('questions_api') }}";
-					url = url + `?author=${this.target_user}`;
-
-                    const response = await fetchOrRefresh(url, 'GET', refresh_url);
-                    if (response.ok) {
-                        const r = await response.json();
-                        this.all_questions = r["questions"];
-						this.setFilteredQuestions(this.all_questions);
-						this.setDisplayedQuestions(0, Math.min(this.filtered_questions.length, this.questions_per_page));
-                    }
-                    else {
-                        showSnackbarMessage(`Error loading questions. Try again. (HTTP Status: ${response.status})`);
-                    }
-                },
 
                 convertToHtml(md_text) {
                     return converter.makeHtml(md_text);
@@ -484,10 +453,6 @@
 							return q.type;
 					}
 				},
-            },
-
-            created() {
-                this.getQuestions();
             },
 
             compilerOptions: {
