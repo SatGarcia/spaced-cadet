@@ -14,6 +14,13 @@
 		<h4>Manage Assessments ({{course.name}})</h4>
 
 		<div id="courseAssessments" class="container">
+			<confirmation-dialog name="confirmDelete"
+				 @confirmed="resolveConfirmation(true)"
+				 @cancelled="resolveConfirmation(false)">
+				Are you sure you want to delete this assessment.
+				<strong>This action cannot be undone.</strong>
+			</confirmation-dialog>
+
 			<table class="table table-striped">
 				<thead>
 					<tr>
@@ -81,24 +88,47 @@
 	<script type="module">
 		import { authenticatedFetch, showSnackbarMessage } from "{{ url_for('static', filename='js/helpers.js') }}";
 		import { createApp, ref } from "{{ url_for('static', filename='js/vue.esm-browser.js') }}";
+		import ConfirmationDialog from "{{ url_for('static', filename='js/confirmation-dialog.js') }}";
 
         const app = createApp({
 			setup() {
-				async function deleteAssessment(assessment_id) {
-					const url = Flask.url_for('assessment_api', {'assessment_id': assessment_id});
-					try {
-						const response = await authenticatedFetch(url, 'DELETE');
-						showSnackbarMessage(`Successfully deleted ${response.deleted.title}.`);
+				const resolveConfirmation = ref(undefined);
 
-						// remove from the table
-						const table_entry = document.getElementById(`assessment${assessment_id}`);
-						table_entry.parentNode.removeChild(table_entry);
-					} catch {
-						showSnackbarMessage(`Failed to delete assessment.`);
+				function getConfirmation() {
+					const modal_el = document.getElementById('confirmDelete');
+					const confirmation_modal = new bootstrap.Modal(document.getElementById('confirmDelete'));
+					confirmation_modal.show();
+
+					return new Promise((resolve, reject) => {
+						resolveConfirmation.value = resolve
+					});
+				}
+
+				async function deleteAssessment(assessment_id) {
+					const ok_to_delete = await getConfirmation();
+
+					// if resolved to true, then we can delete
+					if (ok_to_delete) {
+						const url = Flask.url_for('assessment_api', {'assessment_id': assessment_id});
+						try {
+							const response = await authenticatedFetch(url, 'DELETE');
+							showSnackbarMessage(`Successfully deleted ${response.deleted.title}.`);
+
+							// remove from the table
+							const table_entry = document.getElementById(`assessment${assessment_id}`);
+							table_entry.parentNode.removeChild(table_entry);
+						} catch {
+							showSnackbarMessage(`Failed to delete assessment.`);
+						}
 					}
 				}
 
-				return { deleteAssessment };
+
+				return { deleteAssessment, resolveConfirmation, getConfirmation };
+			},
+
+			components: {
+				ConfirmationDialog,
 			},
 
             compilerOptions: {
