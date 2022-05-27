@@ -13,7 +13,7 @@
 
 		<h4>Manage Assessments ({{course.name}})</h4>
 
-		<div class="container">
+		<div id="courseAssessments" class="container">
 			<table class="table table-striped">
 				<thead>
 					<tr>
@@ -27,7 +27,7 @@
 				</thead>
 				<tbody>
 					{% for assessment in course.assessments %}
-						<tr id="{{assessment.id}}">
+						<tr id="assessment{{assessment.id}}">
 							<th scope="row">{{ assessment.title }}</td>
 							<td>{{ assessment.description }}</td>
 							<td>
@@ -52,6 +52,13 @@
 									<i class="bi-list-stars"></i>
 									Update Topics/Questions
 								</a>
+
+								<br/>
+								<button role="button" class="btn btn-link link-danger text-decoration-none p-0"
+							  		@click="deleteAssessment({{ assessment.id }})">
+									<i class="bi-trash"></i>
+									Delete Assessment
+								</button>
 							</td>
 						</tr>
 					{% endfor %}
@@ -67,6 +74,40 @@
 				</tbody>
 			</table>
 		</div>
-
     </div>
+
+	<div id="snackbar">Default message.</div> 
+
+	<script type="module">
+		import { authenticatedFetch, showSnackbarMessage } from "{{ url_for('static', filename='js/helpers.js') }}";
+		import { createApp, ref } from "{{ url_for('static', filename='js/vue.esm-browser.js') }}";
+
+        const app = createApp({
+			setup() {
+				async function deleteAssessment(assessment_id) {
+					const url = Flask.url_for('assessment_api', {'assessment_id': assessment_id});
+					try {
+						const response = await authenticatedFetch(url, 'DELETE');
+						showSnackbarMessage(`Successfully deleted ${response.deleted.title}.`);
+
+						// remove from the table
+						const table_entry = document.getElementById(`assessment${assessment_id}`);
+						table_entry.parentNode.removeChild(table_entry);
+					} catch {
+						showSnackbarMessage(`Failed to delete assessment.`);
+					}
+				}
+
+				return { deleteAssessment };
+			},
+
+            compilerOptions: {
+                delimiters: ["[[", "]]"]
+            },
+        });
+        
+        const vm = app.mount('#courseAssessments');
+	</script>
+
+
 {% endblock %}
