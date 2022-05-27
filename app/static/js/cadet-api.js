@@ -76,9 +76,13 @@ export async function updateQuestionField(field_name, field_value, question_id) 
     return response.updated;
 }
 
+/*
+ * Deletes the question with the given ID and returns that deleted question.
+ */
 export async function deleteQuestion(question_id) {
     const url = Flask.url_for('question_api', {"question_id": question_id});
-    return await fetchOrRefresh(url, 'DELETE');
+    const response = await authenticatedFetch(url, 'DELETE');
+    return response.deleted;
 }
 
 export async function setObjectiveTopic(objective_id, topic_id) {

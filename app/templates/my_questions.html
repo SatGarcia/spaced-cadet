@@ -199,7 +199,7 @@
 
 	<script type="module">
 		import { createApp, ref } from '/static/js/vue.esm-browser.js';
-		import { fetchOrRefresh, authenticatedFetch, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+		import { authenticatedFetch, showSnackbarMessage } from '/static/js/helpers.js';
 		import * as CadetApi from '/static/js/cadet-api.js';
 		import { useFilterableList, usePagination } from '/static/js/filterable-lists.js';
 		import ConfirmationDialog from '/static/js/confirmation-dialog.js';
@@ -312,7 +312,6 @@
 
 				async setObjectiveInSelected(objective_id) {
 					let failures = [];
-
 					const questions_to_update = this.selected_indices.map(index => this.displayed_questions[index]);
 
 					for (const q of questions_to_update) {
@@ -330,58 +329,44 @@
 				},
 
 				async removeObjectiveFromSelected() {
-					let updated_indices = [];
-					let failed_indices = [];
+					let failures = [];
+					const selected_questions = this.selected_indices.map(index => this.displayed_questions[index]);
+					const questions_to_update = selected_questions.filter(q => q.objective !== null);
 
-					for (const index of this.selected_indices) {
-						if (this.displayed_questions[index].objective === null) {
-							updated_indices.push(index);
-							continue;
-						}
-
-						const q_id = this.displayed_questions[index].id;
-						const response = await CadetApi.removeQuestionObjective(q_id);
-
+					for (const q of questions_to_update) {
+						const response = await CadetApi.removeQuestionObjective(q.id);
 						if (response.ok) {
-							updated_indices.push(index);
-							this.displayed_questions[index].objective = null;
+							q.objective = null;
 						}
 						else {
-							failed_indices.push(index);
+							failures.push(q);
 						}
 					}
 
-					showSnackbarMessage(`Successfully removed objective from ${updated_indices.length} questions. Failures: ${failed_indices.length}`);
+					if (failures.length > 0) {
+						showSnackbarMessage(`Failed to remove objective from ${failures.length} questions.`);
+					}
 				},
 
                 async updateSelectedQuestions(field_name, field_value) {
-					let updated_indices = [];
-					let failed_indices = [];
+					let failures = [];
+					const selected_questions = this.selected_indices.map(index => this.displayed_questions[index]);
+					const questions_to_update = selected_questions.filter(q => q[field_name] !== field_value);
 
-					// TRICKY: reverse sort the list so to avoid issues with
-					// non-existent indices
-					this.selected_indices.sort((a,b) => b - a);
-					for (const index of this.selected_indices) {
-						if (this.displayed_questions[index][field_name] === field_value) {
-							// skip updating those questions whose field value is
-							// already set to the desired value
-							updated_indices.push(index);
-							continue;
-						}
-
-						const q_id = this.displayed_questions[index].id;
+					for (const q of questions_to_update) {
 						try {
-							await CadetApi.updateQuestionField(field_name, field_value, q_id);
+							await CadetApi.updateQuestionField(field_name, field_value, q.id);
+							q[field_name] = field_value;
 						} catch {
-							failed_indices.push(index);
+							failures.push(q);
 							continue;
 						}
 
-						updated_indices.push(index);
-						this.displayed_questions[index][field_name] = field_value;
 					}
 
-					showSnackbarMessage(`Successfully updated ${updated_indices.length} questions. Failures: ${failed_indices.length}`);
+					if (failures.length > 0) {
+						showSnackbarMessage(`Failed to update ${failures.length} questions.`);
+					}
                 },
 
 				getConfirmation() {
@@ -403,33 +388,26 @@
 
 				async deleteSelected() {
 					// get confirmation first
-					const confirmation = await this.getConfirmation();
+					const ok_to_delete = await this.getConfirmation();
 
 					// if resolved to true, then we can delete
-					if (confirmation) {
-						let deleted_indices = [];
-						let failed_indices = [];
-						const original_indices = [...this.selected_indices];
+					if (ok_to_delete) {
+						let failures = [];
+						const questions_to_update = this.selected_indices.map(index => this.displayed_questions[index]);
 
-						// TRICKY: sort indices in reverse order so indices
-						// don't get thrown off when removing from this.questions
-						original_indices.sort( (a,b) => { return b - a; } );
-
-						for (const index of original_indices) {
-							const q_id = this.displayed_questions[index].id;
-							const response = await CadetApi.deleteQuestion(q_id);
-							if (response.ok) {
-								deleted_indices.push(index);
-								this.displayed_questions.splice(index, 1);
-								this.removeQuestion(this.all_questions, q_id);
-							}
-							else {
-								failed_indices.push(index);
+						for (const q of questions_to_update) {
+							try {
+								await CadetApi.deleteQuestion(q.id);
+								this.removeQuestion(this.all_questions, q.id);
+							} catch {
+								failures.push(q);
 							}
 						}
 
-						showSnackbarMessage(`Successfully deleted ${deleted_indices.length} questions. Failures: ${failed_indices.length}`);
-						this.selected_indices = failed_indices;
+						if (failures.length > 0) {
+							// TODO: add some indication of which questions failed
+							showSnackbarMessage(`Failed to delete ${failures.length} questions.`);
+						}
 					}
 				},
 
