@@ -273,26 +273,19 @@
 				},
 
 				async removeTopic(objective) {
-					const response = await CadetApi.removeObjectiveTopic(objective.id);
-					if (response.ok) {
+					try {
+						await CadetApi.removeObjectiveTopic(objective.id);
 						objective.topic = null;
-					}
-					else {
-						showSnackbarMessage("Error removing topic. Try again later.");
+					} catch {
+						showSnackbarMessage("Error removing topic.");
 					}
 				},
 
 				async setTopicInSelected(topic_id) {
-					let failures = [];
-
-					for (const lo of [...this.selected_objectives]) {
-						try {
-							const updated_objective = await CadetApi.setObjectiveTopic(lo.id, topic_id);
-							lo.topic = updated_objective.topic;
-						} catch {
-							failures.push(lo);
-						}
-					}
+					const failures = CadetApi.asyncCallForAllItems(CadetApi.setObjectiveTopic,
+																	[...this.selected_objectives],
+																	(lo => [lo.id, topic_id]),
+																	((orig, updated) => orig.topic = updated.topic));
 
 					if (failures.length > 0) {
 						showSnackbarMessage(`Failed to update ${failures.length} objectives.`);
@@ -300,18 +293,12 @@
 				},
 
 				async removeTopicFromSelected() {
-					let failures = [];
 					const objectives_to_update = this.selected_objectives.filter(lo => lo.topic !== null);
 
-					for (const lo of objectives_to_update) {
-						const response = await CadetApi.removeObjectiveTopic(lo.id);
-						if (response.ok) {
-							lo.topic = null;
-						}
-						else {
-							failures.push(lo);
-						}
-					}
+					const failures = CadetApi.asyncCallForAllItems(CadetApi.removeObjectiveTopic,
+																	objectives_to_update,
+																	(lo => [lo.id]),
+																	((orig, updated) => orig.topic = null));
 
 					if (failures.length > 0) {
 						showSnackbarMessage(`Failed to remove topic from ${failures.length} objectives.`);
@@ -319,17 +306,12 @@
 				},
 
                 async updateSelectedObjectives(field_name, field_value) {
-					let failures = [];
 					const objectives_to_update = this.selected_objectives.filter(lo => lo[field_name] !== field_value);
 
-					for (const lo of objectives_to_update) {
-						try {
-							await CadetApi.updateObjectiveField(field_name, field_value, lo.id);
-							lo[field_name] = field_value;
-						} catch {
-							failures.push(lo);
-						}
-					}
+					const failures = CadetApi.asyncCallForAllItems(CadetApi.updateObjectiveField,
+																	objectives_to_update,
+																	(lo => [field_name, field_value, lo.id]),
+																	((orig, updated) => orig[field_name] = field_value));
 
 					if (failures.length > 0) {
 						showSnackbarMessage(`Failed to update ${failures.length} objectives.`);
@@ -352,16 +334,10 @@
 
 					// if resolved to true, then we can delete
 					if (confirmation) {
-						let failures = [];
-						for (const lo of [...this.selected_objectives]) {
-							try {
-								// TODO: save response for an "undo" feature
-								await CadetApi.deleteObjective(lo.id);
-								findAndRemove(this.all_objectives, lo.id);
-							} catch {
-								failures.push(lo);
-							}
-						}
+						const failures = CadetApi.asyncCallForAllItems(CadetApi.deleteObjective,
+																		[...this.selected_objectives],
+																		(lo => [lo.id]),
+																		((orig, deleted) => findAndRemove(this.all_objectives, orig.id)));
 
 						if (failures.length > 0) {
 							// TODO: add some indication of which objectives failed

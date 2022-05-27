@@ -64,9 +64,14 @@ export async function setQuestionObjective(question_id, objective_id) {
 }
 
 
+/*
+ * Removes the learning objective from the question with the given ID. On
+ * success, it returns the updated version of the Question.
+ */
 export async function removeQuestionObjective(question_id) {
     const url = Flask.url_for('question_objective', {"question_id": question_id});
-    return await fetchOrRefresh(url, 'DELETE', refresh_url);
+    const response = await authenticatedFetch(url, 'DELETE');
+    return response.udpated;
 }
 
 
@@ -90,9 +95,14 @@ export async function setObjectiveTopic(objective_id, topic_id) {
     return await setItemInObject(url, topic_id);
 }
 
+/*
+ * Removes the topic from the objective with the given ID. On success, it
+ * returns the updated version of the Objective.
+ */
 export async function removeObjectiveTopic(objective_id) {
     const url = Flask.url_for('objective_topic', {"objective_id": objective_id});
-    return await fetchOrRefresh(url, 'DELETE', refresh_url);
+    const response = await authenticatedFetch(url, 'DELETE');
+    return response.updated;
 }
 
 export async function updateObjectiveField(field_name, field_value, objective_id) {
@@ -191,4 +201,22 @@ export async function searchTextbooks(search_string) {
 export async function searchTopics(search_string) {
     const url = Flask.url_for('topics_api', {'q': encodeURIComponent(search_string)});
     return await fetchOrRefresh(url, 'GET', refresh_url);
+}
+
+export async function asyncCallForAllItems(asyncFunc, items, buildParams, postProcessItem) {
+    const failures = [];
+
+    for (const item of items) {
+        try {
+            const params = buildParams(item);
+            const result = await asyncFunc(...params); //CadetApi.setObjectiveTopic(lo.id, topic_id);
+            if (typeof postProcess !== undefined) {
+                postProcessItem(item, result);
+            }
+        } catch (e) {
+            failures.push(item);
+        }
+    }
+
+    return failures;
 }

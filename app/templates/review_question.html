@@ -165,13 +165,12 @@
                 },
 
                 async removeObjective() {
-                    const response = await CadetApi.removeQuestionObjective({{ question.id }});
-                    if (response.ok) {
+                    try {
+                        await CadetApi.removeQuestionObjective({{ question.id }});
                         this.objective_text = "";
                         showSnackbarMessage("Successfully removed learning objective.");
-                    }
-                    else {
-                        showSnackbarMessage(`Error removing learning objective. Try again. (HTTP Status: ${response.status})`);
+                    } catch {
+                        showSnackbarMessage("Failed to remove learning objective.");
                     }
                 },
 

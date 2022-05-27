@@ -314,15 +314,10 @@
 				},
 
 				async setObjectiveInSelected(objective_id) {
-					let failures = [];
-					for (const q of [...this.selected_questions]) {
-						try {
-							const updated_question = await CadetApi.setQuestionObjective(q.id, objective_id);
-							q.objective = updated_question.objective;
-						} catch {
-							failures.push(q);
-						}
-					}
+					const failures = CadetApi.asyncCallForAllItems(CadetApi.setQuestionObjective,
+																	[...this.selected_questions],
+																	(q => [q.id, objective_id]),
+																	((orig, updated) => orig.objective = updated.objective));
 
 					if (failures.length > 0) {
 						showSnackbarMessage(`Failed to update ${failures.length} questions.`);
@@ -330,18 +325,11 @@
 				},
 
 				async removeObjectiveFromSelected() {
-					let failures = [];
 					const questions_to_update = this.selected_questions.filter(q => q.objective !== null);
-
-					for (const q of questions_to_update) {
-						const response = await CadetApi.removeQuestionObjective(q.id);
-						if (response.ok) {
-							q.objective = null;
-						}
-						else {
-							failures.push(q);
-						}
-					}
+					const failures = CadetApi.asyncCallForAllItems(CadetApi.removeQuestionObjective,
+																	questions_to_update,
+																	(q => [q.id]),
+																	((orig, updated) => orig.objective = null));
 
 					if (failures.length > 0) {
 						showSnackbarMessage(`Failed to remove objective from ${failures.length} questions.`);
@@ -349,17 +337,11 @@
 				},
 
                 async updateSelectedQuestions(field_name, field_value) {
-					let failures = [];
 					const questions_to_update = this.selected_questions.filter(q => q[field_name] !== field_value);
-
-					for (const q of questions_to_update) {
-						try {
-							await CadetApi.updateQuestionField(field_name, field_value, q.id);
-							q[field_name] = field_value;
-						} catch {
-							failures.push(q);
-						}
-					}
+					const failures = CadetApi.asyncCallForAllItems(CadetApi.updateQuestionField,
+																	questions_to_update,
+																	(q => [field_name, field_value, q.id]),
+																	((orig, updated) => orig[field_name] = field_value));
 
 					if (failures.length > 0) {
 						showSnackbarMessage(`Failed to update ${failures.length} questions.`);
@@ -382,15 +364,10 @@
 
 					// if resolved to true, then we can delete
 					if (ok_to_delete) {
-						let failures = [];
-						for (const q of [...this.selected_questions]) {
-							try {
-								await CadetApi.deleteQuestion(q.id);
-								findAndRemove(this.all_questions, q.id);
-							} catch {
-								failures.push(q);
-							}
-						}
+						const failures = CadetApi.asyncCallForAllItems(CadetApi.deleteQuestion,
+																		[...this.selected_questions],
+																		(q => [q.id]),
+																		((orig, deleted) => findAndRemove(this.all_questions, orig.id)));
 
 						if (failures.length > 0) {
 							// TODO: add some indication of which questions failed
