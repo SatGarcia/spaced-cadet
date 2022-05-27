@@ -545,7 +545,7 @@ def init_app(flask_app):
                         endpoint='topics_api')
     rf_api.add_resource(ObjectiveTopicApi,
                         '/api/objective/<int:objective_id>/topic',
-                        endpoint='object_topic')
+                        endpoint='objective_topic')
     rf_api.add_resource(SourceTopicsApi,
                         '/api/source/<int:source_id>/topics',
                         endpoint='source_topics')
