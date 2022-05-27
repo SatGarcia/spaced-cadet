@@ -482,6 +482,7 @@ class CourseSchema(Schema):
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 course_schema = CourseSchema()
+assessment_schema = CourseSchema()
 topic_schema = TopicSchema()
 topics_schema = TopicSchema(many=True)
 question_schema = QuestionSchema(unknown=EXCLUDE)
@@ -579,6 +580,9 @@ def init_app(flask_app):
     rf_api.add_resource(QuestionObjectiveApi,
                         '/api/question/<int:question_id>/objective',
                         endpoint='question_objective')
+
+    rf_api.add_resource(AssessmentApi, '/api/assessment/<int:assessment_id>',
+                        endpoint="assessment_api")
 
 
 
@@ -1581,6 +1585,38 @@ class ObjectivesApi(Resource):
                                  request.get_json(),
                                  add_to=[current_user.authored_objectives])
 
+
+class AssessmentApi(Resource):
+    @jwt_required()
+    def get(self, assessment_id):
+        assessment = Assessment.query.filter_by(id=assessment_id).one_or_none()
+        if assessment:
+            # Limit access to admins and instructors of the course this
+            # assessment is assigned to
+            if (not current_user.admin)\
+                    and (not current_user.instructor or current_user not in assessment.course.users):
+                return {'message': "Unauthorized access"}, 401
+
+            return assessment_schema.dump(assessment)
+        else:
+            return {'message': f"Assessment {assessment_id} not found."}, 404
+
+    @jwt_required()
+    def delete(self, assessment_id):
+        assessment = Assessment.query.filter_by(id=assessment_id).one_or_none()
+        if assessment:
+            # Limit access to admins and instructors of the course this
+            # assessment is assigned to
+            if (not current_user.admin)\
+                    and (not current_user.instructor or current_user not in assessment.course.users):
+                return {'message': "Unauthorized access"}, 401
+
+            db.session.delete(assessment)
+            db.session.commit()
+            return {"deleted": assessment_schema.dump(assessment)}
+
+        else:
+            return {'message': f"Assessment {assessment_id} not found."}, 404
 
 
 from app.db_models import (
