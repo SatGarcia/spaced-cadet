@@ -198,14 +198,15 @@
     <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
 
 	<script type="module">
-		import { createApp, ref, computed } from '/static/js/vue.esm-browser.js';
-		import { authenticatedFetch, showSnackbarMessage, findAndRemove } from '/static/js/helpers.js';
-		import * as CadetApi from '/static/js/cadet-api.js';
-		import { useFilterableList, usePagination } from '/static/js/filterable-lists.js';
-		import ConfirmationDialog from '/static/js/confirmation-dialog.js';
-		import SetObjectiveModal from '/static/js/objective-modal.js';
-		import PaginationControl from '/static/js/pagination-control.js';
-		import FilterControl from '/static/js/filter-control.js';
+		import { createApp, ref, computed } from "{{ url_for('static', filename='js/vue.esm-browser.js') }}";
+		import { authenticatedFetch, showSnackbarMessage, findAndRemove } from "{{ url_for('static', filename='js/helpers.js') }}";
+		import * as CadetApi from "{{ url_for('static', filename='js/cadet-api.js') }}";
+		import { useFilterableList, usePagination } from "{{ url_for('static', filename='js/filterable-lists.js') }}";
+		import ConfirmationDialog from "{{ url_for('static', filename='js/confirmation-dialog.js') }}";
+		import SetObjectiveModal from "{{ url_for('static', filename='js/objective-modal.js') }}";
+		import PaginationControl from "{{ url_for('static', filename='js/pagination-control.js') }}";
+		import FilterControl from "{{ url_for('static', filename='js/filter-control.js') }}";
+
 
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";

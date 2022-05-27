@@ -113,10 +113,10 @@
     <script src="{{ url_for('static', filename='js/showdown.min.js') }}"></script>
 
     <script type="module">
-		import { createApp, ref } from '/static/js/vue.esm-browser.js';
-		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
-        import * as CadetApi from '/static/js/cadet-api.js';
-		import SetObjectiveModal from '/static/js/objective-modal.js';
+        import { createApp, ref } from "{{ url_for('static', filename='js/vue.esm-browser.js') }}";
+		import { fetchOrRefresh, getCookie, showSnackbarMessage } from "{{ url_for('static', filename='js/helpers.js') }}";
+        import * as CadetApi from "{{ url_for('static', filename='js/cadet-api.js') }}";
+		import SetObjectiveModal from "{{ url_for('static', filename='js/objective-modal.js') }}";
 
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";

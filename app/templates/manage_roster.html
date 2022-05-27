@@ -94,10 +94,8 @@
 
 	<div id="snackbar">Default message.</div> 
 
-	<script src="{{ url_for('static', filename='js/helpers.js') }}" type="module"></script>
-
 	<script type="module">
-		import { fetchOrRefresh, getCookie, showSnackbarMessage } from '/static/js/helpers.js';
+		import { fetchOrRefresh, showSnackbarMessage } from "{{ url_for('static', filename='js/helpers.js') }}";
 
 		const roster_file_input = document.getElementById("roster_file");
 		roster_file_input.addEventListener("change", handleFiles, false);
