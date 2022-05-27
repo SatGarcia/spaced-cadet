@@ -170,8 +170,8 @@
 
 
 	<script type="module">
-		import { fetchOrRefresh, getCookie, showSnackbarMessage, findAndRemove } from '/static/js/helpers.js';
-		import { createApp, ref } from '/static/js/vue.esm-browser.js';
+		import { showSnackbarMessage, findAndRemove } from '/static/js/helpers.js';
+		import { createApp, ref, computed } from '/static/js/vue.esm-browser.js';
 		import * as CadetApi from '/static/js/cadet-api.js';
 		import ConfirmationDialog from '/static/js/confirmation-dialog.js';
 		import SetTopicModal from '/static/js/topic-modal.js';
@@ -184,8 +184,9 @@
 
         const app = createApp({
 			setup() {
-				const current_filter = ref(() => true);
+				const target_user = ref("{{ target_author }}");
 
+				const current_filter = ref(() => true);
 				const { all_data: all_objectives,
 						filtered_data: filtered_objectives,
 						error: fetch_errors } = useFilterableList(Flask.url_for('objectives_api', {'author': 'self'}), "learning_objectives", current_filter);
@@ -193,16 +194,21 @@
 				const objectives_per_page = ref(10);
 				const current_page_num = ref(0);
 				const { current_page: displayed_objectives } = usePagination(filtered_objectives, objectives_per_page, current_page_num);
-				return { all_objectives, filtered_objectives, current_filter, current_page_num, displayed_objectives, objectives_per_page };
-			},
 
-            data() {
-                return {
-					target_user: {{ target_author }},
-					selected_indices: [],
-					resolveConfirmation: undefined,
-                }
-            },
+				const selected_indices = ref([]);
+				const selected_objectives = computed(() => {
+					return selected_indices.value.map(index => displayed_objectives.value[index]);
+				});
+
+				const resolveConfirmation = ref(undefined);
+
+				return {target_user,
+						all_objectives,
+						filtered_objectives, current_filter,
+						current_page_num, displayed_objectives, objectives_per_page,
+						selected_indices, selected_objectives,
+						resolveConfirmation};
+			},
 
 			components: {
 				ConfirmationDialog,
@@ -279,9 +285,7 @@
 				async setTopicInSelected(topic_id) {
 					let failures = [];
 
-					const objectives_to_update = this.selected_indices.map(index => this.displayed_objectives[index]);
-
-					for (const lo of objectives_to_update) {
+					for (const lo of [...this.selected_objectives]) {
 						try {
 							const updated_objective = await CadetApi.setObjectiveTopic(lo.id, topic_id);
 							lo.topic = updated_objective.topic;
@@ -296,59 +300,40 @@
 				},
 
 				async removeTopicFromSelected() {
-					let updated_indices = [];
-					let failed_indices = [];
+					let failures = [];
+					const objectives_to_update = this.selected_objectives.filter(lo => lo.topic !== null);
 
-					for (const index of this.selected_indices) {
-						if (this.displayed_objectives[index].topic === null) {
-							updated_indices.push(index);
-							continue;
-						}
-
-						const o_id = this.displayed_objectives[index].id;
-						const response = await CadetApi.removeObjectiveTopic(o_id);
-
+					for (const lo of objectives_to_update) {
+						const response = await CadetApi.removeObjectiveTopic(lo.id);
 						if (response.ok) {
-							updated_indices.push(index);
-							this.displayed_objectives[index].topic = null;
+							lo.topic = null;
 						}
 						else {
-							failed_indices.push(index);
+							failures.push(lo);
 						}
 					}
 
-					showSnackbarMessage(`Successfully removed topic from ${updated_indices.length} objectives. Failures: ${failed_indices.length}`);
+					if (failures.length > 0) {
+						showSnackbarMessage(`Failed to remove topic from ${failures.length} objectives.`);
+					}
 				},
 
                 async updateSelectedObjectives(field_name, field_value) {
-					let updated_indices = [];
-					let failed_indices = [];
+					let failures = [];
+					const objectives_to_update = this.selected_objectives.filter(lo => lo[field_name] !== field_value);
 
-					// TRICKY: reverse sort the list so to avoid issues with
-					// non-existent indices
-					this.selected_indices.sort((a,b) => b - a);
-					for (const index of this.selected_indices) {
-						if (this.displayed_objectives[index][field_name] === field_value) {
-							// skip updating those objectives whose field value is
-							// already set to the desired value
-							updated_indices.push(index);
-							continue;
-						}
-
-						const o_id = this.displayed_objectives[index].id;
-
+					for (const lo of objectives_to_update) {
 						try {
-							await CadetApi.updateObjectiveField(field_name, field_value, o_id);
-						} catch(e) {
-							failed_indices.push(index);
-							continue;
+							await CadetApi.updateObjectiveField(field_name, field_value, lo.id);
+							lo[field_name] = field_value;
+						} catch {
+							failures.push(lo);
 						}
-
-						updated_indices.push(index);
-						this.displayed_objectives[index][field_name] = field_value;
 					}
 
-					showSnackbarMessage(`Successfully updated ${updated_indices.length} objectives. Failures: ${failed_indices.length}`);
+					if (failures.length > 0) {
+						showSnackbarMessage(`Failed to update ${failures.length} objectives.`);
+					}
                 },
 
 				getConfirmation() {
@@ -367,52 +352,27 @@
 
 					// if resolved to true, then we can delete
 					if (confirmation) {
-						let deleted_indices = [];
-						let failed_indices = [];
-						const original_indices = [...this.selected_indices];
-
-						// TRICKY: sort indices in reverse order so indices
-						// don't get thrown off when removing from this.all_objectives
-						original_indices.sort( (a,b) => { return b - a; } );
-
-						for (const index of original_indices) {
-							const o_id = this.displayed_objectives[index].id;
-							const response = await CadetApi.deleteObjective(o_id);
-							if (response.ok) {
-								deleted_indices.push(index);
-								findAndRemove(this.all_objectives, o_id);
-							}
-							else {
-								failed_indices.push(index);
+						let failures = [];
+						for (const lo of [...this.selected_objectives]) {
+							try {
+								// TODO: save response for an "undo" feature
+								await CadetApi.deleteObjective(lo.id);
+								findAndRemove(this.all_objectives, lo.id);
+							} catch {
+								failures.push(lo);
 							}
 						}
 
-						showSnackbarMessage(`Successfully deleted ${deleted_indices.length} objectives. Failures: ${failed_indices.length}`);
-						this.selected_indices = [];
+						if (failures.length > 0) {
+							// TODO: add some indication of which objectives failed
+							showSnackbarMessage(`Failed to delete ${failures.length} objectives.`);
+						}
 					}
 				},
-
-                async getObjectives() {
-                    let url = "{{ url_for('objectives_api') }}";
-					url = url + `?author=${this.target_user}`;
-
-                    const response = await fetchOrRefresh(url, 'GET', refresh_url);
-                    if (response.ok) {
-                        const r = await response.json();
-                        this.all_objectives = r["learning_objectives"];
-                    }
-                    else {
-                        showSnackbarMessage("Error loading learning objectives.");
-                    }
-                },
 
                 convertToHtml(md_text) {
                     return converter.makeHtml(md_text);
 				},
-            },
-
-            created() {
-                //this.getObjectives();
             },
 
             compilerOptions: {

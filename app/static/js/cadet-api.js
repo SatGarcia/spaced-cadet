@@ -103,7 +103,8 @@ export async function updateObjectiveField(field_name, field_value, objective_id
 
 export async function deleteObjective(objective_id) {
     const url = Flask.url_for('objective_api', {"objective_id": objective_id});
-    return await fetchOrRefresh(url, 'DELETE');
+    const response = await authenticatedFetch(url, 'DELETE');
+    return response.deleted;
 }
 
 export async function searchObjectives(search_string, topic_search_string="") {
