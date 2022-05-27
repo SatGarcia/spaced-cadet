@@ -199,7 +199,7 @@
 
 	<script type="module">
 		import { createApp, ref, computed } from '/static/js/vue.esm-browser.js';
-		import { authenticatedFetch, showSnackbarMessage } from '/static/js/helpers.js';
+		import { authenticatedFetch, showSnackbarMessage, findAndRemove } from '/static/js/helpers.js';
 		import * as CadetApi from '/static/js/cadet-api.js';
 		import { useFilterableList, usePagination } from '/static/js/filterable-lists.js';
 		import ConfirmationDialog from '/static/js/confirmation-dialog.js';
@@ -358,9 +358,7 @@
 							q[field_name] = field_value;
 						} catch {
 							failures.push(q);
-							continue;
 						}
-
 					}
 
 					if (failures.length > 0) {
@@ -378,13 +376,6 @@
 					});
 				},
 
-				removeQuestion(target_arr, question_id) {
-					const target_index = target_arr.findIndex(q => q.id === question_id);
-					if (target_index != -1) {
-						target_arr.splice(target_index, 1);
-					}
-				},
-
 				async deleteSelected() {
 					// get confirmation first
 					const ok_to_delete = await this.getConfirmation();
@@ -395,7 +386,7 @@
 						for (const q of [...this.selected_questions]) {
 							try {
 								await CadetApi.deleteQuestion(q.id);
-								this.removeQuestion(this.all_questions, q.id);
+								findAndRemove(this.all_questions, q.id);
 							} catch {
 								failures.push(q);
 							}
