@@ -12,10 +12,13 @@ db = SQLAlchemy()
 mail = Mail()
 jsglue = JSGlue()
 
-def create_app(test_config=None):
+def create_app(config_class='config.DevelopmentConfig'):
     app = Flask(__name__, instance_relative_config=True)
 
-    app.config.from_object('config')
+    # load the configuration from the specified configuration class, then from
+    # the instance/config.py file, which will override anything in
+    # config_class
+    app.config.from_object(config_class)
     app.config.from_pyfile('config.py', silent=True)
 
     # setting of logging of app-specific messages to cadet.log
@@ -27,7 +30,7 @@ def create_app(test_config=None):
 
     if app.config.get('EMAIL_ERRORS', False):
         # email error and critical events to admin(s)
-        mail_handler = logging.handlers.SMTPHandler(mailhost=app.config['SMTP_SERVER'],
+        mail_handler = logging.handlers.SMTPHandler(mailhost=app.config['MAIL_SERVER'],
                                                     fromaddr=app.config['EMAIL_FROM'],
                                                     toaddrs=app.config['EMAIL_ERRORS_TO'],
                                                     subject="SpacedCadet Error Report")

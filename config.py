@@ -2,26 +2,34 @@ import os
 import logging
 from datetime import timedelta
 
-SECRET_KEY = 'dev'
+class Config(object):
+    TESTING = False
+    SECRET_KEY = 'dev'
 
-JWT_SECRET_KEY = 'dev'
-JWT_COOKIE_SECURE = False
-JWT_TOKEN_LOCATION = ["cookies"]
-JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    JWT_SECRET_KEY = 'dev'
+    JWT_TOKEN_LOCATION = ["cookies"]
 
-#SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-SQLALCHEMY_DATABASE_URI = 'sqlite:///cadet_db.sqlite'
-SQLALCHEMY_TRACK_MODIFICATIONS = False
-DATABASE_VERBOSE = False
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-ELASTICSEARCH_URL = 'http://localhost:9200'
+    SMTP_SERVER = 'localhost'
+    LOGGING_LEVEL = logging.ERROR
+    EMAIL_ERRORS = False
 
-#REDIS_URL = 'redis://'
+    ELASTICSEARCH_URL = 'http://localhost:9200'
 
-#SERVER_NAME = 'localhost:5000'
-#APPLICATION_ROOT = '/cadet'
+class ProductionConfig(Config):
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///cadet_db.sqlite'
+    JWT_COOKIE_SECURE = True
+    EMAIL_ERRORS = True
+    #SERVER_NAME = 'localhost:5000'
+    #APPLICATION_ROOT = '/cadet'
 
-LOGGING_LEVEL=logging.DEBUG
+class DevelopmentConfig(Config):
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///cadet_db.sqlite'
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    LOGGING_LEVEL = logging.DEBUG
+    MAIL_PORT = 1099
 
-EMAIL_ERRORS = False
-MAIL_PORT = 1099
+class TestConfig(object):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
