@@ -30,6 +30,6 @@ class DevelopmentConfig(Config):
     LOGGING_LEVEL = logging.DEBUG
     MAIL_PORT = 1099
 
-class TestConfig(object):
+class TestConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
