@@ -32,4 +32,8 @@ class DevelopmentConfig(Config):
 
 class TestConfig(Config):
     TESTING = True
+    DEBUG = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SESSION_PROTECTION = None
+    WTF_CSRF_ENABLED = False
+    JWT_TOKEN_LOCATION = ["headers", "cookies"]
