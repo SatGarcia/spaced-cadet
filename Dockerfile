@@ -20,6 +20,8 @@ COPY instance_config.py instance/config.py
 RUN chmod +x boot-webapp.sh
 
 ENV FLASK_APP cadet.py
+ENV SCRIPT_NAME /cadet
+ENV APP_CONFIG_CLASS config.ProductionConfig
 
 RUN chown -R cadet:cadet ./
 USER cadet
