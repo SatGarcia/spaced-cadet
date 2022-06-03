@@ -475,7 +475,7 @@ def setup_assessment(course_name, assessment_id):
 
         return redirect(url_for(f'.manage_assessments', course_name=course_name))
 
-    from app.api import AssessmentSchema
+    from app.db_models import AssessmentSchema
     a = AssessmentSchema().dump(assessment)
 
     return render_template("setup_assessment.html",

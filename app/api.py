@@ -1,49 +1,37 @@
 from flask import request, jsonify
 from flask_restful import Resource, Api
 from marshmallow import (
-    Schema, fields, ValidationError, validates, pre_load, EXCLUDE
+    Schema, fields, ValidationError, EXCLUDE
 )
 from flask_jwt_extended import (
     jwt_required, create_access_token, set_access_cookies, unset_jwt_cookies,
     current_user
 )
-from marshmallow.decorators import post_load
-from werkzeug.security import generate_password_hash
-from datetime import date, timedelta, datetime
-from enum import Enum
-import secrets
 
 from app import db
-from app.user_views import markdown_to_html
 from app.auth import AuthorizationError
-
-def markdown_field(attr_name):
-    def markdown_or_html(obj, context):
-        raw_md = getattr(obj, attr_name)
-
-        html_context = context.get("html")
-        if html_context == True:
-            return markdown_to_html(raw_md)
-        else:
-            return raw_md
-
-    return markdown_or_html
-
-def deserialize_str(s):
-    if type(s) != str:
-        raise ValidationError("Value must be a string.")
-    elif len(s) == 0:
-        raise ValidationError("String must be non-zero length.")
-
-    return s
-
-class AuthenticationSchema(Schema):
-    email = fields.Str(required=True)
-    password = fields.Str(required=True)
+from app.db_models import (
+    Question, QuestionSchema,
+    QuestionType,
+    ShortAnswerQuestion, ShortAnswerQuestionSchema,
+    AutoCheckQuestion, AutoCheckQuestionSchema,
+    MultipleChoiceQuestion, MultipleChoiceQuestionSchema,
+    AnswerOption,
+    User, UserSchema,
+    JumbleBlock,
+    CodeJumbleQuestion, CodeJumbleQuestionSchema,
+    Source,
+    Textbook, TextbookSchema,
+    TextbookSection, TextbookSectionSchema,
+    Topic, TopicSchema,
+    Objective, LearningObjectiveSchema,
+    Course, CourseSchema,
+    ClassMeeting, ClassMeetingSchema,
+    Assessment, AssessmentSchema
+)
 
 class ImmutableFieldError(Exception):
     pass
-
 
 def admin_only(item):
     if not current_user.admin:
@@ -134,349 +122,6 @@ def item_collection_poster(item_type, item_id, schema, collection_name,
         "previously-added": schema.dump(ignored, many=True),
         "invalid-ids": invalid_ids
     }
-
-
-
-class TopicSchema(Schema):
-    id = fields.Int(dump_only=True)
-    text = fields.Str(required=True)
-
-    sources = fields.List(fields.Nested("SourceSchema",
-                                          only=('id', 'title')),
-                            dump_only=True)
-
-    objectives = fields.List(fields.Nested("LearningObjectiveSchema",
-                                           only=('id', 'description')),
-                             dump_only=True)
-
-    @validates("text")
-    def unique_text(self, text):
-        if Topic.query.filter_by(text=text).count() > 0:
-            raise ValidationError("text must be unique")
-
-
-class QuestionSchema(Schema):
-    class Meta:
-        ordered = True
-
-    id = fields.Int(dump_only=True)
-    type = fields.Method("get_type", required=True, deserialize="create_type")
-    prompt = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
-    author = fields.Nested("UserSchema",
-                           only=("first_name", "last_name", "email"),
-                           dump_only=True)
-    objective = fields.Nested("LearningObjectiveSchema",
-                              only=('id', 'description'),
-                              dump_only=True)
-    public = fields.Boolean()
-    enabled = fields.Boolean()
-
-    def get_type(self, obj):
-        return obj.type.value
-
-    def create_type(self, value):
-        try:
-            return QuestionType(value)
-        except ValueError as error:
-            raise ValidationError("Invalid question type.") from error
-
-    def update_obj(self, question, data):
-        # check that they didn't try to change the type of the question
-        if 'type' in data and data['type'] != question.type:
-            raise ImmutableFieldError('type')
-
-        for field in ['type', 'prompt', 'author', 'public', 'enabled']:
-            if field in data:
-                setattr(question, field, data[field])
-
-
-class AutoCheckQuestionSchema(QuestionSchema):
-    answer = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
-    regex = fields.Boolean(required=True)
-
-    def make_obj(self, data):
-        return AutoCheckQuestion(**data)
-
-    def update_obj(self, question, data):
-        super().update_obj(question, data)
-
-        for field in ['answer', 'regex']:
-            if field in data:
-                setattr(question, field, data[field])
-
-
-class ShortAnswerQuestionSchema(QuestionSchema):
-    answer = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
-
-    def make_obj(self, data):
-        return ShortAnswerQuestion(**data)
-
-    def update_obj(self, question, data):
-        super().update_obj(question, data)
-
-        for field in ['answer']:
-            if field in data:
-                setattr(question, field, data[field])
-
-
-class AnswerOptionSchema(Schema):
-    id = fields.Int(dump_only=True)
-    text = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
-    correct = fields.Boolean(required=True)
-
-
-class MultipleChoiceQuestionSchema(QuestionSchema):
-    options = fields.List(fields.Nested(AnswerOptionSchema), required=True)
-
-    def make_obj(self, data):
-        answer_options = []
-
-        for opt in data['options']:
-            ao = AnswerOption(**opt)
-            answer_options.append(ao)
-            db.session.add(ao)
-
-        del data['options']
-
-        q = MultipleChoiceQuestion(**data)
-        q.options = answer_options
-
-        return q
-
-    def update_obj(self, question, data):
-        super().update_obj(question, data)
-
-        if 'options' in data:
-            answer_options = []
-            for opt in data['options']:
-                ao = AnswerOption(**opt)
-                answer_options.append(ao)
-
-            question.options = answer_options
-
-
-class JumbleBlockSchema(Schema):
-    id = fields.Int(dump_only=True)
-    code = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
-    correct_index = fields.Int(required=True, data_key='correct-index')
-    correct_indent = fields.Int(required=True, data_key='correct-indent')
-
-
-class CodeJumbleQuestionSchema(QuestionSchema):
-    language = fields.Str(required=True)
-    blocks = fields.List(fields.Nested(JumbleBlockSchema), required=True)
-
-    def make_obj(self, data):
-        code_blocks = []
-
-        for block in data['blocks']:
-            jb = JumbleBlock(**block)
-            code_blocks.append(jb)
-            db.session.add(jb)
-
-        del data['blocks']
-
-        q = CodeJumbleQuestion(**data)
-        q.blocks = code_blocks
-
-        return q
-
-    def update_obj(self, question, data):
-        super().update_obj(question, data)
-
-        for field in ['language']:
-            if field in data:
-                setattr(question, field, data[field])
-
-        if 'blocks' in data:
-            code_blocks = []
-
-            for block in data['blocks']:
-                jb = JumbleBlock(**block)
-                code_blocks.append(jb)
-
-            question.blocks = code_blocks
-
-
-class LearningObjectiveSchema(Schema):
-    id = fields.Int(dump_only=True)
-    description = fields.Function(markdown_field('description'),
-                                  deserialize=deserialize_str, required=True)
-
-    public = fields.Boolean()
-    author = fields.Nested("UserSchema", only=('email',), dump_only=True)
-    topic = fields.Nested(TopicSchema, only=('id', 'text'), dump_only=True)
-
-    questions = fields.List(fields.Nested(QuestionSchema,
-                                          only=('id', 'prompt')),
-                            dump_only=True)
-
-    @validates("description")
-    def unique_description(self, description):
-        # TODO: limit this check to objectives that are public or that are
-        # created by the author
-        if Objective.query.filter(Objective.description == description).count() > 0:
-            raise ValidationError("description must be unique")
-
-
-    def update_obj(self, objective, data):
-        for field in ['description', 'public']:
-            if field in data:
-                setattr(objective, field, data[field])
-
-
-class SourceSchema(Schema):
-    class Meta:
-        ordered = True
-
-    id = fields.Int(dump_only=True)
-    type = fields.Method("get_type", required=True, deserialize="create_type")
-    title = fields.Str(required=True)
-    author = fields.Nested("UserSchema", only=('email',), dump_only=True)
-
-    objectives = fields.List(fields.Nested(LearningObjectiveSchema),
-                             dump_only=True)
-
-    topics = fields.List(fields.Nested(TopicSchema,
-                                       only=('id', 'text')),
-                            dump_only=True)
-
-    def get_type(self, obj):
-        return obj.type.value
-
-    def create_type(self, value):
-        try:
-            return SourceType(value)
-        except ValueError as error:
-            raise ValidationError("Invalid source type.") from error
-
-
-class TextbookSectionSchema(SourceSchema):
-    number = fields.Str()
-    url = fields.Str()
-    textbook = fields.Nested("TextbookSchema",
-                             only=("id", "title", "edition"))
-
-    @pre_load
-    def set_type(self, data, **kwargs):
-        """ Sets source type to that of textbook-section so user doesn't have
-        to specify it themselves. """
-
-        data['type'] = "textbook-section"
-        return data
-
-
-class ClassMeetingSchema(SourceSchema):
-    date = fields.Date()
-    course = fields.Nested("CourseSchema",
-                             only=("id", "name", "title"))
-
-    @pre_load
-    def set_type(self, data, **kwargs):
-        """ Sets source type to that of class-meeting so user doesn't have
-        to specify it themselves. """
-
-        data['type'] = "class-meeting"
-        return data
-
-
-class TextbookSchema(Schema):
-    id = fields.Int(dump_only=True)
-
-    title = fields.Str(required=True)
-    edition = fields.Int()
-
-    authors = fields.Str(required=True)
-    publisher = fields.Str()
-
-    year = fields.Int()
-    isbn = fields.Str()
-    url = fields.Str()
-
-    sections = fields.List(fields.Nested("TextbookSectionSchema",
-                                         only=('id', 'number', 'title', 'topics')),
-                           dump_only=True)
-
-
-class AssessmentSchema(Schema):
-    id = fields.Int(dump_only=True)
-    title = fields.Str(required=True)
-    description = fields.Str()
-    time = fields.DateTime()
-
-    topics = fields.List(fields.Nested("TopicSchema",
-                                       only=('id', 'text')),
-                            dump_only=True)
-
-    objectives = fields.List(fields.Nested("LearningObjectiveSchema",
-                                           only=('id', 'description', 'topic')),
-                             dump_only=True)
-
-    questions = fields.List(fields.Nested("QuestionSchema",
-                                           only=('id', 'type', 'prompt')),
-                             dump_only=True)
-
-
-
-class UserSchema(Schema):
-    class Meta:
-        ordered = True
-
-    id = fields.Int(dump_only=True)
-    email = fields.Str(required=True)
-    password_hash = fields.Str(load_only=True, data_key="password")
-    last_name = fields.Str(required=True, data_key="last-name")
-    first_name = fields.Str(required=True, data_key="first-name")
-    instructor = fields.Boolean()
-    admin = fields.Boolean()
-
-    @pre_load
-    def process_password(self, data, **kwargs):
-        """ Checks if a plaintext password is present, using it (or a random
-        new password) to generate a password hash to store in the database. """
-
-        plain_password = data.get("password")
-        if plain_password:
-            data["password"] = generate_password_hash(plain_password)
-        else:
-            data["password"] = generate_password_hash(secrets.token_hex(25))
-
-        return data
-
-    @validates("email")
-    def unique_email(self, email_address):
-        if User.query.filter(User.email == email_address).count() > 0:
-            raise ValidationError("email must be unique")
-
-
-
-class CourseSchema(Schema):
-    class Meta:
-        ordered = True
-
-    id = fields.Int(dump_only=True)
-    name = fields.Str(required=True)
-    title = fields.Str(required=True)
-    description = fields.Str(required=True)
-    start_date = fields.Date(required=True, data_key="start-date")
-    end_date = fields.Date(required=True, data_key="end-date")
-
-    users = fields.List(fields.Nested(UserSchema, only=('id', 'email')),
-                        dump_only=True)
-    meetings = fields.List(fields.Nested(ClassMeetingSchema,
-                                          only=('id', 'title')),
-                           dump_only=True)
-    topics = fields.List(fields.Nested("TopicSchema",
-                                       only=('id', 'text')),
-                         dump_only=True)
-    textbooks = fields.List(fields.Nested("TextbookSchema",
-                                          only=("id", "title", "edition")),
-                            dump_only=True)
-
-    @validates("name")
-    def unique_name(self, course_name):
-        if Course.query.filter_by(name=course_name).count() > 0:
-            raise ValidationError("name must be unique")
 
 
 user_schema = UserSchema()
@@ -781,6 +426,11 @@ class CoursesApi(Resource):
             return {'message': "Unauthorized access"}, 401
 
         return create_and_commit(Course, course_schema, request.get_json())
+
+
+class AuthenticationSchema(Schema):
+    email = fields.Str(required=True)
+    password = fields.Str(required=True)
 
 
 class LoginApi(Resource):
@@ -1619,9 +1269,3 @@ class AssessmentApi(Resource):
             return {'message': f"Assessment {assessment_id} not found."}, 404
 
 
-from app.db_models import (
-    QuestionType, AnswerOption, Course, ShortAnswerQuestion,
-    AutoCheckQuestion, MultipleChoiceQuestion, User, Question, JumbleBlock,
-    CodeJumbleQuestion, Textbook, TextbookSection, SourceType, Objective,
-    Topic, ClassMeeting, Source, Assessment
-)
