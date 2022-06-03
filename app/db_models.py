@@ -709,10 +709,13 @@ class User(UserMixin, db.Model):
     def get_current_courses(self):
         return self.courses.filter(Course.start_date <= date.today())\
             .filter(Course.end_date >= date.today())\
+            .order_by(Course.start_date)\
             .all()
 
     def get_active_courses(self):
-        return self.courses.filter(Course.end_date >= date.today())
+        return self.courses.filter(Course.end_date >= date.today())\
+            .order_by(Course.start_date)\
+            .all()
 
     def latest_next_attempts(self):
         """ Returns the id and latest next attempt date for all questions that
