@@ -44,7 +44,7 @@ def create_app(config_class='config.DevelopmentConfig'):
     jsglue.init_app(app)
 
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
-        if app.config['ELASTICSEARCH_URL'] else None
+        if app.config.get('ELASTICSEARCH_URL') else None
 
     from app.database import init_app as init_db
     init_db(app)
