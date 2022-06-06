@@ -352,9 +352,19 @@ class UsersApi(Resource):
         if not current_user.admin:
             return {'message': "Unauthorized access"}, 401
 
-        users = User.query.all()
-        result = users_schema.dump(users)
-        return {'users': result}
+        email_str = request.args.get("email")
+
+        if email_str is None:
+            users = User.query.all()
+            result = users_schema.dump(users)
+            return {'users': result}
+        else:
+            user = User.query.filter_by(email=email_str).first()
+            if not user:
+                return {"message": f"No user found with email {email_str}"}, 404
+
+            result = user_schema.dump(user)
+            return {'user': result}
 
     @jwt_required()
     def post(self):
