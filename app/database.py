@@ -33,12 +33,5 @@ def add_admin_user(admin, instructor, email, first_name, last_name):
 
 def init_app(app):
     db.init_app(app)
-
-    with app.app_context():
-        db.create_all()
-
-        for q in Question.query:
-            print(repr(q))
-
     app.cli.add_command(add_admin_user)
 
