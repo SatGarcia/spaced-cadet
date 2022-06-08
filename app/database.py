@@ -13,7 +13,7 @@ from app.db_models import User, Question
 @click.argument('first_name')
 @click.argument('last_name')
 @with_appcontext
-def add_admin_user(admin, instructor, email, first_name, last_name):
+def add_user(admin, instructor, email, first_name, last_name):
     """Adds a new user to the database. Their password will be
     randomized so they must reset their password via the website."""
 
@@ -33,5 +33,5 @@ def add_admin_user(admin, instructor, email, first_name, last_name):
 
 def init_app(app):
     db.init_app(app)
-    app.cli.add_command(add_admin_user)
+    app.cli.add_command(add_user)
 
