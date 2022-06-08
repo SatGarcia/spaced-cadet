@@ -3,12 +3,14 @@ import logging, logging.handlers
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from flask_mail import Mail
 from flask_jsglue import JSGlue
 
 from elasticsearch import Elasticsearch
 
 db = SQLAlchemy()
+migrate = Migrate()
 mail = Mail()
 jsglue = JSGlue()
 
@@ -48,6 +50,8 @@ def create_app(config_class='config.DevelopmentConfig'):
 
     from app.database import init_app as init_db
     init_db(app)
+
+    migrate.init_app(app, db)
 
     from app.user_views import user_views as uv
     app.register_blueprint(uv)
