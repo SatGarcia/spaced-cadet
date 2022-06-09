@@ -30,6 +30,9 @@ class DevelopmentConfig(Config):
     LOGGING_LEVEL = logging.DEBUG
     MAIL_PORT = 1099
 
+class E2ETestingConfig(DevelopmentConfig):
+    WTF_CSRF_ENABLED = False
+
 class TestConfig(Config):
     TESTING = True
     DEBUG = False
