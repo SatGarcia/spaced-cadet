@@ -32,6 +32,7 @@ class DevelopmentConfig(Config):
 
 class E2ETestingConfig(DevelopmentConfig):
     WTF_CSRF_ENABLED = False
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 
 class TestConfig(Config):
     TESTING = True

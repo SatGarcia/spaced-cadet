@@ -67,6 +67,8 @@ def create_app(config_class='config.DevelopmentConfig'):
     from app.auth import init_app as init_auth
     init_auth(app)
 
+    from app.tests import tests
+    app.register_blueprint(tests, url_prefix="/test")
 
     return app
 
