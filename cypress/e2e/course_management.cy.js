@@ -79,6 +79,34 @@ describe('Instructor Course Management', () => {
     const user_to_delete = this.testCourse.users[2]
     cy.get('tr').contains(user_to_delete.email).parent().contains('Remove').click()
     cy.get('table').contains(user_to_delete.email).should('not.exist')
+
+    cy.get('input[type=file]').selectFile('cypress/fixtures/text_files/roster1.csv')
+    cy.get('input[type=submit]').contains('Upload Roster').click()
+    cy.get('tbody').contains('bradley@mockingbird.com')
+    cy.get('tbody').contains('gravy@thanksgiving.org')
+
+    // upload another roster file with column names that don't auto populate
+    // correctly, using the add/drop option to remove all students not in the
+    // file
+    cy.get('input[type=file]').selectFile('cypress/fixtures/text_files/roster2.csv')
+    cy.get('select[name=email_index]').select('Correo')
+    cy.get('select[name=last_name_index]').select('Surname')
+    cy.get('select[name=first_name_index]').select('Primary Name')
+    cy.get('input[name=add_drop]').check()
+    cy.get('input[type=submit]').contains('Upload Roster').click()
+
+    // check flash messages
+    cy.contains("Removed 5 students")
+    cy.contains("Added 2 new students")
+    cy.contains("Skipped 1 who were")
+
+    // check contents of table
+    cy.get('tbody').contains('bradley@mockingbird.com')
+    cy.get('tbody').contains("chocolate@swiss.ch")
+    cy.get('tbody').contains("Michael")
+    cy.get('tbody').contains("Toblerone")
+    cy.get('tbody').contains("gravey@thanksgiving.org").should('not.exist')
+
   })
 })
 
