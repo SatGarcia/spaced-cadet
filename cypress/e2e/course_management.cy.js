@@ -63,5 +63,22 @@ describe('Instructor Course Management', () => {
     cy.get('h3').should('contain', 'Zippy Course Title')
     cy.contains('A shiny new course description')
   })
+
+  it('Manage Roster', function () {
+    cy.visit(`/c/${this.testCourse.name}`)
+
+    cy.get('[id=instructorMenu]').contains('Manage Roster').click()
+
+    cy.contains(`Manage Roster (${this.testCourse.name})`)
+
+    // Check that all the students appear
+    for (const user of this.testCourse.users) {
+      cy.get('tr').contains(user.email)
+    }
+
+    const user_to_delete = this.testCourse.users[2]
+    cy.get('tr').contains(user_to_delete.email).parent().contains('Remove').click()
+    cy.get('table').contains(user_to_delete.email).should('not.exist')
+  })
 })
 
