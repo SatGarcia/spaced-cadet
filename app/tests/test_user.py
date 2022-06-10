@@ -89,10 +89,10 @@ class UserModelCase(unittest.TestCase):
         current_courses = u.get_current_courses()
 
         # check that contents are correct (i.e. disregarding order)
-        self.assertCountEqual(current_courses, [c1, c2])
+        self.assertCountEqual(current_courses, [c1, c2, c3])
 
         # check that results are sorted from oldest start_date to newest
-        self.assertEqual(current_courses, [c1, c2])
+        self.assertEqual(current_courses, [c1, c2, c3])
 
     @unittest.skip("Test not implemented")
     def test_latest_next_attempts(self):
