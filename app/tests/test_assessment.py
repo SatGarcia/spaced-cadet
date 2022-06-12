@@ -113,7 +113,7 @@ class AssessmentModelCase(unittest.TestCase):
         """ Returns all "fresh" assessment questions, where fresh is defined as needing
         to be practiced by the user for the FIRST time today. 
         
-        questions should be unattempted, due, or overdue, and don't have an attempt that is today
+        questions should be unattempted or don't already have an attempt that is today and need to be practiced today
         """
         # adds questions and users to this session 
         a = Assessment(title="Test assessment")
@@ -121,6 +121,9 @@ class AssessmentModelCase(unittest.TestCase):
         q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2")
         q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3")
         q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4")
+        q5 = ShortAnswerQuestion(prompt="Question 5", answer="Answer 5")
+        q6 = ShortAnswerQuestion(prompt="Question 6", answer="Answer 6")
+        q7 = ShortAnswerQuestion(prompt="Question 7", answer="Answer 7")
 
         db.session.add(a)
         db.session.commit()
@@ -128,6 +131,9 @@ class AssessmentModelCase(unittest.TestCase):
         a.questions.append(q2)
         a.questions.append(q3)
         a.questions.append(q4)
+        a.questions.append(q5)
+        a.questions.append(q6)
+
 
         u1 = User(email="test@test.com", first_name="Test", last_name="User")
         u1.set_password("test")
@@ -137,7 +143,8 @@ class AssessmentModelCase(unittest.TestCase):
         db.session.commit()
 
         # if no questions are attempted yet, they should be fresh
-        self.assertCountEqual(a.fresh_questions(u1).all(), [q1,q2,q3,q4])
+        self.assertCountEqual(a.fresh_questions(u1).all(), [q1,q2,q3,q4,q5,q6])
+
 
         #ADD ATTEMPTS
         q2_attempt = TextAttempt(response="Attempt2", user=u1, question=q2, time = datetime.now()-timedelta(days=1),
@@ -146,27 +153,35 @@ class AssessmentModelCase(unittest.TestCase):
         #checking with multiple attempts, one of yesterday and one of today
         q3_attempt = TextAttempt(response="Attempt3", user=u1, question=q3, time = datetime.now()-timedelta(days=1),
                                  next_attempt=date.today()) # last attempt: yesterday, next attempt: today
-        q3_attempt2 = TextAttempt(response="Attempt4", user=u1, question=q3, time = datetime.now(),
+        q3_attempt2 = TextAttempt(response="Attempt3b", user=u1, question=q3, time = datetime.now(),
                                  next_attempt=(date.today()-timedelta(days=1))) # last attempt: today, next attempt: today
+                                                                                # (already practiced today so not a fresh question)
 
         #checking with multiple attempts, both today, different next attempts
-        q4_attempt = TextAttempt(response="Attempt5", user=u1, question=q4, time = datetime.now(),
+        q4_attempt = TextAttempt(response="Attempt4", user=u1, question=q4, time = datetime.now(),
                                  next_attempt=(date.today()-timedelta(days=1))) # last attempt: today, next attempt: today
-        q4_attempt2 = TextAttempt(response="Attempt6", user=u1, question=q4, time = datetime.now(),
+        q4_attempt2 = TextAttempt(response="Attempt4b", user=u1, question=q4, time = datetime.now(),
                                  next_attempt=(date.today()+timedelta(days=1))) # last attempt: today, next attempt: tomorrow
+                                                                                # (already practiced today so not a fresh question)
 
+        q5_attempt = TextAttempt(response="Attempt5", user=u1, question=q5, time = datetime.now()-timedelta(days=1),
+                                 next_attempt=(date.today()+timedelta(days=1))) # last attempt: yesterday, next attempt: tomorrow 
+                                                                                # (doesn't need to be practiced by user today so not a fresh question)
 
-        # single attempt for u2, with next attempt of today to make sure
-        # method differentiates between users
+        q6_attempt = TextAttempt(response="Attempt6", user=u1, question=q6, time = datetime.now()-timedelta(days=2),
+                                 next_attempt=(date.today()-timedelta(days=1))) # last attempt: 2 days ago, next attempt: yesterday
+                                                                                # (doesn't need to be practiced by user today so not a fresh question) ??? bc overdue
+
+        # single attempt for u2, with next attempt of today to make sure method differentiates between users
         q1_attempt = TextAttempt(response="Attempt1", user=u2, question=q1,
                                  next_attempt=date.today())
 
-        db.session.add_all([q2_attempt, q3_attempt, q3_attempt2, q4_attempt, q4_attempt2, q1_attempt])
+        db.session.add_all([q2_attempt, q3_attempt, q3_attempt2, q4_attempt, q4_attempt2, q5_attempt, q6_attempt, q1_attempt])
 
         self.assertCountEqual(a.fresh_questions(u1).all(), [q2])
+        
 
 
-    @unittest.skip("Test not implemented")
     def test_repeat_questions(self):
         """ Returns all assessment questions that the user has already attempted today
         but that haven't gotten a quality score of 4 or above."""
@@ -179,6 +194,7 @@ class AssessmentModelCase(unittest.TestCase):
         q5 = ShortAnswerQuestion(prompt="Question 5", answer="Answer 5")
         q6 = ShortAnswerQuestion(prompt="Question 6", answer="Answer 6")
         q7 = ShortAnswerQuestion(prompt="Question 7", answer="Answer 7")
+        q8 = ShortAnswerQuestion(prompt="Question 8", answer="Answer 8")
 
         db.session.add(a)
         db.session.commit()
@@ -242,12 +258,6 @@ class AssessmentModelCase(unittest.TestCase):
 
         self.assertCountEqual(a.repeat_questions(u1).all(), [q3, q4, q5])
         
-        # test that we successfully get multiple questions by changing one of
-        # the attempts to be due today
-        q3_attempt.time = date.today()
-        db.session.commit()
-
-        self.assertCountEqual(a.repeat_questions(u1).all(), [q4, q3])
 
 
 if __name__ == '__main__':
