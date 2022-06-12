@@ -721,6 +721,13 @@ class User(UserMixin, db.Model):
         return self.courses.filter(Course.end_date >= date.today())\
             .order_by(Course.start_date)\
             .all()
+    
+    def get_past_courses(self):
+        """ Returns all courses whose end date is ealier than today """
+        
+        return self.courses.filter(Course.end_date < date.today())\
+            .order_by(Course.start_date)\
+            .all()
 
     def latest_next_attempts(self):
         """ Returns the id and latest next attempt date for all questions that
