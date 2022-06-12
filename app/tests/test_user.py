@@ -75,7 +75,11 @@ class UserModelCase(unittest.TestCase):
                                 end_date=(date.today()+timedelta(days=2)))
 
         #start: yesterday end: yesterday
-        c4 = Course(name="test-course3", title="Test Course 3", description="",
+        c4 = Course(name="test-course4", title="Test Course 4", description="",
+                    start_date=(date.today()-timedelta(days=1)),
+                                end_date=(date.today()-timedelta(days=1)))
+
+        c5 = Course(name="test-course5", title="Test Course 5", description="",
                     start_date=(date.today()-timedelta(days=1)),
                                 end_date=(date.today()-timedelta(days=1)))
 
@@ -86,7 +90,7 @@ class UserModelCase(unittest.TestCase):
         u.courses.append(c1)
         u.courses.append(c4)
 
-        current_courses = u.get_current_courses()
+        current_courses = u.get_active_courses()
 
         # check that contents are correct (i.e. disregarding order)
         self.assertCountEqual(current_courses, [c1, c2, c3])
