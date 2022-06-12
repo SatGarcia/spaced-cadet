@@ -39,10 +39,24 @@ class UserModelCase(unittest.TestCase):
                     start_date=(date.today()+timedelta(days=1)),
                                 end_date=(date.today()+timedelta(days=2)))
 
+        c4 = Course(name="test-course4", title="Test Course 4", description="",
+                    start_date=(date.today()-timedelta(days=1)),
+                                end_date=(date.today()-timedelta(days=1)))
+
+        c5 = Course(name="test-course5", title="Test Course 5", description="",
+                    start_date=(date.today()-timedelta(days=1)),
+                                end_date=(date.today()-timedelta(days=1)))
+
+        # to make sure that a new course isn't appended
+        db.session.add(c5)
+        db.session.commit()
+
         # add the newer course in first (just to make sure ordering is correct
         # later)
+        u.courses.append(c3)
         u.courses.append(c2)
         u.courses.append(c1)
+        u.courses.append(c4)
 
         current_courses = u.get_current_courses()
 
