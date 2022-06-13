@@ -35,7 +35,7 @@ describe('Instructor Course Management', () => {
   }
 
   it('My Questions', function () {
-    cy.visit('/u/1/questions')
+    cy.visit(`/u/${this.currentUser.id}/questions`)
     cy.contains('Create New Question').click()
     cy.contains('Short Answer (Self-Graded)').click()
 
