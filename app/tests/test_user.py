@@ -52,9 +52,9 @@ class UserModelCase(unittest.TestCase):
         # check that results are sorted from oldest start_date to newest
         self.assertEqual(current_courses, [c1, c2])
 
-    @unittest.skip("Test not implemented")
+
     def test_get_active_courses(self):
-        pass
+        self.assertEqual(True, False)
 
     @unittest.skip("Test not implemented")
     def test_latest_next_attempts(self):
