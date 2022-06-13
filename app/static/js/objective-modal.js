@@ -141,7 +141,7 @@ export default {
                         </div>
                     </div>
 
-                    <div v-if="objectives !== null">
+                    <div id="objectiveSearchResults" v-if="objectives !== null">
                         <strong>Search Results ([[ objectives.length ]]):</strong>
                         <div class="container" v-if="objectives.length === 0">
                             <em>No search results.</em>
@@ -183,7 +183,7 @@ export default {
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary"
+                    <button type="submit" class="btn btn-primary"
                             @click="setObjective()"
                             :disabled="selected_objective_id === null"
                             >Save Selection</button>
@@ -226,7 +226,7 @@ export default {
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary"
+                    <button type="submit" class="btn btn-primary"
                             @click="addObjective()"
                                           :disabled="new_objective_description.length === 0">
                         Create Objective

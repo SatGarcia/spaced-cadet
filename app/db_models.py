@@ -652,6 +652,9 @@ class CourseSchema(Schema):
     textbooks = fields.List(fields.Nested("TextbookSchema",
                                           only=("id", "title", "edition")),
                             dump_only=True)
+    assessments = fields.List(fields.Nested("AssessmentSchema",
+                                            only=("id", "title")),
+                              dump_only=True)
 
     @validates("name")
     def unique_name(self, course_name):

@@ -57,7 +57,7 @@
 				<form method="POST"
 		  			action="{{ url_for('instructor.upload_roster', course_name=course.name) }}"
 					enctype="multipart/form-data">
-					{{ roster_form.csrf_token() }}
+					{{ roster_form.csrf_token }}
 					{{ forms.input(roster_form.roster_file, "", "form-control-file") }}
 					<div id="rosterfields" class="container border px-3 py-2">
 						Select the appropriate columns in your CSV file for
