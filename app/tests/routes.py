@@ -8,7 +8,8 @@ from datetime import date, datetime, timedelta
 from app import db
 from app.tests import tests
 from app.db_models import (
-    User, UserSchema, Course, CourseSchema, Assessment
+    User, UserSchema, Course, CourseSchema, Assessment, Objective,
+    LearningObjectiveSchema
 )
 
 Faker.seed(0)
@@ -110,3 +111,23 @@ def seed_course():
     db.session.commit()
 
     return jsonify(CourseSchema().dump(new_course))
+
+@tests.route('/seed/objective', methods=['POST'])
+def seed_objective():
+    AuthorIdSchema = Schema.from_dict({
+        'author_id': fields.Int(required=True)
+    })
+    try:
+        data = load_data(AuthorIdSchema())
+    except LoadDataError as err:
+        return err.response, err.status_code
+
+    author = User.query.filter_by(id=data['author_id']).first()
+    if not author:
+        return jsonify(message=f"No user with ID {data['author_id']}"), 422
+
+    new_objective = Objective(description=fake.sentence(), author=author)
+    db.session.add(new_objective)
+    db.session.commit()
+
+    return jsonify(LearningObjectiveSchema().dump(new_objective))
