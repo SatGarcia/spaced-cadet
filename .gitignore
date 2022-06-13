@@ -5,3 +5,4 @@
 __pycache__
 venv
 cadet.log
+node_modules
