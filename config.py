@@ -15,7 +15,7 @@ class Config(object):
     LOGGING_LEVEL = logging.ERROR
     EMAIL_ERRORS = False
 
-    ELASTICSEARCH_URL = 'http://localhost:9200'
+    #ELASTICSEARCH_URL = 'http://localhost:9200'
 
 class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///cadet_db.sqlite'
