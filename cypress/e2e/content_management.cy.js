@@ -18,24 +18,7 @@ describe('Instructor Course Management', () => {
       .its('body')
       .as('learningObjective')
 
-    // login (without UI)
-    cy.request({
-      url: '/auth/login',
-      method: 'POST',
-      form: true,
-      body: {
-        email: 'test@cadet.com',
-        password: 'testing'
-      },
-	  followRedirect: false,
-    }).then((resp) => {
-	  // make sure we got a 302 redirect to the homepage
-	  expect(resp.status).to.eq(302)
-	  expect(resp.redirectedToUrl).to.eq(Cypress.config().baseUrl + '/')
-    })
-
-    // our auth cookie should be present
-    cy.getCookie('access_token_cookie').should('exist')
+	cy.login('test@cadet.com', 'testing')
   })
 
   const getIframeDocument = () => {
@@ -50,14 +33,6 @@ describe('Instructor Course Management', () => {
       .its('body').should('not.be.undefined')
       .then(cy.wrap)
   }
-
-  /*
-  it('gets the post', () => {
-    cy.visit('index.html')
-    getIframeBody().find('#run-button').should('have.text', 'Try it').click()
-    getIframeBody().find('#result').should('include.text', '"delectus aut autem"')
-  })
-  */
 
   it('My Questions', function () {
     cy.visit('/u/1/questions')
