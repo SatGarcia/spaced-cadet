@@ -18,11 +18,11 @@ class CourseModelCase(unittest.TestCase):
         db.session.add(self.c)
         db.session.commit()
 
-        self.a1 = Assessment(title="Test assessment1", time = datetime.now()-timedelta(days=3))  # assessment occurs during course, before current date
+        self.a1 = Assessment(title="Test assessment1", time = datetime.now()-timedelta(days=2))  # assessment occurs during course, before current date
         self.a2 = Assessment(title="Test assessment2", time = datetime.now()-timedelta(hours=1)) # assessment occurs during course, today (an hour before this moment)
         self.a3 = Assessment(title="Test assessment3", time = datetime.now())                    # assessment occurs during course, today (right at this moment)
         self.a4 = Assessment(title="Test assessment4", time = datetime.now()+timedelta(hours=1)) # assessment occurs during course, today (an hour after this moment)
-        self.a5 = Assessment(title="Test assessment5", time = datetime.now()+timedelta(days=3))  # assessment occurs during course, after current date
+        self.a5 = Assessment(title="Test assessment5", time = datetime.now()+timedelta(days=2))  # assessment occurs during course, after current date
 
 
     def tearDown(self):
