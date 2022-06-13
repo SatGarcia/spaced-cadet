@@ -12,11 +12,11 @@ describe('Instructor Course Management', () => {
       'last-name': 'Bar' })
       .its('body')
       .as('currentUser')
-
-    cy.request('POST', '/test/seed/objective', { 
-      author_id: 1})
-      .its('body')
-      .as('learningObjective')
+      .then((user) => {
+        cy.request('POST', '/test/seed/objective', {author_id: user.id})
+          .its('body')
+          .as('learningObjective')
+      })
 
 	cy.login('test@cadet.com', 'testing')
   })
