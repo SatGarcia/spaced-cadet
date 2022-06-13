@@ -103,17 +103,9 @@ class AssessmentModelCase(unittest.TestCase):
     def test_waiting_questions(self):
         pass
 
-
-
-
-
-
-
     def test_fresh_questions(self):
         """ Returns all "fresh" assessment questions, where fresh is defined as needing
         to be practiced by the user for the FIRST time today. 
-        
-        questions should be unattempted or don't already have an attempt that is today and need to be practiced today
         """
         # adds questions and users to this session 
         a = Assessment(title="Test assessment")
@@ -122,8 +114,7 @@ class AssessmentModelCase(unittest.TestCase):
         q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3")
         q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4")
         q5 = ShortAnswerQuestion(prompt="Question 5", answer="Answer 5")
-        q6 = ShortAnswerQuestion(prompt="Question 6", answer="Answer 6")
-        q7 = ShortAnswerQuestion(prompt="Question 7", answer="Answer 7")
+
 
         db.session.add(a)
         db.session.commit()
@@ -132,7 +123,6 @@ class AssessmentModelCase(unittest.TestCase):
         a.questions.append(q3)
         a.questions.append(q4)
         a.questions.append(q5)
-        a.questions.append(q6)
 
 
         u1 = User(email="test@test.com", first_name="Test", last_name="User")
@@ -143,42 +133,38 @@ class AssessmentModelCase(unittest.TestCase):
         db.session.commit()
 
         # if no questions are attempted yet, they should be fresh
-        self.assertCountEqual(a.fresh_questions(u1).all(), [q1,q2,q3,q4,q5,q6])
+        self.assertCountEqual(a.fresh_questions(u1).all(), [q1,q2,q3,q4,q5])
 
 
-        #ADD ATTEMPTS
+        #ADDING ATTEMPTS
         q2_attempt = TextAttempt(response="Attempt2", user=u1, question=q2, time = datetime.now()-timedelta(days=1),
                                  next_attempt=date.today()) # last attempt: yesterday, next attempt: today
+                                                            # due today and no attempt today so is a fresh question
 
         #checking with multiple attempts, one of yesterday and one of today
         q3_attempt = TextAttempt(response="Attempt3", user=u1, question=q3, time = datetime.now()-timedelta(days=1),
                                  next_attempt=date.today()) # last attempt: yesterday, next attempt: today
         q3_attempt2 = TextAttempt(response="Attempt3b", user=u1, question=q3, time = datetime.now(),
-                                 next_attempt=(date.today()-timedelta(days=1))) # last attempt: today, next attempt: today
-                                                                                # (already practiced today so not a fresh question)
-
-        #checking with multiple attempts, both today, different next attempts
-        q4_attempt = TextAttempt(response="Attempt4", user=u1, question=q4, time = datetime.now(),
-                                 next_attempt=(date.today()-timedelta(days=1))) # last attempt: today, next attempt: today
-        q4_attempt2 = TextAttempt(response="Attempt4b", user=u1, question=q4, time = datetime.now(),
                                  next_attempt=(date.today()+timedelta(days=1))) # last attempt: today, next attempt: tomorrow
                                                                                 # (already practiced today so not a fresh question)
 
-        q5_attempt = TextAttempt(response="Attempt5", user=u1, question=q5, time = datetime.now()-timedelta(days=1),
+        q4_attempt = TextAttempt(response="Attempt4", user=u1, question=q4, time = datetime.now()-timedelta(days=1),
                                  next_attempt=(date.today()+timedelta(days=1))) # last attempt: yesterday, next attempt: tomorrow 
                                                                                 # (doesn't need to be practiced by user today so not a fresh question)
 
-        q6_attempt = TextAttempt(response="Attempt6", user=u1, question=q6, time = datetime.now()-timedelta(days=2),
+        q5_attempt = TextAttempt(response="Attempt5", user=u1, question=q5, time = datetime.now()-timedelta(days=2),
                                  next_attempt=(date.today()-timedelta(days=1))) # last attempt: 2 days ago, next attempt: yesterday
-                                                                                # (doesn't need to be practiced by user today so not a fresh question) ??? bc overdue
+                                                                                # (question is overdue so it is a fresh question) 
+
 
         # single attempt for u2, with next attempt of today to make sure method differentiates between users
-        q1_attempt = TextAttempt(response="Attempt1", user=u2, question=q1,
+        q1_attempt = TextAttempt(response="Attempt1", user=u2, question=q1, time = datetime.now()-timedelta(days=1),
                                  next_attempt=date.today())
 
-        db.session.add_all([q2_attempt, q3_attempt, q3_attempt2, q4_attempt, q4_attempt2, q5_attempt, q6_attempt, q1_attempt])
+        db.session.add_all([q2_attempt, q3_attempt, q3_attempt2, q4_attempt,q5_attempt,q1_attempt])
 
-        self.assertCountEqual(a.fresh_questions(u1).all(), [q2])
+        self.assertCountEqual(a.fresh_questions(u1).all(), [q1,q2,q5]) # unattempted questions are still fresh
+        self.assertCountEqual(a.fresh_questions(u2).all(), [q1,q2,q3,q4,q5])
         
 
 
@@ -194,7 +180,6 @@ class AssessmentModelCase(unittest.TestCase):
         q5 = ShortAnswerQuestion(prompt="Question 5", answer="Answer 5")
         q6 = ShortAnswerQuestion(prompt="Question 6", answer="Answer 6")
         q7 = ShortAnswerQuestion(prompt="Question 7", answer="Answer 7")
-        q8 = ShortAnswerQuestion(prompt="Question 8", answer="Answer 8")
 
         db.session.add(a)
         db.session.commit()
@@ -216,7 +201,9 @@ class AssessmentModelCase(unittest.TestCase):
         # if no questions are attempted yet today, they should not be repreated
         self.assertEqual(a.repeat_questions(u1).all(), [])
 
-        # attempts of yesterday and today
+        # attempts of yesterday and today: q2 attempts test improving quality the next day(not a repeat question), 
+        # q3 attempts test stagnant quality the next day (still less than 4 so not a repeat question), q4 attempts test
+        # decreasing quality the next day (less than 4 so is a repreat question)
         q2_attempt = TextAttempt(response="Attempt2", user=u1, question=q2,
                                  time=(datetime.now()-timedelta(days=1)), quality = 3) # last attempt: yesterday, quality: 3
         q2_attempt2 = TextAttempt(response="Attempt2b", user=u1, question=q2,
@@ -232,7 +219,9 @@ class AssessmentModelCase(unittest.TestCase):
         q4_attempt2 = TextAttempt(response="Attempt4b", user=u1, question=q4,
                                  time=datetime.now(), quality = 1) # last attempt: today, quality: 1
 
-        # multiple attempts today
+        # multiple attempts today: q5 attempts test improving quality the same day but still not greater than 
+        # 4 on the next attempt(repeat question), q6 attempts test decreasing quality the same day (less than 
+        # 4 so is a repeat question), q7 attempts test increasing quality the same day (4 or greater so not a repreat question)
         q5_attempt = TextAttempt(response="Attempt5", user=u1, question=q5,
                                  time=(datetime.now()), quality = 2)  # last attempt: today, quality: 2
         q5_attempt2 = TextAttempt(response="Attempt5b", user=u1, question=q5,
