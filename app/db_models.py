@@ -1031,7 +1031,8 @@ class Assessment(db.Model):
         poor_attempts = Attempt.query.filter(db.and_(Attempt.user_id == user.id,
                                                      Attempt.time >= midnight_today))\
                                      .group_by(Attempt.question_id)\
-                                     .having(db.func.max(Attempt.quality) < 4)
+                                     .having(db.func.max(Attempt.quality) < 4)\
+                                     .subquery()
 
         return self.questions.join(poor_attempts)
 
