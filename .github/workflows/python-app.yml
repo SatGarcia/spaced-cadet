@@ -30,4 +30,6 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Test with nose2
       run: |
+        mkdir instance
+        echo "ELASTICSEARCH_URL = None" > instance/config.py
         nose2 -v
