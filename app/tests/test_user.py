@@ -1,7 +1,7 @@
 import unittest
 from app import create_app, db
-from app.db_models import User, Course
-from datetime import date, timedelta
+from app.db_models import User, Course, ShortAnswerQuestion, TextAttempt
+from datetime import date, datetime, timedelta
 
 class UserModelCase(unittest.TestCase):
     def setUp(self):
@@ -112,9 +112,53 @@ class UserModelCase(unittest.TestCase):
         # check that results are sorted from oldest start_date to newest
         self.assertEqual(current_courses, [self.c4])
 
-    @unittest.skip("Test not implemented")
     def test_latest_next_attempts(self):
-        pass
 
+        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1")
+        q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2")
+        q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3")
+        q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4")
+        q5 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 5")
+
+        db.session.add(q5)
+        db.session.commit()
+
+        u1 = User(email="test1@test.com", first_name="Test1", last_name="User")
+        u1.set_password("test")
+        u2 = User(email="test2@test.com", first_name="Test2", last_name="User")
+        u2.set_password("test")
+        db.session.add_all([u1, u2])
+        db.session.commit()
+
+        self.assertCountEqual(u1.latest_next_attempts().all(), [])
+
+        q1_attempt = TextAttempt(response="Meow", user=u1, question=q1,
+                                 next_attempt=date.today())   
+        q2_attempt = TextAttempt(response="Meow", user=u1, question=q2,
+                                 next_attempt=date.today()+timedelta(days=1))
+        q3_attempt = TextAttempt(response="Meow", user=u1, question=q3,
+                                 next_attempt=date.today()-timedelta(days=1))
+
+        
+        # single attempt for u2, with next attempt of tomorrow to make sure
+        # method differentiates between users
+        q4_attempt = TextAttempt(response="Meow", user=u2, question=q4,
+                                 next_attempt=datetime.today()+timedelta(days=1))
+        db.session.add_all([q1_attempt, q2_attempt, q3_attempt, q4_attempt])
+
+        self.assertCountEqual(u1.latest_next_attempts().all(), [(q1_attempt.question_id, date.today(), date.today()), 
+                                                                (q2_attempt.question_id, date.today()+timedelta(days=1), date.today()+timedelta(days=1)), 
+                                                                (q3_attempt.question_id, date.today()-timedelta(days=1), date.today()-timedelta(days=1))])
+
+        # test that we successfully update a latest attempt by u1 reattempting q1
+        q1_attempt2 = TextAttempt(response="Meow", user=u1, question=q1,
+                                 next_attempt=date.today()+timedelta(days=1))
+        self.assertCountEqual(u1.latest_next_attempts().all(), [(q1_attempt2.question_id, date.today()+timedelta(days=1), date.today()+timedelta(days=1)), 
+                                                                (q2_attempt.question_id, date.today()+timedelta(days=1), date.today()+timedelta(days=1)), 
+                                                                (q3_attempt.question_id, date.today()-timedelta(days=1), date.today()-timedelta(days=1))])
+
+        
+        
+                
 if __name__ == '__main__':
     unittest.main(verbosity=2)
