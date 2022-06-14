@@ -629,6 +629,12 @@ class Course(SearchableMixin, db.Model):
     def past_assessments(self):
         return self.assessments.filter(Assessment.time < datetime.now())
 
+    def upcoming_meetings(self): # wouldn't it make more sense if the course meetings were time instead of date?
+        return self.meetings.filter(ClassMeeting.date >= datetime.now()) #date.today())
+
+    def previous_meetings(self):
+        return self.meetings.filter(ClassMeeting.date < datetime.now()) #date.today())
+
 
 class CourseSchema(Schema):
     class Meta:
