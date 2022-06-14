@@ -9,7 +9,8 @@ from app import db
 from app.tests import tests
 from app.db_models import (
     User, UserSchema, Course, CourseSchema, Assessment, Objective,
-    LearningObjectiveSchema
+    LearningObjectiveSchema,
+    ShortAnswerQuestion, ShortAnswerQuestionSchema
 )
 
 Faker.seed(0)
@@ -89,7 +90,7 @@ def seed_course():
     for i in range(data['num_students']):
         student = User(email=fake.email(), first_name=fake.first_name(),
                        last_name=fake.last_name())
-        student.set_password(fake.password())
+        student.set_password('testing')
         new_course.users.append(student)
 
     db.session.commit()
@@ -131,3 +132,47 @@ def seed_objective():
     db.session.commit()
 
     return jsonify(LearningObjectiveSchema().dump(new_objective))
+
+
+@tests.route('/seed/question/short-answer', methods=['POST'])
+def seed_short_answer():
+    """ Creates randomized short answer questions. """
+    QuestionInfoSchema = Schema.from_dict({
+        'author_id': fields.Int(required=True),
+        'assessment_id': fields.Int(),
+        'amount': fields.Int(required=True),  # the number of questions to create
+    })
+
+    try:
+        data = load_data(QuestionInfoSchema())
+    except LoadDataError as err:
+        return err.response, err.status_code
+
+    author = User.query.filter_by(id=data['author_id']).first()
+    if not author:
+        return jsonify(message=f"No user with ID {data['author_id']}"), 422
+
+    if 'assessment_id' in data:
+        assessment = Assessment.query.filter_by(id=data['assessment_id']).first()
+        if not assessment:
+            return jsonify(message=f"No assessment with ID {data['assessment_id']}"), 422
+    else:
+        assessment = None
+
+    new_questions = []
+
+    for i in range(data['amount']):
+        answer = fake.sentence(nb_words=3)
+        prompt = f"Enter something similar to the following: {answer}"
+        new_q = ShortAnswerQuestion(prompt=prompt, answer=answer, author=author,
+                                    public=True, enabled=True)
+
+        new_questions.append(new_q)
+        db.session.add(new_q)
+
+        if assessment:
+            assessment.questions.append(new_q)
+
+        db.session.commit()
+
+    return jsonify(ShortAnswerQuestionSchema().dump(new_questions, many=True))
