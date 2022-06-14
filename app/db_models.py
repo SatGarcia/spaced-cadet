@@ -630,7 +630,8 @@ class Course(SearchableMixin, db.Model):
         return self.assessments.filter(Assessment.time < datetime.now())
 
     def upcoming_meetings(self): 
-        """ make comment here"""
+        """meetings that occur on the current date are considered upcoming"""
+
         return self.meetings.filter(ClassMeeting.date >= date.today())
 
     def previous_meetings(self):
