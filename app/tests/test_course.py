@@ -24,10 +24,12 @@ class CourseModelCase(unittest.TestCase):
         db.session.add(self.c2)
         db.session.commit()
 
+
     def tearDown(self):
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
+
 
     def create_assessments(self):
         self.a1 = Assessment(title="Test assessment1", time = datetime.now()-timedelta(days=2))  # assessment occurs during course, before current date
@@ -53,6 +55,7 @@ class CourseModelCase(unittest.TestCase):
 
         db.session.commit()
 
+
     def create_meetings(self):
         # course meetings to add
         self.cm1 = ClassMeeting(title = 'Meeting 1', date = datetime.now()-timedelta(days=2))
@@ -74,6 +77,7 @@ class CourseModelCase(unittest.TestCase):
         self.c2.meetings.append(self.cm5)
 
         db.session.commit()
+
 
     def test_upcoming_assessments(self):
         # test: if no assessments are added to the course yet, then none should be upcoming
@@ -110,6 +114,7 @@ class CourseModelCase(unittest.TestCase):
         self.assertCountEqual(self.c.previous_meetings(), []) 
 
         self.create_meetings()
+        
         # any meetings before today are previous
         self.assertCountEqual(self.c.previous_meetings(), [self.cm1])
         
