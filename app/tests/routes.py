@@ -16,6 +16,7 @@ from app.db_models import (
 Faker.seed(0)
 fake = Faker()
 
+
 class LoadDataError(Exception):
     def __init__(self, message, response, status_code):
         # Call the base class constructor with the parameters it needs
