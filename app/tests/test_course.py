@@ -103,13 +103,12 @@ class CourseModelCase(unittest.TestCase):
 
     def test_upcoming_meetings(self):
         # ClassMeeting class is based off of Date not DateTime, thus any meeting that is today will be included
-        # wouldn't it make more sense if the course meetings were time instead of date?
 
         # test: if no meetings are added to the course yet, then none should be upcoming
         self.assertCountEqual(self.c_empty.upcoming_meetings(), []) 
 
         # a5 should be upcoming because they haven't occurred yet
-        self.assertCountEqual(self.c.upcoming_meetings(), [self.cm5])
+        self.assertCountEqual(self.c.upcoming_meetings(), [self.cm5, self.cm2, self.cm3, self.cm4])
 
 
     def test_previous_meetings(self):
@@ -117,5 +116,5 @@ class CourseModelCase(unittest.TestCase):
         self.assertCountEqual(self.c_empty.previous_meetings(), []) 
 
         # any meetings that were today or in the past are previous
-        self.assertCountEqual(self.c.previous_meetings(), [self.cm1, self.cm2, self.cm3, self.cm4])
+        self.assertCountEqual(self.c.previous_meetings(), [self.cm1])
         
