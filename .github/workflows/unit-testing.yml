@@ -4,6 +4,7 @@
 name: Unit Testing
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main", "dev" ]
   pull_request:
