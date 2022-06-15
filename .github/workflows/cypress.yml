@@ -1,0 +1,33 @@
+name: End-to-End Tests (Cypress)
+on:
+  push:
+    branches:
+      - dev
+      - dummy
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+    # Docker Hub image that `container-job` executes in
+    container: nikolaik/python-nodejs:python3.10-nodejs14-slim
+
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      elasticsearch:
+        image: bitnami/elasticsearch:7.17.4
+        env:
+          discovery.type: single-node
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Install Node dependencies
+        run: npm ci
+      - name: Cypress run
+        uses: cypress-io/github-action@v4
+        with:
+          start: flask run
+          wait-on: 'http://localhost:5000'
