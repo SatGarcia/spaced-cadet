@@ -137,11 +137,11 @@ class AssessmentModelCase(unittest.TestCase):
         self.assertCountEqual(a.overdue_questions(u1).all(), [q3])
 
         # test that we successfully get multiple questions by changing one of
-        # the attempts to be due today
+        # the attempts to be due yesterday
         q2_attempt.next_attempt = date.today()-timedelta(days=1)
         db.session.commit()
 
-        self.assertCountEqual(a.due_questions(u1).all(), [q2, q3])
+        self.assertCountEqual(a.overdue_questions(u1).all(), [q2, q3])
 
     
     def test_waiting_questions(self):
@@ -165,7 +165,7 @@ class AssessmentModelCase(unittest.TestCase):
         db.session.commit()
 
         # before any attempts, there shouldn't be any waiting
-        self.assertEqual(a.overdue_questions(u1).all(), [])
+        self.assertEqual(a.waiting_questions(u1).all(), [])
 
         # three attempts for u1: one with next attempt of today, one with next
         # attempt yesterday, and one with tomorrow
@@ -183,14 +183,14 @@ class AssessmentModelCase(unittest.TestCase):
 
         db.session.add_all([q2_attempt, q3_attempt, q4_attempt, q1_attempt])
 
-        self.assertCountEqual(a.overdue_questions(u1).all(), [q4])
+        self.assertCountEqual(a.waiting_questions(u1).all(), [q4])
 
         # test that we successfully get multiple questions by changing one of
-        # the attempts to be due today
+        # the attempts to be due tomorrow
         q2_attempt.next_attempt = date.today()+timedelta(days=1)
         db.session.commit()
 
-        self.assertCountEqual(a.due_questions(u1).all(), [q2, q4])
+        self.assertCountEqual(a.waiting_questions(u1).all(), [q2, q4])
         
 
     @unittest.skip("Test not implemented")
