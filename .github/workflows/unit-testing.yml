@@ -1,7 +1,7 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Python application
+name: Unit Testing
 
 on:
   push:
@@ -13,8 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
-
+  run-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,8 +27,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install nose2
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Test with nose2
+    - name: Create Flask instance config
       run: |
         mkdir instance
         echo "ELASTICSEARCH_URL = None" > instance/config.py
-        nose2 -v
+    - name: Run unittests (nose2)
+      run: nose2 -v
