@@ -9,7 +9,7 @@ jobs:
   cypress-run:
     runs-on: ubuntu-latest
     # Docker Hub image that `container-job` executes in
-    container: nikolaik/python-nodejs:python3.10-nodejs14-slim
+    container: nikolaik/python-nodejs:python3.10-nodejs14
 
     # Service containers to run with `container-job`
     services:
