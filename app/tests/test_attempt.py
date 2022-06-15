@@ -63,6 +63,7 @@ class AttemptModelCase(unittest.TestCase):
         self.assertEqual(q3_attempt.next_attempt,date.today() + timedelta(days=1))
         self.assertEqual(q3_attempt.interval,1)
 
+
         # if quality >= 3 then the interval should be set to 6 if the interval was 1 
         q4_attempt = TextAttempt(response="Attempt4", user=u1, question=q4, time = datetime.now(),
                                  next_attempt=date.today(), e_factor = 2.5, interval = 1, quality = 3) 
@@ -72,6 +73,7 @@ class AttemptModelCase(unittest.TestCase):
         self.assertEqual(q4_attempt.interval,6) # by checking the interval we are also checking the next_attempt
         self.assertEqual(q4_attempt.e_factor,2.36)
 
+
         # if quality >= 3 then the interval should be set to the new interval *  new e_factor if the interval was not 1  
         q5_attempt = TextAttempt(response="Attempt5", user=u1, question=q5, time = datetime.now(),
                                  next_attempt=date.today(), e_factor = 2.5, interval = 3, quality = 3) 
@@ -80,6 +82,7 @@ class AttemptModelCase(unittest.TestCase):
         db.session.add(q5_attempt) 
         self.assertEqual(q5_attempt.interval,8) # by checking the interval we are also checking the next_attempt
         self.assertEqual(q5_attempt.e_factor,2.36)
+
 
         # checking that the floor of the e_factor is set if it goes below 1.3 in calculations
         q1_attempt = TextAttempt(response="Attempt1", user=u1, question=q1, time = datetime.now(),
