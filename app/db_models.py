@@ -392,6 +392,8 @@ class MultipleChoiceQuestionSchema(QuestionSchema):
 
             question.options = answer_options
 
+class MultipleSelectionQuestion(Question):
+    pass
 
 class AnswerOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
