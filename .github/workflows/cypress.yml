@@ -1,5 +1,6 @@
 name: End-to-End Tests (Cypress)
 on:
+  workflow_dispatch:
   push:
     branches: [ "main", "dev" ]
   pull_request:
