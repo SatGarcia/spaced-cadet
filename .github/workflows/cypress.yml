@@ -30,6 +30,8 @@ jobs:
         run: npm install
       - name: Cypress run
         uses: cypress-io/github-action@v4
+        env:
+          APP_CONFIG_CLASS: config.E2ETestingConfig
         with:
           start: flask run
           wait-on: 'http://localhost:5000'
