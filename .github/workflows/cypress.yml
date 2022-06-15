@@ -25,7 +25,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
       - name: Install Node dependencies
-        run: npm ci
+        run: npm install
       - name: Cypress run
         uses: cypress-io/github-action@v4
         with:
