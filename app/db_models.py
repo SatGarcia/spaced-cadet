@@ -710,13 +710,25 @@ class User(UserMixin, db.Model):
         return password
 
     def get_current_courses(self):
+        """ Returns all courses whose start date is before today and end date is
+        after today """
+
         return self.courses.filter(Course.start_date <= date.today())\
             .filter(Course.end_date >= date.today())\
             .order_by(Course.start_date)\
             .all()
 
     def get_active_courses(self):
+        """ Returns all courses whose end date is today or later """
+        
         return self.courses.filter(Course.end_date >= date.today())\
+            .order_by(Course.start_date)\
+            .all()
+    
+    def get_past_courses(self):
+        """ Returns all courses whose end date is earlier than today """
+        
+        return self.courses.filter(Course.end_date < date.today())\
             .order_by(Course.start_date)\
             .all()
 
