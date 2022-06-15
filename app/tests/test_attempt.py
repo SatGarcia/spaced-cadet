@@ -66,7 +66,7 @@ class AttemptModelCase(unittest.TestCase):
 
         # if quality >= 3 then the interval should be set to 6 if the interval was 1 
         q4_attempt = TextAttempt(response="Attempt4", user=u1, question=q4, time = datetime.now(),
-                                 next_attempt=date.today(), e_factor = 2.5, interval = 1, quality = 3) 
+                                 next_attempt=date.today(),  interval = 1, quality = 3) 
 
         q4_attempt.sm2_update(q4_attempt.quality) 
         db.session.add(q4_attempt) 
@@ -76,7 +76,7 @@ class AttemptModelCase(unittest.TestCase):
 
         # if quality >= 3 then the interval should be set to the new interval *  new e_factor if the interval was not 1  
         q5_attempt = TextAttempt(response="Attempt5", user=u1, question=q5, time = datetime.now(),
-                                 next_attempt=date.today(), e_factor = 2.5, interval = 3, quality = 3) 
+                                 next_attempt=date.today(), interval = 3, quality = 3) 
 
         q5_attempt.sm2_update(q5_attempt.quality) 
         db.session.add(q5_attempt) 
