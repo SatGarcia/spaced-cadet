@@ -127,10 +127,10 @@ class AssessmentModelCase(unittest.TestCase):
         q4_attempt = TextAttempt(response="Attempt4", user=u1, question=q4,
                                  next_attempt=(date.today()+timedelta(days=1)))
 
-        # single attempt for u2, with next attempt of today to make sure
+        # single attempt for u2, with next attempt of yesterday to make sure
         # method differentiates between users
         q1_attempt = TextAttempt(response="Attempt1", user=u2, question=q1,
-                                 next_attempt=date.today())
+                                 next_attempt=date.today()-timedelta(days=1))
 
         db.session.add_all([q2_attempt, q3_attempt, q4_attempt, q1_attempt])
 
@@ -156,6 +156,7 @@ class AssessmentModelCase(unittest.TestCase):
         a.questions.append(q1)
         a.questions.append(q2)
         a.questions.append(q3)
+        a.questions.append(q4)
 
         u1 = User(email="test@test.com", first_name="Test", last_name="User")
         u1.set_password("test")
@@ -176,10 +177,10 @@ class AssessmentModelCase(unittest.TestCase):
         q4_attempt = TextAttempt(response="Attempt4", user=u1, question=q4,
                                  next_attempt=(date.today()+timedelta(days=1)))
 
-        # single attempt for u2, with next attempt of today to make sure
+        # single attempt for u2, with next attempt of tomorrow to make sure
         # method differentiates between users
         q1_attempt = TextAttempt(response="Attempt1", user=u2, question=q1,
-                                 next_attempt=date.today())
+                                 next_attempt=date.today()+timedelta(days=1))
 
         db.session.add_all([q2_attempt, q3_attempt, q4_attempt, q1_attempt])
 
