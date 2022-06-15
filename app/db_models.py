@@ -723,7 +723,7 @@ class User(UserMixin, db.Model):
             .all()
     
     def get_past_courses(self):
-        """ Returns all courses whose end date is ealier than today """
+        """ Returns all courses whose end date is earlier than today """
         
         return self.courses.filter(Course.end_date < date.today())\
             .order_by(Course.start_date)\
