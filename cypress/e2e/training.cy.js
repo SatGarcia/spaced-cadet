@@ -1,4 +1,4 @@
-describe('Mission Training', () => {
+describe('Mission Training', function() {
   beforeEach(() => {
     // reset and seed the database prior to every test
     cy.request('/test/reset_db')
@@ -49,83 +49,177 @@ describe('Mission Training', () => {
       cy.get('input[name=submit]').click()
   }
 
-  /* 
-   * Tests a self-graded short answer question, which is correctly answered and rated
-   * as easy.
-   */
-  it('Easy Short Answer Question', function () {
-    cy.request('POST', '/test/seed/question/short-answer', { 
-      'author_id': this.instructorUser.id,
-      'assessment_id': 4,
-      'amount': 1
+  describe('Short Answer (Self-Graded)', function() {
+    beforeEach(function() {
+      cy.request('POST', '/test/seed/question/short-answer', { 
+        'author_id': this.instructorUser.id,
+        'assessment_id': 4,
+        'amount': 1
+      })
     })
 
-    cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
-    respondToQuestionCorrectly(this.testCourse.name, 'This is DEFINITELY correct. So simple!', 'Easy', false)
-    cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
-    cy.contains("Congratulations")
+    /* 
+     * Tests a self-graded short answer question, which is correctly answered and rated
+     * as easy.
+     */
+    it('Correct Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+      respondToQuestionCorrectly(this.testCourse.name, 'This is DEFINITELY correct. So simple!', 'Easy', false)
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Congratulations")
+    })
+
+    it('IDK Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("I Don't Know").click()
+
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
+
+    /* 
+     * Simulate a challenging short answer question that results in an incorrect
+     * answer followed by a retry.
+     */
+    it('Incorrect Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      // Enter an 'incorrect' answer
+      cy.get('textarea[name=response]').type("This isn't correct")
+      cy.get('input[name=submit]').click()
+
+      // check that they are on the page where they say whether their answer was
+      // correct and select "No"
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/short-answer`)
+      cy.get('input[name=no]').click()
+
+      // Should be back at the main training page with the same question ready
+      // to repeat
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
   })
 
-  /* 
-   * Tests a multiple choice question, which is correctly answered and rated
-   * as easy.
-   */
-  it('Easy Multiple Choice Question', function () {
-    cy.request('POST', '/test/seed/question/multiple-choice', { 
-      'author_id': this.instructorUser.id,
-      'assessment_id': 4,
-      'amount': 1
+  describe('Short Answer (Auto-Graded)', function() {
+    beforeEach(function() {
+      cy.request('POST', '/test/seed/question/auto-check', { 
+        'author_id': this.instructorUser.id,
+        'assessment_id': 4,
+        'amount': 1
+      })
+        .its('body')
+        .then(questions => { return questions[0]; })
+        .as('currentQuestion')
     })
 
-    cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
-    cy.contains("MULTIPLE CHOICE")
-    cy.contains("Good answer").click()
-    cy.get("input[name=submit]").click()
+    /* 
+     * Tests a self-graded short answer question, which is correctly answered and rated
+     * as easy.
+     */
+    it('Correct Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+      cy.get('input[name=response]').type(`${this.currentQuestion.answer}`)
+      cy.get('input[name=submit]').click()
 
-    // check that they are on the page where they rate their performance
-    cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/multiple-choice`)
+      // check that they are on the page where they rate their performance
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/auto-check`)
 
-    cy.contains('Easy').click()
-    cy.get('input[name=submit]').click()
+      cy.contains('Easy').click()
+      cy.get('input[name=submit]').click()
 
-    cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
-    cy.contains("Congratulations")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Congratulations")
+    })
+
+    // TODO: Test for IDK response to Auto Check question
+
+    /*
+     * Tests an incorrect response to the auto-graded question.
+     */
+    it('Incorrect Answer', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      // Note: by design, the random answer will always be a positive number
+      // so -1 will always be incorrect
+      cy.get('input[name=response]').type("-1")
+      cy.get('input[name=submit]').click()
+
+      // check that "Incorrect Answer" appears
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
   })
 
-  /* 
-   * Simulate a challenging short answer question that results in an incorrect
-   * answer followed by a retry.
-   */
-  it('Challenging Short Answer Question', function () {
-    // create a short answer question
-    cy.request('POST', '/test/seed/question/short-answer', { 
-      'author_id': this.instructorUser.id,
-      'assessment_id': 4,
-      'amount': 1
+  describe('Multiple Choice', function() {
+    beforeEach(function() {
+      cy.request('POST', '/test/seed/question/multiple-choice', { 
+        'author_id': this.instructorUser.id,
+        'assessment_id': 4,
+        'amount': 1
+      })
+
     })
 
-    cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+    /* 
+     * Tests a multiple choice question, which is correctly answered and rated
+     * as easy.
+     */
+    it('Correct Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Good answer").click()
+      cy.get("input[name=submit]").click()
 
-    // Enter an 'incorrect' answer
-    cy.get('textarea[name=response]').type("This isn't correct")
-    cy.get('input[name=submit]').click()
+      // check that they are on the page where they rate their performance
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/multiple-choice`)
 
-    // check that they are on the page where they say whether their answer was
-    // correct and select "No"
-    cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/short-answer`)
-    cy.get('input[name=no]').click()
+      cy.contains('Easy').click()
+      cy.get('input[name=submit]').click()
 
-    const responses = [{difficulty: 'Hard', answer: 'This is correct, I think'},
-      {difficulty: 'Medium', answer: 'I am fairly confident that this is correct'}]
-
-    responses.forEach(response => {
-      // should be back on training page
-      respondToQuestionCorrectly(this.testCourse.name, response.answer, response.difficulty, true)
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Congratulations")
     })
 
-    cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
-    cy.contains("Congratulations")
+    /*
+     * Tests an incorrect response to a multiple choice question.
+     */
+    it('Incorrect Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      cy.contains("Bad answer").click()
+      cy.get('input[name=submit]').click()
+
+      // check that "Incorrect Answer" appears
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
+
+    /*
+     * Tests a response of "I Don't Know"
+     */
+    it('IDK Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      cy.contains("I Don't Know").click()
+      cy.get('input[name=submit]').click()
+
+      // check that "Incorrect Answer" appears
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
   })
+
 
 })
 
