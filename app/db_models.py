@@ -93,6 +93,7 @@ class QuestionType(enum.Enum):
     GENERIC = "generic"
     SHORT_ANSWER = "short-answer"
     MULTIPLE_CHOICE = "multiple-choice"
+    MULTIPLE_SELECTION = "multiple-selection"
     CODE_JUMBLE = "code-jumble"
     AUTO_CHECK = "auto-check"
 
@@ -393,6 +394,22 @@ class MultipleChoiceQuestionSchema(QuestionSchema):
             question.options = answer_options
 
 class MultipleSelectionQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+
+    options = db.relationship('AnswerOption',
+                              foreign_keys='AnswerOption.question_id',
+                              backref='question', lazy='dynamic',
+                              cascade="all, delete-orphan")
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.MULTIPLE_SELECTION,
+    }
+
+    def get_answer(self):
+        answer = self.options.filter_by(correct=True).one()
+        return markdown_to_html(answer.text)
+
+class MultipleChoiceQuestionSchema(QuestionSchema):
     pass
 
 class AnswerOption(db.Model):
