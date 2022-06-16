@@ -398,7 +398,7 @@ class MultipleSelectionQuestion(Question):
 
     options = db.relationship('AnswerOption',
                               foreign_keys='AnswerOption.question_id',
-                              backref='question', lazy='dynamic',
+                              backref='selection_question', lazy='dynamic',
                               cascade="all, delete-orphan")
 
     __mapper_args__ = {
@@ -406,8 +406,11 @@ class MultipleSelectionQuestion(Question):
     }
 
     def get_answer(self):
-        answers = self.options.filter_by(correct=True)
-        return markdown_to_html(answers.text)
+        answers = self.options.filter_by(correct=True).all()
+        answer = ""
+        for a in answers:
+            answer+=markdown_to_html(a.text)
+        return answer
 
 class MultipleSelectionQuestionSchema(QuestionSchema):
     options = fields.List(fields.Nested('AnswerOptionSchema'), required=True)
@@ -437,6 +440,7 @@ class MultipleSelectionQuestionSchema(QuestionSchema):
                 answer_options.append(ao)
 
             question.options = answer_options
+
 
 class AnswerOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)

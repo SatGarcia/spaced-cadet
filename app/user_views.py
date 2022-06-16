@@ -219,7 +219,7 @@ def test_multiple_selection(course_name, mission_id):
                                    user_id=current_user.id)
 
         # Get the selected answer.
-        answer_id = form.response.data
+        answer_id = form.response.data # research this for multiple answers on wtforms
         selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
 
         # if there was a previous attempt, copy over e_factor and interval
@@ -873,7 +873,7 @@ class MultipleChoiceForm(FlaskForm):
 
 class MultipleSelectionForm(FlaskForm):
     question_id = HiddenField("Question ID")
-    response = RadioField('Select All That Apply', validators=[InputRequired()], coerce=int)
+    response = RadioField('Select All That Apply', coerce=int, render_kw={"type": "checkbox"})
     submit = SubmitField("Submit")
 
 from app.db_models import (
