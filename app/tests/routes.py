@@ -3,6 +3,7 @@ from marshmallow import (
     ValidationError, Schema, fields
 )
 from faker import Faker
+from random import shuffle
 from datetime import date, datetime, timedelta
 
 from app import db
@@ -10,12 +11,16 @@ from app.tests import tests
 from app.db_models import (
     User, UserSchema, Course, CourseSchema, Assessment, Objective,
     LearningObjectiveSchema,
-    ShortAnswerQuestion, ShortAnswerQuestionSchema
+    ShortAnswerQuestion, ShortAnswerQuestionSchema,
+    MultipleChoiceQuestion, MultipleChoiceQuestionSchema, AnswerOption
 )
 
 Faker.seed(0)
 fake = Faker()
 
+class InvalidIDError(Exception):
+    """ Error to indicate that a given ID is invalid. """
+    pass
 
 class LoadDataError(Exception):
     def __init__(self, message, response, status_code):
@@ -135,9 +140,54 @@ def seed_objective():
     return jsonify(LearningObjectiveSchema().dump(new_objective))
 
 
-@tests.route('/seed/question/short-answer', methods=['POST'])
-def seed_short_answer():
-    """ Creates randomized short answer questions. """
+def get_author_and_assessment(author_id, assessment_id):
+    author = User.query.filter_by(id=author_id).first()
+    if not author:
+        raise InvalidIDError(f"No user found with ID {author_id}")
+
+    if assessment_id is not None:
+        assessment = Assessment.query.filter_by(id=assessment_id).first()
+        if not assessment:
+            raise InvalidIDError(f"No assessment with ID {assessment_id}")
+    else:
+        assessment = None
+
+    return author, assessment
+
+def random_short_answer(author, is_public, is_enabled):
+    answer = fake.sentence(nb_words=3)
+    prompt = f"Type in something similar to the following: **{answer}**"
+    return ShortAnswerQuestion(prompt=prompt, answer=answer, author=author,
+                               public=is_public, enabled=is_enabled)
+
+def random_multiple_choice(author, is_public, is_enabled):
+    options = []
+    options.append(AnswerOption(text="Good answer", correct=True))
+
+    for i in range(1,4):
+        options.append(AnswerOption(text=f"Bad answer {i}", correct=False))
+
+    shuffle(options) # randomize the order of the options
+
+    prompt = "MULTIPLE CHOICE: " + fake.sentence(nb_words=3)
+    q = MultipleChoiceQuestion(prompt=prompt, author=author,
+                               public=is_public, enabled=is_enabled)
+
+    q.options = options
+    return q
+
+def create_questions(create_new_question):
+    """
+    Creates questions and adds them to the database.
+
+    Params:
+    create_new_question: Function that generates a new question given three
+    parameters: the question author, whether the question should be public,
+    and whether the question should be enabled.
+
+    Returns:
+    List of questions created
+    """
     QuestionInfoSchema = Schema.from_dict({
         'author_id': fields.Int(required=True),
         'assessment_id': fields.Int(),
@@ -149,24 +199,16 @@ def seed_short_answer():
     except LoadDataError as err:
         return err.response, err.status_code
 
-    author = User.query.filter_by(id=data['author_id']).first()
-    if not author:
-        return jsonify(message=f"No user with ID {data['author_id']}"), 422
-
-    if 'assessment_id' in data:
-        assessment = Assessment.query.filter_by(id=data['assessment_id']).first()
-        if not assessment:
-            return jsonify(message=f"No assessment with ID {data['assessment_id']}"), 422
-    else:
-        assessment = None
+    try:
+        author, assessment = get_author_and_assessment(data.get('author_id'),
+                                                       data.get('assessment_id'))
+    except InvalidIDError as err:
+        return jsonify(message=str(err)), 422
 
     new_questions = []
 
     for i in range(data['amount']):
-        answer = fake.sentence(nb_words=3)
-        prompt = f"Enter something similar to the following: {answer}"
-        new_q = ShortAnswerQuestion(prompt=prompt, answer=answer, author=author,
-                                    public=True, enabled=True)
+        new_q = create_new_question(author, True, True)
 
         new_questions.append(new_q)
         db.session.add(new_q)
@@ -176,4 +218,17 @@ def seed_short_answer():
 
         db.session.commit()
 
+    return new_questions
+
+@tests.route('/seed/question/short-answer', methods=['POST'])
+def seed_short_answer():
+    """ Creates randomized short answer (self-graded) questions. """
+    new_questions = create_questions(random_short_answer)
     return jsonify(ShortAnswerQuestionSchema().dump(new_questions, many=True))
+
+
+@tests.route('/seed/question/multiple-choice', methods=['POST'])
+def seed_multiple_choice():
+    """ Creates randomized multiple choice questions. """
+    new_questions = create_questions(random_multiple_choice)
+    return jsonify(MultipleChoiceQuestionSchema().dump(new_questions, many=True))
