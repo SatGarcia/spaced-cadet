@@ -45,11 +45,57 @@ describe('Mission Training', () => {
       // check that they are on the page where they rate their performance
       cy.location('pathname').should('eq', `/c/${courseName}/mission/4/train/review`)
 
-      // select hard so they repeat the question
       cy.contains(difficulty).click()
       cy.get('input[name=submit]').click()
   }
 
+  /* 
+   * Tests a self-graded short answer question, which is correctly answered and rated
+   * as easy.
+   */
+  it('Easy Short Answer Question', function () {
+    cy.request('POST', '/test/seed/question/short-answer', { 
+      'author_id': this.instructorUser.id,
+      'assessment_id': 4,
+      'amount': 1
+    })
+
+    cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+    respondToQuestionCorrectly(this.testCourse.name, 'This is DEFINITELY correct. So simple!', 'Easy', false)
+    cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+    cy.contains("Congratulations")
+  })
+
+  /* 
+   * Tests a multiple choice question, which is correctly answered and rated
+   * as easy.
+   */
+  it('Easy Multiple Choice Question', function () {
+    cy.request('POST', '/test/seed/question/multiple-choice', { 
+      'author_id': this.instructorUser.id,
+      'assessment_id': 4,
+      'amount': 1
+    })
+
+    cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+    cy.contains("MULTIPLE CHOICE")
+    cy.contains("Good answer").click()
+    cy.get("input[name=submit]").click()
+
+    // check that they are on the page where they rate their performance
+    cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/multiple-choice`)
+
+    cy.contains('Easy').click()
+    cy.get('input[name=submit]').click()
+
+    cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+    cy.contains("Congratulations")
+  })
+
+  /* 
+   * Simulate a challenging short answer question that results in an incorrect
+   * answer followed by a retry.
+   */
   it('Challenging Short Answer Question', function () {
     // create a short answer question
     cy.request('POST', '/test/seed/question/short-answer', { 
@@ -77,21 +123,6 @@ describe('Mission Training', () => {
       respondToQuestionCorrectly(this.testCourse.name, response.answer, response.difficulty, true)
     })
 
-    cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
-    cy.contains("Congratulations")
-  })
-
-  /* Tests a short answer question that user marks as correct ans rates as
-   * being easy. */
-  it('Easy Short Answer Question', function () {
-    cy.request('POST', '/test/seed/question/short-answer', { 
-      'author_id': this.instructorUser.id,
-      'assessment_id': 4,
-      'amount': 1
-    })
-
-    cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
-    respondToQuestionCorrectly(this.testCourse.name, 'This is DEFINITELY correct. So simple!', 'Easy', false)
     cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
     cy.contains("Congratulations")
   })
