@@ -9,8 +9,8 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
-    container: cypress/browsers:node16.14.0-chrome99-ff97
-    #container: python:3.10-buster
+    #container: cypress/browsers:node16.14.0-chrome99-ff97
+    container: elsaturnino/cypress-python
 
     # Service containers to run with `container-job`
     services:
