@@ -191,7 +191,101 @@ def check_mission_inclusion(mission_id, course):
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-selection', methods=['POST'])
 @login_required
 def test_multiple_selection(course_name, mission_id):
-    pass
+    # TODO: code duplication in this function
+    course = check_course_authorization(course_name)
+    check_mission_inclusion(mission_id, course)
+
+    form = MultipleSelectionForm(request.form)
+    original_question_id = form.question_id.data
+    original_question = Question.query.filter_by(id=original_question_id).first()
+
+    if not original_question:
+        abort(400)
+
+    form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
+    form.response.choices.append((-1, "I Don't Know"))
+
+    # grab the last attempt (before creating a new attempt which will be
+    # the new "last" attempt
+    previous_attempt = get_last_attempt(current_user.id, original_question_id)
+
+    # determine if this question is repeated from earlier today
+    repeated = is_a_repeat(previous_attempt)
+
+    if form.validate_on_submit():
+
+        # add the attempt to the database
+        attempt = SelectionAttempt(question_id=original_question_id,
+                                   user_id=current_user.id)
+
+        # Get the selected answer.
+        answer_id = form.response.data
+        selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
+
+        # if there was a previous attempt, copy over e_factor and interval
+        if previous_attempt:
+            attempt.e_factor = previous_attempt.e_factor
+            attempt.interval = previous_attempt.interval
+            attempt.next_attempt = previous_attempt.next_attempt
+
+        if selected_answer:
+            # no selected answer means they didn't have a response (i.e. "I
+            # Don't Know" was their answer)
+            attempt.response = selected_answer
+
+
+        db.session.add(attempt)
+        db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
+
+        if selected_answer and selected_answer.correct:
+            # if correct, send them off to the self rating form
+            attempt.correct = True
+            db.session.commit()
+            difficulty_form = DifficultyForm(attempt_id=attempt.id)
+            return render_template("difficulty.html",
+                                   page_title="Cadet Test: Rating",
+                                   form=difficulty_form,
+                                   post_url=url_for('.difficulty',
+                                                    course_name=course_name,
+                                                    mission_id=mission_id))
+
+        else:
+            attempt.correct = False
+
+            if selected_answer:
+                # they made an attempt but were wrong so set response quality to 2
+                attempt.sm2_update(2, repeat_attempt=repeated)
+            else:
+                # no attempt ("I Don't Know"), so set response quality to 1
+                attempt.sm2_update(1, repeat_attempt=repeated)
+
+            db.session.commit()
+
+            # show the user a page where they can view the correct answer
+            prompt_html = markdown_to_html(original_question.prompt)
+
+            correct_option = original_question.options.filter_by(correct=True).first()
+            answer_html = markdown_to_html(correct_option.text)
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
+                                   prompt=Markup(prompt_html),
+                                   answer=Markup(answer_html))
+
+
+    prompt_html = markdown_to_html(original_question.prompt)
+
+    return render_template("test_multiple_choice.html",
+                           page_title="Cadet Test",
+                           course_name=course_name,
+                           fresh_question=(not repeated),
+                           form=form,
+                           post_url="", # same url as current so can leave this blank
+                           prompt=Markup(prompt_html))
+
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-choice', methods=['POST'])
