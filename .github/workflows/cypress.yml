@@ -9,7 +9,8 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
-    container: elsaturnino/cypress-python
+    #container: elsaturnino/cypress-python
+    container: node16.14.0-chrome99-ff97
 
     # Service containers to run with `container-job`
     services:
@@ -25,14 +26,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10.5'
+          python-version: '3.10'
           cache: 'pip'
       - name: Install Python dependencies
         run: pip install -r requirements.txt
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version: 16
           cache: 'npm'
       - name: Install Node dependencies
         run: npm install
