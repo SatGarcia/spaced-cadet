@@ -3,7 +3,7 @@ from marshmallow import (
     ValidationError, Schema, fields
 )
 from faker import Faker
-from random import shuffle
+from random import shuffle, randint
 from datetime import date, datetime, timedelta
 
 from app import db
@@ -12,6 +12,7 @@ from app.db_models import (
     User, UserSchema, Course, CourseSchema, Assessment, Objective,
     LearningObjectiveSchema,
     ShortAnswerQuestion, ShortAnswerQuestionSchema,
+    AutoCheckQuestion, AutoCheckQuestionSchema,
     MultipleChoiceQuestion, MultipleChoiceQuestionSchema, AnswerOption
 )
 
@@ -160,6 +161,13 @@ def random_short_answer(author, is_public, is_enabled):
     return ShortAnswerQuestion(prompt=prompt, answer=answer, author=author,
                                public=is_public, enabled=is_enabled)
 
+def random_auto_check(author, is_public, is_enabled):
+    answer = str(randint(1,100))
+    prompt = f"What is {answer}+0?"
+    return AutoCheckQuestion(prompt=prompt, answer=answer, regex=False,
+                             author=author, public=is_public,
+                             enabled=is_enabled)
+
 def random_multiple_choice(author, is_public, is_enabled):
     options = []
     options.append(AnswerOption(text="Good answer", correct=True))
@@ -225,6 +233,13 @@ def seed_short_answer():
     """ Creates randomized short answer (self-graded) questions. """
     new_questions = create_questions(random_short_answer)
     return jsonify(ShortAnswerQuestionSchema().dump(new_questions, many=True))
+
+
+@tests.route('/seed/question/auto-check', methods=['POST'])
+def seed_auto_check():
+    """ Creates randomized short answer (auto-graded) questions. """
+    new_questions = create_questions(random_auto_check)
+    return jsonify(AutoCheckQuestionSchema().dump(new_questions, many=True))
 
 
 @tests.route('/seed/question/multiple-choice', methods=['POST'])
