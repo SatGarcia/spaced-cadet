@@ -16,6 +16,7 @@ from app.db_models import (
     ShortAnswerQuestion, ShortAnswerQuestionSchema,
     AutoCheckQuestion, AutoCheckQuestionSchema,
     MultipleChoiceQuestion, MultipleChoiceQuestionSchema,
+    MultipleSelectionQuestion, MultipleSelectionQuestionSchema,
     AnswerOption,
     User, UserSchema,
     JumbleBlock,
@@ -134,6 +135,7 @@ question_schema = QuestionSchema(unknown=EXCLUDE)
 sa_question_schema = ShortAnswerQuestionSchema()
 ac_question_schema = AutoCheckQuestionSchema()
 mc_question_schema = MultipleChoiceQuestionSchema()
+ms_question_schema = MultipleSelectionQuestionSchema()
 cj_question_schema = CodeJumbleQuestionSchema()
 textbook_schema = TextbookSchema()
 textbook_section_schema = TextbookSectionSchema()
@@ -603,6 +605,8 @@ class QuestionApi(Resource):
             return ac_question_schema.dump(question)
         elif question.type == QuestionType.MULTIPLE_CHOICE:
             return mc_question_schema.dump(question)
+        elif question.type == QuestionType.MULTIPLE_SELECTION:
+            return ms_question_schema.dump(question)
         elif question.type == QuestionType.CODE_JUMBLE:
             return cj_question_schema.dump(question)
         else:
@@ -673,6 +677,8 @@ class QuestionApi(Resource):
             schema = ac_question_schema
         elif q.type == QuestionType.MULTIPLE_CHOICE:
             schema = mc_question_schema
+        elif q.type == QuestionType.MULTIPLE_SELECTION:
+            schema = ms_question_schema
         elif q.type == QuestionType.CODE_JUMBLE:
             schema = cj_question_schema
 
@@ -975,6 +981,8 @@ class QuestionsApi(Resource):
             schema = ac_question_schema
         elif json_data['type'] == 'multiple-choice':
             schema = mc_question_schema
+        elif json_data['type'] == 'multiple-selection':
+            schema = ms_question_schema
         elif json_data['type'] == 'code-jumble':
             schema = cj_question_schema
 

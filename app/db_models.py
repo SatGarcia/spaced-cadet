@@ -406,11 +406,37 @@ class MultipleSelectionQuestion(Question):
     }
 
     def get_answer(self):
-        answer = self.options.filter_by(correct=True).one()
-        return markdown_to_html(answer.text)
+        answers = self.options.filter_by(correct=True)
+        return markdown_to_html(answers.text)
 
-class MultipleChoiceQuestionSchema(QuestionSchema):
-    pass
+class MultipleSelectionQuestionSchema(QuestionSchema):
+    options = fields.List(fields.Nested('AnswerOptionSchema'), required=True)
+
+    def make_obj(self, data):
+        answer_options = []
+
+        for opt in data['options']:
+            ao = AnswerOption(**opt)
+            answer_options.append(ao)
+            db.session.add(ao)
+
+        del data['options']
+
+        q = MultipleSelectionQuestion(**data)
+        q.options = answer_options
+
+        return q
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        if 'options' in data:
+            answer_options = []
+            for opt in data['options']:
+                ao = AnswerOption(**opt)
+                answer_options.append(ao)
+
+            question.options = answer_options
 
 class AnswerOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)

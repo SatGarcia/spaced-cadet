@@ -188,6 +188,11 @@ def check_mission_inclusion(mission_id, course):
     else:
         return mission
 
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-selection', methods=['POST'])
+@login_required
+def test_multiple_selection(course_name, mission_id):
+    pass
+
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-choice', methods=['POST'])
 @login_required
@@ -677,6 +682,24 @@ def test(course_name, mission_id):
                                                 mission_id=mission_id),
                                prompt=Markup(prompt_html))
 
+    # ADDED THIS
+    elif question.type == QuestionType.MULTIPLE_SELECTION:
+        form = MultipleSelectionForm(question_id=question.id)
+        form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
+        form.response.choices.append((-1, "I Don't Know"))
+
+        prompt_html = markdown_to_html(question.prompt)
+
+        return render_template("test_multiple_choice.html",
+                                page_title="Cadet Test",
+                                course_name=course_name,
+                                fresh_question=fresh_question,
+                                form=form,
+                                post_url=url_for('.test_multiple_choice',
+                                                course_name=course_name,
+                                                mission_id=mission_id),
+                                prompt=Markup(prompt_html))
+
     elif question.type == QuestionType.CODE_JUMBLE:
         form = CodeJumbleForm(question_id=question.id, response="")
         prompt_html = markdown_to_html(question.prompt)
@@ -752,6 +775,11 @@ class CodeJumbleForm(FlaskForm):
 class MultipleChoiceForm(FlaskForm):
     question_id = HiddenField("Question ID")
     response = RadioField('Select One', validators=[InputRequired()], coerce=int)
+    submit = SubmitField("Submit")
+
+class MultipleSelectionForm(FlaskForm):
+    question_id = HiddenField("Question ID")
+    response = RadioField('Select All That Apply', validators=[InputRequired()], coerce=int)
     submit = SubmitField("Submit")
 
 from app.db_models import (
