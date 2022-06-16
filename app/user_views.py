@@ -203,6 +203,7 @@ def test_multiple_selection(course_name, mission_id):
         abort(400)
 
     form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
+    print(form.response.choices)
     form.response.choices.append((-1, "I Don't Know"))
 
     # grab the last attempt (before creating a new attempt which will be
@@ -220,6 +221,8 @@ def test_multiple_selection(course_name, mission_id):
 
         # Get the selected answer.
         answer_id = form.response.data # research this for multiple answers on wtforms
+        print(form.response.data)
+        
         selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
 
         # if there was a previous attempt, copy over e_factor and interval
