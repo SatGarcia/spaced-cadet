@@ -220,6 +220,137 @@ describe('Mission Training', function() {
     })
   })
 
+  describe.only('Code Jumble', function() {
+    beforeEach(function() {
+      cy.request('POST', '/test/seed/question/code-jumble', { 
+        'author_id': this.instructorUser.id,
+        'assessment_id': 4,
+        'amount': 1
+      })
+    })
+
+    function moveCodeBlock(lineContents, destinationId, destinationIndex) {
+      const dataTransfer = new DataTransfer()
+
+      cy.contains(lineContents)
+        .trigger('dragstart', {dataTransfer})
+      cy.get(`${destinationId}>li`).eq(destinationIndex)
+        .trigger('drop', {dataTransfer})
+      cy.contains(lineContents)
+        .trigger('dragend', {dataTransfer})
+    }
+
+    /* 
+     * Tests a code jumble question, which is correctly answered and rated
+     * as easy.
+     */
+    it('Correct Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      // move correct blocks into place
+      moveCodeBlock('line 0', '#jumbley', 0);
+      moveCodeBlock('line 1', '#jumbley', 1);
+      moveCodeBlock('line 2', '#jumbley', 2);
+
+      // move unused blocks into trash
+      moveCodeBlock('trash 1', '#jumble-trash', 0);
+      moveCodeBlock('trash 2', '#jumble-trash', 0);
+
+      // indent the blocks
+      cy.get("#jumbley>li").eq(1).find('.bi-arrow-right').click().click()
+
+      // indent twice, but then remove indent
+      cy.get("#jumbley>li").eq(2).find('.bi-arrow-right').click().click()
+      cy.get("#jumbley>li").eq(2).find('.bi-arrow-left').click()
+
+      // test that unindent doesn't do anything if there isn't any indentation
+      cy.get("#jumbley>li").eq(0).find('.bi-arrow-left').click().click()
+
+      cy.contains("Submit").click()
+
+      // should be on rating page
+      cy.contains("Rate Your Performance")
+      cy.contains("Easy").click()
+      cy.contains("Submit").click()
+
+      cy.contains("Congratulations")
+    })
+
+    /*
+     * Tests several incorrect attempts:
+     * (1) Wrong blocks/order/indentation
+     * (2) Correct blocks/order, bad indentation
+     * (3) Correct blocks/indentation, bad ordering
+     */
+    it('Incorrect Attempts', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      // Scenario 1 (wrong blocks/order/indentation)
+      cy.contains("Submit").click()
+
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+
+      // Scenario 2 (bad indentation)
+      // move correct blocks into place
+      moveCodeBlock('line 0', '#jumbley', 0);
+      moveCodeBlock('line 1', '#jumbley', 1);
+      moveCodeBlock('line 2', '#jumbley', 2);
+
+      // move unused blocks into trash
+      moveCodeBlock('trash 1', '#jumble-trash', 0);
+      moveCodeBlock('trash 2', '#jumble-trash', 0);
+
+      cy.contains("Submit").click()
+
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+
+      // Scenario 3 (bad ordering)
+      // move correct blocks into correct places (we'll undo this later)
+      moveCodeBlock('line 0', '#jumbley', 0);
+      moveCodeBlock('line 1', '#jumbley', 1);
+      moveCodeBlock('line 2', '#jumbley', 2);
+
+      // move unused blocks into trash
+      moveCodeBlock('trash 1', '#jumble-trash', 0);
+      moveCodeBlock('trash 2', '#jumble-trash', 0);
+
+      // indent the blocks
+      cy.get("#jumbley>li").eq(1).find('.bi-arrow-right').click().click()
+      cy.get("#jumbley>li").eq(2).find('.bi-arrow-right').click()
+
+      // move one block to the wrong spot
+      moveCodeBlock('line 0', '#jumbley', 2);
+
+      cy.contains("Submit").click()
+
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
+
+    it('IDK Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("I Don't Know").click()
+
+      // check that "Incorrect Answer" appears
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
+
+  })
 
 })
 
