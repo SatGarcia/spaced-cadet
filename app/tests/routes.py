@@ -13,7 +13,8 @@ from app.db_models import (
     LearningObjectiveSchema,
     ShortAnswerQuestion, ShortAnswerQuestionSchema,
     AutoCheckQuestion, AutoCheckQuestionSchema,
-    MultipleChoiceQuestion, MultipleChoiceQuestionSchema, AnswerOption
+    MultipleChoiceQuestion, MultipleChoiceQuestionSchema, AnswerOption,
+    CodeJumbleQuestion, CodeJumbleQuestionSchema, JumbleBlock
 )
 
 Faker.seed(0)
@@ -184,6 +185,28 @@ def random_multiple_choice(author, is_public, is_enabled):
     q.options = options
     return q
 
+def random_code_jumble(author, is_public, is_enabled):
+    blocks = []
+    blocks.append(JumbleBlock(code=f"# line 0, indent 0",
+                              correct_index=0, correct_indent=0))
+    blocks.append(JumbleBlock(code=f"# line 1, indent 2",
+                              correct_index=1, correct_indent=2))
+    blocks.append(JumbleBlock(code=f"# line 2, indent 1",
+                              correct_index=2, correct_indent=1))
+
+    for i in range(1,3):
+        blocks.append(JumbleBlock(code=f"# trash {i}",
+                                  correct_index=-1, correct_indent=-1))
+
+    shuffle(blocks) # randomize the order of the blocks
+
+    prompt = "Read the code and figure it out!"
+    q = CodeJumbleQuestion(prompt=prompt, language='python', author=author,
+                               public=is_public, enabled=is_enabled)
+
+    q.blocks = blocks
+    return q
+
 def create_questions(create_new_question):
     """
     Creates questions and adds them to the database.
@@ -247,3 +270,10 @@ def seed_multiple_choice():
     """ Creates randomized multiple choice questions. """
     new_questions = create_questions(random_multiple_choice)
     return jsonify(MultipleChoiceQuestionSchema().dump(new_questions, many=True))
+
+
+@tests.route('/seed/question/code-jumble', methods=['POST'])
+def seed_code_jumble():
+    """ Creates randomized code jumble questions. """
+    new_questions = create_questions(random_code_jumble)
+    return jsonify(CodeJumbleQuestionSchema().dump(new_questions, many=True))
