@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch, MagicMock, call
 import warnings
 from urllib.parse import urlparse
 from datetime import date, datetime, timedelta
@@ -14,6 +15,7 @@ from app.db_models import (
 class TrainingTests(unittest.TestCase):
     def setUp(self):
         warnings.simplefilter('ignore', category=DeprecationWarning)
+        warnings.simplefilter('ignore', category=ResourceWarning)
 
         self.app = create_app('config.TestConfig')
         self.app.test_client_class = FlaskLoginClient
@@ -33,8 +35,8 @@ class TrainingTests(unittest.TestCase):
         a = Assessment(title="Test assessment")
         self.course.assessments.append(a)
 
-        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1")
-        a.questions.append(q1)
+        self.q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1")
+        a.questions.append(self.q1)
 
         # create two example users, one enrolled in the course, another not
         self.u1 = User(email="user1@example.com", first_name="User", last_name="Uno")
@@ -72,7 +74,7 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertIn(b"Was your answer correct?", response.data)
 
-            # check that there is now a single attempt
+            # check that there is now a single (text) attempt
             self.assertEqual(Attempt.query.count(), 1)
             self.assertEqual(TextAttempt.query.count(), 1)
 
@@ -112,6 +114,10 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Incorrect Answer", response.data)
 
+        # check that there is now a single (text) attempt
+        self.assertEqual(Attempt.query.count(), 1)
+        self.assertEqual(TextAttempt.query.count(), 1)
+
     def test_missing_short_answer_response(self):
         # System should reject blank strings as well as strings that have only
         # whitespace characters
@@ -130,6 +136,81 @@ class TrainingTests(unittest.TestCase):
 
             # make sure no attempt was created
             self.assertEqual(Attempt.query.count(), 0)
+
+    def test_self_review_correct(self):
+        """ Tests user selecting that they correctly got the question correct. """
+        # create the existing attempt that will be updated
+        attempt = TextAttempt(response="Whatever", question=self.q1,
+                              user=self.u1,
+                              time=datetime(2022, 1, 2))
+        db.session.add(attempt)
+        db.session.commit()
+
+        client = self.app.test_client(user=self.u1)
+        response = client.post(url_for('user_views.self_review',
+                                            course_name="test-course",
+                                            mission_id=1),
+                                        data={
+                                            "attempt_id": attempt.id,
+                                            "yes": "y"
+                                        })
+
+        # check that user was sent to the difficulty rating page
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Rate Your Performance", response.data)
+
+        # check that attempt's correctness was set but that all other fields
+        # remain unchanged
+        updated_attempt = Attempt.query.filter_by(id=attempt.id).first()
+        self.assertIsNotNone(updated_attempt)
+        self.assertTrue(updated_attempt.correct)
+        self.assertEqual(updated_attempt.next_attempt, date.today())
+        self.assertEqual(updated_attempt.e_factor, 2.5)
+        self.assertEqual(updated_attempt.interval, 1)
+        self.assertEqual(updated_attempt.quality, -1)
+        self.assertEqual(updated_attempt.time, datetime(2022, 1, 2))
+
+    def test_self_review_incorrect(self):
+        """ Tests user selecting that they incorrectly answered the question. """
+        # create the existing attempt that will be updated
+        attempt = TextAttempt(response="Whatever", question=self.q1,
+                              user=self.u1,
+                              time=datetime(2022, 1, 2))
+        db.session.add(attempt)
+        db.session.commit()
+
+        client = self.app.test_client(user=self.u1)
+        with patch('app.db_models.Attempt.sm2_update') as mock_sm2_update:
+            response = client.post(url_for('user_views.self_review',
+                                                course_name="test-course",
+                                                mission_id=1),
+                                            data={
+                                                "attempt_id": attempt.id,
+                                                "no": "y"
+                                            })
+
+            self.assertEqual(mock_sm2_update.call_count, 1)
+            self.assertEqual(mock_sm2_update.call_args, call(2, repeat_attempt=False))
+
+        # check that user was sent to the difficulty rating page
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(urlparse(response.location).path,
+                                  url_for('user_views.test',
+                                          course_name="test-course",
+                                          mission_id=1,
+                                          _external=False))
+
+
+        # check that attempt's correctness was set, but no other fields were
+        # changed (they should only be changed through sm2_update)
+        updated_attempt = Attempt.query.filter_by(id=attempt.id).first()
+        self.assertIsNotNone(updated_attempt)
+        self.assertFalse(updated_attempt.correct)
+        self.assertEqual(updated_attempt.next_attempt, date.today())
+        self.assertEqual(updated_attempt.e_factor, 2.5)
+        self.assertEqual(updated_attempt.interval, 1)
+        self.assertEqual(updated_attempt.quality, -1)
+        self.assertEqual(updated_attempt.time, datetime(2022, 1, 2))
 
 
 if __name__ == '__main__':
