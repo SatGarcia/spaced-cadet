@@ -163,7 +163,6 @@ def preview_question(question_id):
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(question_id=question.id)
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
-        form.response.choices.append((-1, "I Don't Know"))
 
         return render_template("test_multiple_choice.html",
                                page_title=page_title,
@@ -174,7 +173,6 @@ def preview_question(question_id):
     elif question.type == QuestionType.MULTIPLE_SELECTION:
         form = MultipleSelectionForm(question_id=question.id)
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
-        form.response.choices.append((-1, "I Don't Know"))
 
         return render_template("test_multiple_selection.html",
                                page_title=page_title,
