@@ -319,6 +319,8 @@ def test_multiple_selection(course_name, mission_id):
         attempt = SelectionAttempt(question_id=original_question_id,
                                    user_id=current_user.id)
  
+
+        prompt_html = markdown_to_html(original_question.prompt)
     
         answer_ids = form.response.data 
         selected_answers = AnswerOption.query.filter(AnswerOption.id.in_(answer_ids)).all()
@@ -339,13 +341,18 @@ def test_multiple_selection(course_name, mission_id):
             attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
+            correct_options = original_question.options.filter_by(correct=True).all()
+            answer_html = ''
+            for option in correct_options:
+                answer_html += markdown_to_html(option.text) + "\n"
+
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
                                    continue_url=url_for('.test',
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
-                                   answer=original_question.answer)
+                                   answer=Markup(answer_html))
 
         correct_list = original_question.options.filter_by(correct = True).all()
         if selected_answers == correct_list: 
@@ -367,6 +374,7 @@ def test_multiple_selection(course_name, mission_id):
             
             # they made an attempt but were wrong so set response quality to 2
             attempt.sm2_update(2, repeat_attempt=repeated)
+
             
             #LOOK AT ME: there is no I Don't Know button yet? so remember to set quality to 1 after feature added
             #else:
@@ -376,7 +384,7 @@ def test_multiple_selection(course_name, mission_id):
             db.session.commit()
  
             # show the user a page where they can view the correct answers
-            prompt_html = markdown_to_html(original_question.prompt)
+            
  
             correct_options = original_question.options.filter_by(correct=True).all()
             answer_html = ''
