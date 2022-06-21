@@ -493,5 +493,41 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
 
 
+    def test_difficulty_form(self):
+        attempt = TextAttempt(response="Whatever", question=self.sa_question,
+                              user=self.u1,
+                              time=datetime(2022, 1, 2))
+        db.session.add(attempt)
+        db.session.commit()
+
+        client = self.app.test_client(user=self.u1)
+
+        for score in range(3, 6):
+            with patch('app.db_models.Attempt.sm2_update') as mock_sm2_update:
+                response = client.post(url_for('user_views.difficulty',
+                                               course_name="test-course",
+                                               mission_id=1),
+                                       data={
+                                           "attempt_id": str(attempt.id),
+                                           "difficulty": str(score),
+                                           "submit": "y"
+                                       })
+
+                # should call sm2_update once
+                self.assertEqual(mock_sm2_update.call_count, 1)
+                self.assertEqual(mock_sm2_update.call_args, call(score, repeat_attempt=False))
+
+                # should redirect to the main training page
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(urlparse(response.location).path,
+                                          url_for('user_views.test',
+                                                  course_name="test-course",
+                                                  mission_id=1,
+                                                  _external=False))
+
+                # should not create any new attempts
+                self.assertEqual(Attempt.query.count(), 1)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
