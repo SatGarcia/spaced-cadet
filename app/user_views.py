@@ -332,9 +332,22 @@ def test_multiple_selection(course_name, mission_id):
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
 
+        if form.no_answer.data:
+            # No response from user ("I Don't Know"), which is response
+            # quality 1 in SM-2
+            attempt.correct = False
+            attempt.sm2_update(1, repeat_attempt=repeated)
+            db.session.commit()
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
+                                   prompt=Markup(prompt_html),
+                                   answer=original_question.answer)
+
         correct_list = original_question.options.filter_by(correct = True).all()
-        print(selected_answers)
-        print(correct_list)
         if selected_answers == correct_list: 
             
             # if correct, send them off to the self rating form
@@ -779,11 +792,9 @@ def test(course_name, mission_id):
                                                 mission_id=mission_id),
                                prompt=Markup(prompt_html))
 
-    # ADDED THIS
     elif question.type == QuestionType.MULTIPLE_SELECTION:
         form = MultipleSelectionForm(question_id=question.id)
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
-        form.response.choices.append((-1, "I Don't Know"))
 
         prompt_html = markdown_to_html(question.prompt)
 
@@ -882,6 +893,7 @@ class MultipleSelectionForm(FlaskForm):
 
     question_id = HiddenField("Question ID")
     response = MultiCheckboxField('Select All That Apply', coerce=int) # , validators=[DataRequired()]
+    no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 
 from app.db_models import (
