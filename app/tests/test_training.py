@@ -23,7 +23,6 @@ class TrainingTests(unittest.TestCase):
         self.app.config['SERVER_NAME'] = 'localhost.localdomain:5000'
         self.app_context = self.app.app_context()
         self.app_context.push()
-        self.client = self.app.test_client()
         db.create_all()
 
         self.course = Course(name="test-course", title="Test Course",
@@ -270,6 +269,12 @@ class TrainingTests(unittest.TestCase):
         # check that there is now a single (text) attempt
         self.assertEqual(Attempt.query.count(), 1)
         self.assertEqual(TextAttempt.query.count(), 1)
+
+        # check that attempt is labeled as incorrect and has quality of 1
+        attempt = TextAttempt.query.first()
+        self.assertFalse(attempt.correct)
+        self.assertEqual(attempt.quality, 1)
+
 
     def test_missing_short_answer_response(self):
         # System should reject blank strings as well as strings that have only
