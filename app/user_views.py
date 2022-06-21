@@ -332,7 +332,7 @@ def test_multiple_selection(course_name, mission_id):
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
 
-        correct_list = AnswerOption.query.filter_by(question_id=original_question_id).filter_by(correct = True).all()
+        correct_list = original_question.options.filter_by(correct = True).all()
         print(selected_answers)
         print(correct_list)
         if selected_answers == correct_list: 
