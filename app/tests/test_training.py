@@ -330,27 +330,38 @@ class TrainingTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 401)
 
-    def test_idk_short_answer_question_submission(self):
-        client = self.app.test_client(user=self.u1)
-        response = client.post(url_for('user_views.test_short_answer',
-                                            course_name="test-course",
-                                            mission_id=1),
-                                    data={
-                                        "question_id": str(self.sa_question.id),
-                                        "response": "",
-                                        "no_answer": "y"
-                                    })
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Incorrect Answer", response.data)
+    def test_idk_responses(self):
+        for route_url, question_id in [
+                ('user_views.test_short_answer', self.sa_question.id),
+                ('user_views.test_auto_check', self.ac_question.id),
+                ('user_views.test_code_jumble', self.cj_question.id)]:
 
-        # check that there is now a single (text) attempt
-        self.assertEqual(Attempt.query.count(), 1)
-        self.assertEqual(TextAttempt.query.count(), 1)
+            client = self.app.test_client(user=self.u1)
+            response = client.post(url_for(route_url,
+                                           course_name="test-course",
+                                           mission_id=1),
+                                        data={
+                                            "question_id": question_id,
+                                            "response": "",
+                                            "no_answer": "y"
+                                        })
 
-        # check that attempt is labeled as incorrect and has quality of 1
-        attempt = TextAttempt.query.first()
-        self.assertFalse(attempt.correct)
-        self.assertEqual(attempt.quality, 1)
+            # check that they are given the 'review answer' page
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"Incorrect Answer", response.data)
+
+            # check that there is now a single (text) attempt
+            self.assertEqual(Attempt.query.count(), 1)
+
+            # check that attempt is labeled as incorrect and has quality of 1
+            attempt = Attempt.query.first()
+            self.assertFalse(attempt.correct)
+            self.assertEqual(attempt.quality, 1)
+
+            # clear out attempts for next user test
+            Attempt.query.delete()
+            TextAttempt.query.delete()
+            SelectionAttempt.query.delete()
 
 
     def test_missing_short_answer_response(self):
