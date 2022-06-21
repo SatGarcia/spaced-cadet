@@ -212,6 +212,40 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(updated_attempt.quality, -1)
         self.assertEqual(updated_attempt.time, datetime(2022, 1, 2))
 
+    def test_unauthorized_self_review(self):
+        attempt = TextAttempt(response="Whatever", question=self.q1,
+                              user=self.u1,
+                              time=datetime(2022, 1, 2))
+        db.session.add(attempt)
+        db.session.commit()
+
+        # test when user isn't in the course at all
+
+        client = self.app.test_client(user=self.u2)
+        response = client.post(url_for('user_views.self_review',
+                                            course_name="test-course",
+                                            mission_id=1),
+                                        data={
+                                            "attempt_id": attempt.id,
+                                            "yes": "y"
+                                        })
+
+        self.assertEqual(response.status_code, 401)
+
+        # test when user is in the course but this isn't their attempt
+        self.course.users.append(self.u2)
+        db.session.commit()
+
+        response = client.post(url_for('user_views.self_review',
+                                            course_name="test-course",
+                                            mission_id=1),
+                                        data={
+                                            "attempt_id": attempt.id,
+                                            "yes": "y"
+                                        })
+
+        self.assertEqual(response.status_code, 401)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
