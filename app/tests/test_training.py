@@ -8,7 +8,8 @@ from flask_login import FlaskLoginClient
 
 from app import create_app, db
 from app.db_models import (
-    User, Course, ShortAnswerQuestion, Assessment, Attempt, TextAttempt
+    User, Course, ShortAnswerQuestion, Assessment, Attempt, TextAttempt,
+    AutoCheckQuestion, MultipleChoiceQuestion, AnswerOption, SelectionAttempt
 )
 
 
@@ -35,8 +36,20 @@ class TrainingTests(unittest.TestCase):
         a = Assessment(title="Test assessment")
         self.course.assessments.append(a)
 
-        self.q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1")
-        a.questions.append(self.q1)
+        self.sa_question = ShortAnswerQuestion(prompt="Short Answer Question", answer="Answer 1")
+        a.questions.append(self.sa_question)
+
+        self.ac_question = AutoCheckQuestion(prompt="Auto Check Question",
+                                             answer="Answer 2",
+                                             regex=False)
+        a.questions.append(self.ac_question)
+
+        self.mc_question = MultipleChoiceQuestion(prompt="Multiple Choice Question")
+        o1 = AnswerOption(text="Good", correct=True)
+        o2 = AnswerOption(text="Not good", correct=False)
+        o3 = AnswerOption(text="Also bad", correct=False)
+        self.mc_question.options = [o1, o2, o3]
+        a.questions.append(self.mc_question)
 
         # create two example users, one enrolled in the course, another not
         self.u1 = User(email="user1@example.com", first_name="User", last_name="Uno")
@@ -54,6 +67,27 @@ class TrainingTests(unittest.TestCase):
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
+
+    def check_text_attempt(self, question_id, user_id, response):
+            # check that there is now a single (text) attempt
+            self.assertEqual(Attempt.query.count(), 1)
+            self.assertEqual(TextAttempt.query.count(), 1)
+
+            attempt = TextAttempt.query.first()
+            self.assertEqual(attempt.question_id, question_id)
+            self.assertEqual(attempt.user_id, user_id)
+            self.assertEqual(attempt.response, response)
+
+    def check_selection_attempt(self, question_id, user_id, response_id):
+            # check that there is now a single (text) attempt
+            self.assertEqual(Attempt.query.count(), 1)
+            self.assertEqual(SelectionAttempt.query.count(), 1)
+
+            attempt = SelectionAttempt.query.first()
+            self.assertEqual(attempt.question_id, question_id)
+            self.assertEqual(attempt.user_id, user_id)
+            self.assertEqual(attempt.response.id, response_id)
+
 
     def test_valid_short_answer_question_submission(self):
         self.course.users.append(self.u2)
@@ -75,18 +109,116 @@ class TrainingTests(unittest.TestCase):
             self.assertIn(b"Was your answer correct?", response.data)
 
             # check that there is now a single (text) attempt
-            self.assertEqual(Attempt.query.count(), 1)
-            self.assertEqual(TextAttempt.query.count(), 1)
-
-            attempt = TextAttempt.query.first()
-            self.assertEqual(attempt.question_id, 1)
-            self.assertEqual(attempt.user_id, user.id)
-            self.assertEqual(attempt.response, "My response")
+            self.check_text_attempt(self.sa_question.id, user.id, "My response")
 
             # clear out attempts for next user test
             Attempt.query.delete()
             TextAttempt.query.delete()
 
+
+    def test_correct_auto_check_question_submission(self):
+        self.course.users.append(self.u2)
+        db.session.commit()
+
+        for user in [self.u1, self.u2]:
+            client = self.app.test_client(user=user)
+            response = client.post(url_for('user_views.test_auto_check',
+                                                course_name="test-course",
+                                                mission_id=1),
+                                        data={
+                                            "question_id": str(self.ac_question.id),
+                                            "response": "Answer 2",
+                                            "submit": "y"
+                                        })
+
+            # check that user was sent to the difficulty page
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"Rate Your Performance", response.data)
+
+            # check that there is now a single (text) attempt
+            self.check_text_attempt(self.ac_question.id, user.id, "Answer 2")
+
+            attempt = TextAttempt.query.first()
+            self.assertTrue(attempt.correct)
+
+            # clear out attempts for next user test
+            Attempt.query.delete()
+            TextAttempt.query.delete()
+
+    # TODO: check for correct auto check submission when caSiNG is different
+
+    def test_incorrect_auto_check_question_submission(self):
+        client = self.app.test_client(user=self.u1)
+        response = client.post(url_for('user_views.test_auto_check',
+                                            course_name="test-course",
+                                            mission_id=1),
+                                    data={
+                                        "question_id": str(self.ac_question.id),
+                                        "response": "Wrong Answer",
+                                        "submit": "y"
+                                    })
+
+        # check that user was sent to the difficulty page
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Incorrect Answer", response.data)
+
+        attempt = TextAttempt.query.first()
+        self.assertFalse(attempt.correct)
+
+
+    def test_correct_multiple_choice_question_submission(self):
+        self.course.users.append(self.u2)
+        db.session.commit()
+
+        for user in [self.u1, self.u2]:
+            client = self.app.test_client(user=user)
+            response = client.post(url_for('user_views.test_multiple_choice',
+                                                course_name="test-course",
+                                                mission_id=1),
+                                        data={
+                                            "question_id": str(self.mc_question.id),
+                                            "response": "1",
+                                            "submit": "y"
+                                        })
+
+            # check that user was sent to the difficulty page
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"Rate Your Performance", response.data)
+
+            # check that there is now a single (text) attempt
+            self.check_selection_attempt(self.mc_question.id, user.id, 1)
+
+            attempt = SelectionAttempt.query.first()
+            self.assertTrue(attempt.correct)
+
+            # clear out attempts for next user test
+            Attempt.query.delete()
+            SelectionAttempt.query.delete()
+
+    def test_incorrect_multiple_choice_question_submission(self):
+        for response_id in [2, 3]:
+            client = self.app.test_client(user=self.u1)
+            response = client.post(url_for('user_views.test_multiple_choice',
+                                                course_name="test-course",
+                                                mission_id=1),
+                                        data={
+                                            "question_id": str(self.mc_question.id),
+                                            "response": str(response_id),
+                                            "submit": "y"
+                                        })
+
+            # check that user was sent to the difficulty page
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"Incorrect Answer", response.data)
+
+            attempt = SelectionAttempt.query.first()
+            self.assertFalse(attempt.correct)
+
+            # clear out attempts for next user test
+            Attempt.query.delete()
+            SelectionAttempt.query.delete()
+
+    # TODO: test IDK multiple choice response
 
     def test_unauthorized_user(self):
         client = self.app.test_client(user=self.u2)
@@ -140,7 +272,7 @@ class TrainingTests(unittest.TestCase):
     def test_self_review_correct(self):
         """ Tests user selecting that they correctly got the question correct. """
         # create the existing attempt that will be updated
-        attempt = TextAttempt(response="Whatever", question=self.q1,
+        attempt = TextAttempt(response="Whatever", question=self.sa_question,
                               user=self.u1,
                               time=datetime(2022, 1, 2))
         db.session.add(attempt)
@@ -173,7 +305,7 @@ class TrainingTests(unittest.TestCase):
     def test_self_review_incorrect(self):
         """ Tests user selecting that they incorrectly answered the question. """
         # create the existing attempt that will be updated
-        attempt = TextAttempt(response="Whatever", question=self.q1,
+        attempt = TextAttempt(response="Whatever", question=self.sa_question,
                               user=self.u1,
                               time=datetime(2022, 1, 2))
         db.session.add(attempt)
@@ -213,7 +345,7 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(updated_attempt.time, datetime(2022, 1, 2))
 
     def test_unauthorized_self_review(self):
-        attempt = TextAttempt(response="Whatever", question=self.q1,
+        attempt = TextAttempt(response="Whatever", question=self.sa_question,
                               user=self.u1,
                               time=datetime(2022, 1, 2))
         db.session.add(attempt)
