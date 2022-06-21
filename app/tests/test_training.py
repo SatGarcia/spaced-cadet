@@ -195,6 +195,7 @@ class TrainingTests(unittest.TestCase):
             Attempt.query.delete()
             SelectionAttempt.query.delete()
 
+
     def test_incorrect_multiple_choice_question_submission(self):
         for response_id in [2, 3]:
             client = self.app.test_client(user=self.u1)
@@ -213,12 +214,32 @@ class TrainingTests(unittest.TestCase):
 
             attempt = SelectionAttempt.query.first()
             self.assertFalse(attempt.correct)
+            self.assertEqual(attempt.quality, 2)
 
             # clear out attempts for next user test
             Attempt.query.delete()
             SelectionAttempt.query.delete()
 
-    # TODO: test IDK multiple choice response
+
+    def test_idk_multiple_choice_question_submission(self):
+        client = self.app.test_client(user=self.u1)
+        response = client.post(url_for('user_views.test_multiple_choice',
+                                            course_name="test-course",
+                                            mission_id=1),
+                                    data={
+                                        "question_id": str(self.mc_question.id),
+                                        "response": "-1",
+                                        "submit": "y"
+                                    })
+
+        # check that user was sent to the difficulty page
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Incorrect Answer", response.data)
+
+        attempt = SelectionAttempt.query.first()
+        self.assertFalse(attempt.correct)
+        self.assertEqual(attempt.quality, 1)
+
 
     def test_unauthorized_user(self):
         client = self.app.test_client(user=self.u2)
