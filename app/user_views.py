@@ -206,7 +206,6 @@ def test_multiple_choice(course_name, mission_id):
         abort(400)
 
     form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
-    form.response.choices.append((-1, "I Don't Know"))
 
     # grab the last attempt (before creating a new attempt which will be
     # the new "last" attempt
@@ -240,6 +239,27 @@ def test_multiple_choice(course_name, mission_id):
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
 
+        if form.no_answer.data:
+            # No response from user ("I Don't Know"), which is response
+            # quality 1 in SM-2
+            attempt.correct = False
+            attempt.sm2_update(1, repeat_attempt=repeated)
+            db.session.commit()
+
+            # show the user a page where they can view the correct answer
+            prompt_html = markdown_to_html(original_question.prompt)
+
+            correct_option = original_question.options.filter_by(correct=True).first()
+            answer_html = markdown_to_html(correct_option.text)
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
+                                   prompt=Markup(prompt_html),
+                                   answer=Markup(answer_html))
+
         if selected_answer and selected_answer.correct:
             # if correct, send them off to the self rating form
             attempt.correct = True
@@ -258,9 +278,7 @@ def test_multiple_choice(course_name, mission_id):
             if selected_answer:
                 # they made an attempt but were wrong so set response quality to 2
                 attempt.sm2_update(2, repeat_attempt=repeated)
-            else:
-                # no attempt ("I Don't Know"), so set response quality to 1
-                attempt.sm2_update(1, repeat_attempt=repeated)
+          
 
             db.session.commit()
 
@@ -786,7 +804,6 @@ def test(course_name, mission_id):
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(question_id=question.id)
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
-        form.response.choices.append((-1, "I Don't Know"))
 
         prompt_html = markdown_to_html(question.prompt)
 
@@ -891,6 +908,7 @@ class CodeJumbleForm(FlaskForm):
 class MultipleChoiceForm(FlaskForm):
     question_id = HiddenField("Question ID")
     response = RadioField('Select One', validators=[InputRequired()], coerce=int)
+    no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 
 class MultiCheckboxField(SelectMultipleField):
