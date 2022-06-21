@@ -332,7 +332,8 @@ def test_multiple_selection(course_name, mission_id):
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
 
-        correct_list = AnswerOption.query.filter_by(correct=True) 
+        correct_list = AnswerOption.query.filter_by(correct=True).all()
+
         if selected_answers == correct_list: 
             
             # if correct, send them off to the self rating form
@@ -364,7 +365,6 @@ def test_multiple_selection(course_name, mission_id):
             prompt_html = markdown_to_html(original_question.prompt)
  
             correct_options = original_question.options.filter_by(correct=True).all()
-            #answer_html = markdown_to_html(correct_options.text)
             answer_html = ''
             for option in correct_options:
                 answer_html += markdown_to_html(option.text) + "\n"
