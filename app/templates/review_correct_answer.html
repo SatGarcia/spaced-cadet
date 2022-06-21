@@ -12,8 +12,21 @@
             <p class="pt-3"><strong>Question:</strong>
                     <div class="px-3">{{ prompt }}</div></p>
 
-            <p><strong>Answer:</strong>
-                    <div class="px-3">{{ answer }}</div></p>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th scope="col">Your Answer</th>
+                        <th scope="col">Correct Answer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ response }}</td>
+                        <td>{{ answer }}</td>
+                    </tr>
+                </tbody>
+            </table>
+            
 
             <p>
                 <a class="btn btn-primary"

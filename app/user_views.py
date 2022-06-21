@@ -258,6 +258,7 @@ def test_multiple_choice(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
+                                   response = "",
                                    answer=Markup(answer_html))
 
         if selected_answer and selected_answer.correct:
@@ -284,6 +285,7 @@ def test_multiple_choice(course_name, mission_id):
 
             # show the user a page where they can view the correct answer
             prompt_html = markdown_to_html(original_question.prompt)
+            response_html = markdown_to_html(attempt.response.text)
 
             correct_option = original_question.options.filter_by(correct=True).first()
             answer_html = markdown_to_html(correct_option.text)
@@ -294,6 +296,7 @@ def test_multiple_choice(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
+                                   response = Markup(response_html),
                                    answer=Markup(answer_html))
 
 
@@ -370,6 +373,7 @@ def test_multiple_selection(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
+                                   response="",
                                    answer=Markup(answer_html))
 
         correct_list = original_question.options.filter_by(correct = True).all()
@@ -409,6 +413,9 @@ def test_multiple_selection(course_name, mission_id):
             for option in correct_options:
                 answer_html += markdown_to_html(option.text) + "\n"
      
+            response_html = ''
+            for option in selected_answers:
+                response_html += markdown_to_html(option.text) + "\n"
  
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
@@ -416,6 +423,7 @@ def test_multiple_selection(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
+                                   response = Markup(response_html),
                                    answer=Markup(answer_html))
  
  
@@ -482,6 +490,7 @@ def test_short_answer(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
+                                   response = "",
                                    answer=Markup(answer_html))
 
         review_form = SelfReviewForm(attempt_id=attempt.id)
@@ -558,6 +567,7 @@ def test_auto_check(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
+                                   response = "",
                                    answer=original_question.answer)
 
         # check whether they got it correct or not
@@ -588,6 +598,7 @@ def test_auto_check(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
+                                   response=attempt.response,
                                    answer=original_question.answer)
 
 
@@ -657,6 +668,7 @@ def test_code_jumble(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
+                                   response = '',
                                    answer=Markup(answer_html))
 
 
@@ -690,6 +702,7 @@ def test_code_jumble(course_name, mission_id):
             # show the user a page where they can view the correct answer
             prompt_html = markdown_to_html(question.prompt)
             answer_html = question.get_answer()
+            
 
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
@@ -697,6 +710,7 @@ def test_code_jumble(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
+                                   response = Markup(response_str),
                                    answer=Markup(answer_html))
 
 
