@@ -907,7 +907,7 @@ class CodeJumbleForm(FlaskForm):
 
 class MultipleChoiceForm(FlaskForm):
     question_id = HiddenField("Question ID")
-    response = RadioField('Select One', validators=[InputRequired()], coerce=int)
+    response = RadioField('Select One', coerce=int, validate_choice = False)
     no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 
@@ -918,7 +918,7 @@ class MultiCheckboxField(SelectMultipleField):
 class MultipleSelectionForm(FlaskForm):
 
     question_id = HiddenField("Question ID")
-    response = MultiCheckboxField('Select All That Apply', coerce=int) # , validators=[DataRequired()]
+    response = MultiCheckboxField('Select All That Apply', coerce=int) 
     no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 
