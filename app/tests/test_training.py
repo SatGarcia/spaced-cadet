@@ -9,7 +9,8 @@ from flask_login import FlaskLoginClient
 from app import create_app, db
 from app.db_models import (
     User, Course, ShortAnswerQuestion, Assessment, Attempt, TextAttempt,
-    AutoCheckQuestion, MultipleChoiceQuestion, AnswerOption, SelectionAttempt
+    AutoCheckQuestion, MultipleChoiceQuestion, AnswerOption, SelectionAttempt,
+    CodeJumbleQuestion, JumbleBlock
 )
 
 
@@ -49,6 +50,20 @@ class TrainingTests(unittest.TestCase):
         o3 = AnswerOption(text="Also bad", correct=False)
         self.mc_question.options = [o1, o2, o3]
         a.questions.append(self.mc_question)
+
+        self.cj_question = CodeJumbleQuestion(prompt="Code Jumble Question")
+        b1 = JumbleBlock(code="line 1, indent 2",
+                         correct_index=1, correct_indent=2)
+        b2 = JumbleBlock(code="trash 1",
+                         correct_index=-1, correct_indent=-1)
+        b3 = JumbleBlock(code="line 0, indent 0",
+                         correct_index=0, correct_indent=0)
+        b4 = JumbleBlock(code="line 2, indent 1",
+                         correct_index=2, correct_indent=1)
+        b5 = JumbleBlock(code="trash 2",
+                         correct_index=-1, correct_indent=-1)
+        self.cj_question.blocks = [b1, b2, b3, b4, b5]
+        a.questions.append(self.cj_question)
 
         # create two example users, one enrolled in the course, another not
         self.u1 = User(email="user1@example.com", first_name="User", last_name="Uno")
@@ -238,6 +253,67 @@ class TrainingTests(unittest.TestCase):
         attempt = SelectionAttempt.query.first()
         self.assertFalse(attempt.correct)
         self.assertEqual(attempt.quality, 1)
+
+
+    def test_correct_code_jumble_question_submission(self):
+        self.course.users.append(self.u2)
+        db.session.commit()
+
+        for user in [self.u1, self.u2]:
+            client = self.app.test_client(user=user)
+            response = client.post(url_for('user_views.test_code_jumble',
+                                                course_name="test-course",
+                                                mission_id=1),
+                                        data={
+                                            "question_id": str(self.cj_question.id),
+                                            "response": "[(3,0), (1,2), (4,1)]",
+                                            "submit": "y"
+                                        })
+
+            # check that user was sent to the difficulty page
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"Rate Your Performance", response.data)
+
+            # check that there is now a single (text) attempt
+            self.check_text_attempt(self.cj_question.id, user.id, "[(3,0), (1,2), (4,1)]")
+
+            attempt = TextAttempt.query.first()
+            self.assertTrue(attempt.correct)
+
+            # clear out attempts for next user test
+            Attempt.query.delete()
+            TextAttempt.query.delete()
+
+
+    def test_incorrect_code_jumble_question_submission(self):
+        for response_str in ["[(1,2), (3,0), (4,1)]", # wrong ordering
+                             "[(3,0), (1,2), (4,0)]", # wrong indent
+                             "[(3,0), (1,2)]", # missing block
+                             "[(3,0), (1,2), (4,1), (2,0)]"]: # extraneous block
+            client = self.app.test_client(user=self.u1)
+            response = client.post(url_for('user_views.test_code_jumble',
+                                                course_name="test-course",
+                                                mission_id=1),
+                                        data={
+                                            "question_id": str(self.cj_question.id),
+                                            "response": response_str,
+                                            "submit": "y"
+                                        })
+
+            # check that user was sent to the difficulty page
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"Incorrect Answer", response.data)
+
+            # check that there is now a single (text) attempt
+            self.check_text_attempt(self.cj_question.id, self.u1.id,
+                                    response_str)
+
+            attempt = TextAttempt.query.first()
+            self.assertFalse(attempt.correct)
+
+            # clear out attempts for next user test
+            Attempt.query.delete()
+            TextAttempt.query.delete()
 
 
     def test_unauthorized_user(self):
