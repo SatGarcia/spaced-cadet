@@ -113,7 +113,8 @@ class TrainingTests(unittest.TestCase):
                                                 course_name="test-course",
                                                 mission_id=1),
                                         data={
-                                            "question_id": "1",
+                                            "question_id":
+                                            str(self.sa_question.id),
                                             "response": "My response",
                                             "submit": "y"
                                         })
@@ -322,7 +323,7 @@ class TrainingTests(unittest.TestCase):
                                             course_name="test-course",
                                             mission_id=1),
                                     data={
-                                        "question_id": "1",
+                                        "question_id": str(self.sa_question.id),
                                         "response": "My response",
                                         "submit": "y"
                                     })
@@ -335,7 +336,7 @@ class TrainingTests(unittest.TestCase):
                                             course_name="test-course",
                                             mission_id=1),
                                     data={
-                                        "question_id": "1",
+                                        "question_id": str(self.sa_question.id),
                                         "response": "",
                                         "no_answer": "y"
                                     })
@@ -361,7 +362,7 @@ class TrainingTests(unittest.TestCase):
                                                 course_name="test-course",
                                                 mission_id=1),
                                         data={
-                                            "question_id": "1",
+                                            "question_id": str(self.sa_question.id),
                                             "response": response,
                                             "submit": "y"
                                         })
