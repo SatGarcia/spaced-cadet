@@ -5,8 +5,9 @@ from flask import (
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField,
-    RadioField, FieldList, SelectMultipleField, ListWidget, CheckboxInput
+    RadioField, FieldList, SelectMultipleField
 )
+from wtforms.widgets import (ListWidget, CheckboxInput)
 from wtforms.validators import (
     DataRequired, InputRequired
 )
@@ -363,7 +364,11 @@ def test_multiple_selection(course_name, mission_id):
             prompt_html = markdown_to_html(original_question.prompt)
  
             correct_options = original_question.options.filter_by(correct=True).all()
-            answer_html = markdown_to_html(correct_options.text)
+            #answer_html = markdown_to_html(correct_options.text)
+            answer_html = ''
+            for option in correct_options:
+                answer_html += markdown_to_html(option.text) + "\n"
+     
  
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
@@ -868,14 +873,14 @@ class MultipleChoiceForm(FlaskForm):
     response = RadioField('Select One', validators=[InputRequired()], coerce=int)
     submit = SubmitField("Submit")
 
-class MultipleSelectionForm(FlaskForm):
-
-    class MultiCheckboxField(SelectMultipleField):
+class MultiCheckboxField(SelectMultipleField):
         widget = ListWidget(prefix_label=False)
         option_widget = CheckboxInput()
 
+class MultipleSelectionForm(FlaskForm):
+
     question_id = HiddenField("Question ID")
-    response = MultiCheckboxField('Select All That Apply', coerce=int, validators=[DataRequired()])
+    response = MultiCheckboxField('Select All That Apply', coerce=int) # , validators=[DataRequired()]
     submit = SubmitField("Submit")
 
 from app.db_models import (
