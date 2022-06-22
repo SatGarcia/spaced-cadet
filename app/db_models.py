@@ -676,7 +676,17 @@ class Course(SearchableMixin, db.Model):
         return self.assessments.filter(Assessment.time >= datetime.now())
 
     def past_assessments(self):
+        """Returns all ClassAssessments that occured before the current time"""
         return self.assessments.filter(Assessment.time < datetime.now())
+
+    def upcoming_meetings(self): 
+        """Returns all ClassMeetings that occur today or in the future"""
+
+        return self.meetings.filter(ClassMeeting.date >= date.today())
+
+    def previous_meetings(self):
+        """Returns all ClassMeetings that occured before today"""
+        return self.meetings.filter(ClassMeeting.date < date.today())
 
 
 class CourseSchema(Schema):
@@ -701,6 +711,9 @@ class CourseSchema(Schema):
     textbooks = fields.List(fields.Nested("TextbookSchema",
                                           only=("id", "title", "edition")),
                             dump_only=True)
+    assessments = fields.List(fields.Nested("AssessmentSchema",
+                                            only=("id", "title")),
+                              dump_only=True)
 
     @validates("name")
     def unique_name(self, course_name):
@@ -756,13 +769,25 @@ class User(UserMixin, db.Model):
         return password
 
     def get_current_courses(self):
+        """ Returns all courses whose start date is before today and end date is
+        after today """
+
         return self.courses.filter(Course.start_date <= date.today())\
             .filter(Course.end_date >= date.today())\
             .order_by(Course.start_date)\
             .all()
 
     def get_active_courses(self):
+        """ Returns all courses whose end date is today or later """
+        
         return self.courses.filter(Course.end_date >= date.today())\
+            .order_by(Course.start_date)\
+            .all()
+    
+    def get_past_courses(self):
+        """ Returns all courses whose end date is earlier than today """
+        
+        return self.courses.filter(Course.end_date < date.today())\
             .order_by(Course.start_date)\
             .all()
 
@@ -1077,7 +1102,8 @@ class Assessment(db.Model):
         poor_attempts = Attempt.query.filter(db.and_(Attempt.user_id == user.id,
                                                      Attempt.time >= midnight_today))\
                                      .group_by(Attempt.question_id)\
-                                     .having(db.func.max(Attempt.quality) < 4)
+                                     .having(db.func.max(Attempt.quality) < 4)\
+                                     .subquery()
 
         return self.questions.join(poor_attempts)
 
