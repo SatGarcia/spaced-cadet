@@ -627,7 +627,17 @@ class Course(SearchableMixin, db.Model):
         return self.assessments.filter(Assessment.time >= datetime.now())
 
     def past_assessments(self):
+        """Returns all ClassAssessments that occured before the current time"""
         return self.assessments.filter(Assessment.time < datetime.now())
+
+    def upcoming_meetings(self): 
+        """Returns all ClassMeetings that occur today or in the future"""
+
+        return self.meetings.filter(ClassMeeting.date >= date.today())
+
+    def previous_meetings(self):
+        """Returns all ClassMeetings that occured before today"""
+        return self.meetings.filter(ClassMeeting.date < date.today())
 
 
 class CourseSchema(Schema):
