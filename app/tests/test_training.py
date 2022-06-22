@@ -236,26 +236,6 @@ class TrainingTests(unittest.TestCase):
             SelectionAttempt.query.delete()
 
 
-    def test_idk_multiple_choice_question_submission(self):
-        client = self.app.test_client(user=self.u1)
-        response = client.post(url_for('user_views.test_multiple_choice',
-                                            course_name="test-course",
-                                            mission_id=1),
-                                    data={
-                                        "question_id": str(self.mc_question.id),
-                                        "response": "-1",
-                                        "submit": "y"
-                                    })
-
-        # check that user was sent to the difficulty page
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Incorrect Answer", response.data)
-
-        attempt = SelectionAttempt.query.first()
-        self.assertFalse(attempt.correct)
-        self.assertEqual(attempt.quality, 1)
-
-
     def test_correct_code_jumble_question_submission(self):
         self.course.users.append(self.u2)
         db.session.commit()
@@ -334,7 +314,8 @@ class TrainingTests(unittest.TestCase):
         for route_url, question_id in [
                 ('user_views.test_short_answer', self.sa_question.id),
                 ('user_views.test_auto_check', self.ac_question.id),
-                ('user_views.test_code_jumble', self.cj_question.id)]:
+                ('user_views.test_code_jumble', self.cj_question.id),
+                ('user_views.test_multiple_choice', self.mc_question.id)]:
 
             client = self.app.test_client(user=self.u1)
             response = client.post(url_for(route_url,
