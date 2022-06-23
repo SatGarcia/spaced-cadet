@@ -702,6 +702,21 @@ def test_code_jumble(course_name, mission_id):
             # show the user a page where they can view the correct answer
             prompt_html = markdown_to_html(question.prompt)
             answer_html = question.get_answer()
+
+            print(user_response)
+            response_html = "<ul class=\"list-unstyled jumble\">"
+            for block in user_response:
+                print(block)
+                jumble_block = JumbleBlock(id=block[0], question_id=question_id)
+                print(jumble_block)
+                language_str = "" if not question.language else question.language
+                code_str = f"```{language_str}\n{jumble_block.code}\n```\n"
+                block_html = markdown_to_html(code_str, code_linenums=False)
+                print(block_html)
+                indent_amount = (block[1]* 20) + 15
+                response_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
+            response_html += "</ul>"
+
             
 
             return render_template("review_correct_answer.html",
@@ -710,7 +725,7 @@ def test_code_jumble(course_name, mission_id):
                                                         course_name=course_name,
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
-                                   response = Markup(response_str),
+                                   response = Markup(response_html),
                                    answer=Markup(answer_html))
 
 
