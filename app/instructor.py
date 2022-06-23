@@ -818,12 +818,6 @@ class NewMultipleSelectionQuestionForm(FlaskForm):
     options = FieldList(FormField(McOptionForm, default=AnswerOption), min_entries=2)
     submit = SubmitField("Submit")
 
-    def validate_options(self, field):
-        """ LOOK AT ME """
-        num_correct = len([1 for option in field if option.correct.data])
-        if num_correct <= 1:
-            raise ValidationError("More than one option should be marked as correct.")
-
 
 class JumbleBlockForm(FlaskForm):
     code = TextAreaField('Code', [DataRequired()])
