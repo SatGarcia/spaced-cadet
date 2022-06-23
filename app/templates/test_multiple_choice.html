@@ -24,6 +24,7 @@
 				{{ form.csrf_token }}
 				{{ form.question_id }}
 				{{ forms.checkbox_input(form.response) }}
+				{{ form.no_answer(class_="btn btn-secondary btn-sm") }}
 				{{ form.submit(class_="btn btn-primary btn-sm") }}
 			</form>
 		</div>
@@ -34,6 +35,9 @@
 			window.addEventListener("DOMContentLoaded", () => {
 				submit_button = document.getElementById("submit");
 				submit_button.disabled = true;
+
+				no_answer_button = document.getElementById("no_answer");
+				no_answer_button.disabled = true;
 			});
 		</script>
 	{% endif %}

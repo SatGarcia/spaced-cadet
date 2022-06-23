@@ -93,6 +93,7 @@ class QuestionType(enum.Enum):
     GENERIC = "generic"
     SHORT_ANSWER = "short-answer"
     MULTIPLE_CHOICE = "multiple-choice"
+    MULTIPLE_SELECTION = "multiple-selection"
     CODE_JUMBLE = "code-jumble"
     AUTO_CHECK = "auto-check"
 
@@ -377,6 +378,58 @@ class MultipleChoiceQuestionSchema(QuestionSchema):
         del data['options']
 
         q = MultipleChoiceQuestion(**data)
+        q.options = answer_options
+
+        return q
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        if 'options' in data:
+            answer_options = []
+            for opt in data['options']:
+                ao = AnswerOption(**opt)
+                answer_options.append(ao)
+
+            question.options = answer_options
+
+class MultipleSelectionQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+
+    options = db.relationship('AnswerOption',
+                              foreign_keys='AnswerOption.question_id',
+                              backref='selection_question', lazy='dynamic',
+                              cascade="all, delete-orphan")
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.MULTIPLE_SELECTION,
+    }
+
+    def get_answer(self):
+        answers = self.options.filter_by(correct=True).all()
+
+        if len(answers) == 0:
+            return "None of the above"
+        else:
+            answer = ""
+            for a in answers:
+                answer+=markdown_to_html(a.text)
+            return answer
+
+class MultipleSelectionQuestionSchema(QuestionSchema):
+    options = fields.List(fields.Nested('AnswerOptionSchema'), required=True)
+
+    def make_obj(self, data):
+        answer_options = []
+
+        for opt in data['options']:
+            ao = AnswerOption(**opt)
+            answer_options.append(ao)
+            db.session.add(ao)
+
+        del data['options']
+
+        q = MultipleSelectionQuestion(**data)
         q.options = answer_options
 
         return q

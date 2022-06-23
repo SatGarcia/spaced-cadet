@@ -23,7 +23,7 @@ import os, csv, re
 from app import db
 from app.user_views import (
     ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm,
-    MultipleChoiceForm
+    MultipleChoiceForm, MultipleSelectionForm
 )
 from app.auth import AuthorizationError, check_authorization
 
@@ -163,7 +163,16 @@ def preview_question(question_id):
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(question_id=question.id)
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
-        form.response.choices.append((-1, "I Don't Know"))
+
+        return render_template("test_multiple_choice.html",
+                               page_title=page_title,
+                               preview_mode=True,
+                               form=form,
+                               prompt=Markup(prompt_html))
+    
+    elif question.type == QuestionType.MULTIPLE_SELECTION:
+        form = MultipleSelectionForm(question_id=question.id)
+        form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
 
         return render_template("test_multiple_choice.html",
                                page_title=page_title,
@@ -507,6 +516,9 @@ def edit_question(question_id):
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = NewMultipleChoiceQuestionForm(formdata=form_data, obj=question)
         template = "create_new_multiple_choice.html"
+    elif question.type == QuestionType.MULTIPLE_SELECTION:
+        form = NewMultipleSelectionQuestionForm(formdata=form_data, obj=question)
+        template = "create_new_multiple_selection.html"
     elif question.type == QuestionType.CODE_JUMBLE:
         form = NewJumbleQuestionForm(formdata=form_data, obj=question)
         template = "create_new_code_jumble.html"
@@ -605,6 +617,10 @@ def create_new_question(question_type):
         form = NewMultipleChoiceQuestionForm(request.form)
         template = "create_new_multiple_choice.html"
         new_q = MultipleChoiceQuestion()
+    elif question_type == 'multiple-selection':
+        form = NewMultipleSelectionQuestionForm(request.form)
+        template = "create_new_multiple_selection.html"
+        new_q = MultipleSelectionQuestion()
     elif question_type == 'code-jumble':
         form = NewJumbleQuestionForm(request.form)
         template = "create_new_code_jumble.html"
@@ -795,6 +811,13 @@ class NewMultipleChoiceQuestionForm(FlaskForm):
         if num_correct != 1:
             raise ValidationError("Exactly one option should be marked as correct.")
 
+class NewMultipleSelectionQuestionForm(FlaskForm):
+    from app.db_models import AnswerOption
+
+    prompt = TextAreaField("Question Prompt", [DataRequired()])
+    options = FieldList(FormField(McOptionForm, default=AnswerOption), min_entries=2)
+    submit = SubmitField("Submit")
+
 
 class JumbleBlockForm(FlaskForm):
     code = TextAreaField('Code', [DataRequired()])
@@ -843,6 +866,7 @@ class RosterUploadForm(FlaskForm):
 
 from app.db_models import (
     AnswerOption, CodeJumbleQuestion, JumbleBlock, Course,
-    ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, Question,
+    ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, 
+    MultipleSelectionQuestion, Question,
     QuestionType, User, Objective, Textbook, Assessment, Topic
 )
