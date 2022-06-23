@@ -322,8 +322,8 @@ class TrainingTests(unittest.TestCase):
                                            course_name="test-course",
                                            mission_id=1),
                                         data={
-                                            "question_id": question_id,
-                                            "response": "",
+                                            "question_id": str(question_id),
+                                            "response": "0",
                                             "no_answer": "y"
                                         })
 
