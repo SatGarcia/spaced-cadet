@@ -703,16 +703,13 @@ def test_code_jumble(course_name, mission_id):
             prompt_html = markdown_to_html(question.prompt)
             answer_html = question.get_answer()
 
-            print(user_response)
             response_html = "<ul class=\"list-unstyled jumble\">"
             for block in user_response:
-                print(block)
-                jumble_block = JumbleBlock(id=block[0], question_id=question_id)
-                print(jumble_block)
+                jumble_block = JumbleBlock.query.filter(JumbleBlock.id == int(block[0]),
+                                                        JumbleBlock.question_id == int(question_id)).first()
                 language_str = "" if not question.language else question.language
                 code_str = f"```{language_str}\n{jumble_block.code}\n```\n"
                 block_html = markdown_to_html(code_str, code_linenums=False)
-                print(block_html)
                 indent_amount = (block[1]* 20) + 15
                 response_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
             response_html += "</ul>"
