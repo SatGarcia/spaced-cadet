@@ -413,7 +413,7 @@ def test_multiple_selection(course_name, mission_id):
  
     prompt_html = markdown_to_html(original_question.prompt)
  
-    return render_template("test_multiple_selection.html",
+    return render_template("test_multiple_choice.html",
                            page_title="Cadet Test",
                            course_name=course_name,
                            fresh_question=(not repeated),
@@ -815,7 +815,7 @@ def test(course_name, mission_id):
 
         prompt_html = markdown_to_html(question.prompt)
 
-        return render_template("test_multiple_selection.html",
+        return render_template("test_multiple_choice.html",
                                 page_title="Cadet Test",
                                 course_name=course_name,
                                 fresh_question=fresh_question,

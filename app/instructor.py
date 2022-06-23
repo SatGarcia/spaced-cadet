@@ -174,7 +174,7 @@ def preview_question(question_id):
         form = MultipleSelectionForm(question_id=question.id)
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
 
-        return render_template("test_multiple_selection.html",
+        return render_template("test_multiple_choice.html",
                                page_title=page_title,
                                preview_mode=True,
                                form=form,
