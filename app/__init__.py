@@ -45,8 +45,18 @@ def create_app(config_class='config.DevelopmentConfig'):
     mail.init_app(app)
     jsglue.init_app(app)
 
-    app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
-        if app.config.get('ELASTICSEARCH_URL') else None
+    es_url = app.config.get('ELASTICSEARCH_URL')
+    if es_url:
+        app.elasticsearch = Elasticsearch(es_url)
+
+        # check that elasticsearch server is actually available
+        if not app.elasticsearch.ping():
+            app.logger.warn("Could not connect to Elasticsearch server.")
+            app.elasticsearch = None
+
+    else:
+        app.elasticsearch = None
+
 
     from app.database import init_app as init_db
     init_db(app)
