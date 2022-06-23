@@ -407,10 +407,14 @@ class MultipleSelectionQuestion(Question):
 
     def get_answer(self):
         answers = self.options.filter_by(correct=True).all()
-        answer = ""
-        for a in answers:
-            answer+=markdown_to_html(a.text)
-        return answer
+
+        if len(answers) == 0:
+            return "None of the above"
+        else:
+            answer = ""
+            for a in answers:
+                answer+=markdown_to_html(a.text)
+            return answer
 
 class MultipleSelectionQuestionSchema(QuestionSchema):
     options = fields.List(fields.Nested('AnswerOptionSchema'), required=True)
