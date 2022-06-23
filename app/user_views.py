@@ -392,18 +392,10 @@ def test_multiple_selection(course_name, mission_id):
             
             # they made an attempt but were wrong so set response quality to 2
             attempt.sm2_update(2, repeat_attempt=repeated)
-
-            
-            #LOOK AT ME: there is no I Don't Know button yet? so remember to set quality to 1 after feature added
-            #else:
-                # no attempt ("I Don't Know"), so set response quality to 1
-                #attempt.sm2_update(1, repeat_attempt=repeated)
  
             db.session.commit()
  
             # show the user a page where they can view the correct answers
-            
- 
             correct_options = original_question.options.filter_by(correct=True).all()
             answer_html = ''
             for option in correct_options:
