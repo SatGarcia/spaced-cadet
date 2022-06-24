@@ -270,6 +270,35 @@ class TrainingTests(unittest.TestCase):
             Attempt.query.delete()
             SelectionAttempt.query.delete()
 
+    def test_incorrect_multiple_selection_question_submission(self):
+        for response_ids in [["5"], ["5", "6"], ["4", "5", "7"], None]:
+            with self.subTest(ids=response_ids):
+                client = self.app.test_client(user=self.u1)
+                form_data = {
+                    "question_id": str(self.ms_question.id),
+                    "submit": "y"
+                }
+
+                if response_ids is not None:
+                    form_data['response'] = response_ids
+
+                response = client.post(url_for('user_views.test_multiple_selection',
+                                                    course_name="test-course",
+                                                    mission_id=1),
+                                       data=form_data)
+
+                # check that user was sent to the difficulty page
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(b"Incorrect Answer", response.data)
+
+                attempt = SelectionAttempt.query.first()
+                self.assertFalse(attempt.correct)
+                self.assertEqual(attempt.quality, 2)
+
+                # clear out attempts for next user test
+                Attempt.query.delete()
+                SelectionAttempt.query.delete()
+
 
     def test_correct_code_jumble_question_submission(self):
         self.course.users.append(self.u2)
