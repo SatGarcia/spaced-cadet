@@ -174,7 +174,7 @@ def preview_question(question_id):
         form = MultipleSelectionForm(question_id=question.id)
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
 
-        return render_template("test_multiple_selection.html",
+        return render_template("test_multiple_choice.html",
                                page_title=page_title,
                                preview_mode=True,
                                form=form,
@@ -817,12 +817,6 @@ class NewMultipleSelectionQuestionForm(FlaskForm):
     prompt = TextAreaField("Question Prompt", [DataRequired()])
     options = FieldList(FormField(McOptionForm, default=AnswerOption), min_entries=2)
     submit = SubmitField("Submit")
-
-    def validate_options(self, field):
-        """ LOOK AT ME """
-        num_correct = len([1 for option in field if option.correct.data])
-        if num_correct <= 1:
-            raise ValidationError("More than one option should be marked as correct.")
 
 
 class JumbleBlockForm(FlaskForm):

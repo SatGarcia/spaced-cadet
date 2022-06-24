@@ -39,7 +39,7 @@
             <div class="container pb-2">
                 <div v-if="objective_text === ''">
                     <em>None.</em>
-                    <div class="pt-2">
+                    <div class="pt-2" id="objectiveActions">
                         <i class="bi-plus-square"></i>
                         <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#setObjectiveModal">
                             Add Objective
@@ -48,7 +48,7 @@
                 </div>
                 <div v-else>
                     <span v-html="objective_text"></span>
-                    <div>
+                    <div id="objectiveActions">
                         <i class="bi-pencil-square"></i>
                         <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#setObjectiveModal">
                             Change Objective

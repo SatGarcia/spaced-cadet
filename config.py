@@ -4,6 +4,7 @@ from datetime import timedelta
 
 class Config(object):
     TESTING = False
+    ENABLE_TEST_ROUTES = False
     SECRET_KEY = 'dev'
 
     JWT_SECRET_KEY = 'dev'
@@ -29,6 +30,11 @@ class DevelopmentConfig(Config):
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     LOGGING_LEVEL = logging.DEBUG
     MAIL_PORT = 1099
+
+class E2ETestingConfig(DevelopmentConfig):
+    WTF_CSRF_ENABLED = False
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    ENABLE_TEST_ROUTES = True
 
 class TestConfig(Config):
     TESTING = True
