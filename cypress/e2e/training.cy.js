@@ -298,7 +298,7 @@ describe('Mission Training', function() {
     })
   })
 
-  describe.only('Code Jumble', function() {
+  describe('Code Jumble', function() {
     beforeEach(function() {
       cy.request('POST', '/test/seed/question/code-jumble', { 
         'author_id': this.instructorUser.id,
