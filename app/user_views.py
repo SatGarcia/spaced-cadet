@@ -5,10 +5,11 @@ from flask import (
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField, SubmitField, TextAreaField, HiddenField, SelectField,
-    RadioField,
+    RadioField, FieldList, SelectMultipleField
 )
+from wtforms.widgets import (ListWidget, CheckboxInput)
 from wtforms.validators import (
-    DataRequired, InputRequired
+    DataRequired, InputRequired, ValidationError
 )
 from flask_login import current_user, login_required
 
@@ -205,7 +206,6 @@ def test_multiple_choice(course_name, mission_id):
         abort(400)
 
     form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
-    form.response.choices.append((-1, "I Don't Know"))
 
     # grab the last attempt (before creating a new attempt which will be
     # the new "last" attempt
@@ -215,14 +215,9 @@ def test_multiple_choice(course_name, mission_id):
     repeated = is_a_repeat(previous_attempt)
 
     if form.validate_on_submit():
-
         # add the attempt to the database
         attempt = SelectionAttempt(question_id=original_question_id,
                                    user_id=current_user.id)
-
-        # Get the selected answer.
-        answer_id = form.response.data
-        selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
 
         # if there was a previous attempt, copy over e_factor and interval
         if previous_attempt:
@@ -230,16 +225,36 @@ def test_multiple_choice(course_name, mission_id):
             attempt.interval = previous_attempt.interval
             attempt.next_attempt = previous_attempt.next_attempt
 
-        if selected_answer:
-            # no selected answer means they didn't have a response (i.e. "I
-            # Don't Know" was their answer)
-            attempt.response = selected_answer
-
-
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
 
-        if selected_answer and selected_answer.correct:
+        if form.no_answer.data:
+            # No response from user ("I Don't Know"), which is response
+            # quality 1 in SM-2
+            attempt.correct = False
+            attempt.sm2_update(1, repeat_attempt=repeated)
+            db.session.commit()
+
+            # show the user a page where they can view the correct answer
+            prompt_html = markdown_to_html(original_question.prompt)
+
+            correct_option = original_question.options.filter_by(correct=True).first()
+            answer_html = markdown_to_html(correct_option.text)
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
+                                   prompt=Markup(prompt_html),
+                                   answer=Markup(answer_html))
+
+        # Get the selected answer.
+        answer_id = form.response.data
+        selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
+        attempt.responses.append(selected_answer)
+
+        if selected_answer.correct:
             # if correct, send them off to the self rating form
             attempt.correct = True
             db.session.commit()
@@ -257,9 +272,6 @@ def test_multiple_choice(course_name, mission_id):
             if selected_answer:
                 # they made an attempt but were wrong so set response quality to 2
                 attempt.sm2_update(2, repeat_attempt=repeated)
-            else:
-                # no attempt ("I Don't Know"), so set response quality to 1
-                attempt.sm2_update(1, repeat_attempt=repeated)
 
             db.session.commit()
 
@@ -279,6 +291,110 @@ def test_multiple_choice(course_name, mission_id):
 
 
     prompt_html = markdown_to_html(original_question.prompt)
+
+    return render_template("test_multiple_choice.html",
+                           page_title="Cadet Test",
+                           course_name=course_name,
+                           fresh_question=(not repeated),
+                           form=form,
+                           post_url="", # same url as current so can leave this blank
+                           prompt=Markup(prompt_html))
+
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-selection', methods=['POST'])
+@login_required
+def test_multiple_selection(course_name, mission_id):
+    # TODO: code duplication in this function
+    course = check_course_authorization(course_name)
+    check_mission_inclusion(mission_id, course)
+
+    form = MultipleSelectionForm(request.form)
+    original_question_id = form.question_id.data
+    original_question = Question.query.filter_by(id=original_question_id).first()
+
+    if not original_question:
+        abort(400)
+
+    form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
+
+    # grab the last attempt (before creating a new attempt which will be
+    # the new "last" attempt
+    previous_attempt = get_last_attempt(current_user.id, original_question_id)
+    repeated = is_a_repeat(previous_attempt)
+
+    prompt_html = markdown_to_html(original_question.prompt)
+
+    if form.validate_on_submit():
+        # add the attempt to the database
+        attempt = SelectionAttempt(question_id=original_question_id,
+                                   user_id=current_user.id)
+
+        # if there was a previous attempt, copy over e_factor and interval
+        if previous_attempt:
+            attempt.e_factor = previous_attempt.e_factor
+            attempt.interval = previous_attempt.interval
+            attempt.next_attempt = previous_attempt.next_attempt
+
+        db.session.add(attempt)
+        db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
+
+
+        if form.no_answer.data:
+            # No response from user ("I Don't Know"), which is response
+            # quality 1 in SM-2
+            attempt.correct = False
+            attempt.sm2_update(1, repeat_attempt=repeated)
+            db.session.commit()
+
+            correct_options = original_question.options.filter_by(correct=True).all()
+            answer_html = ''
+            for option in correct_options:
+                answer_html += markdown_to_html(option.text) + "\n"
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
+                                   prompt=Markup(prompt_html),
+                                   answer=Markup(answer_html))
+
+        answer_ids = form.response.data
+        selected_answers = AnswerOption.query.filter(AnswerOption.id.in_(answer_ids)).all()
+        attempt.responses = selected_answers
+
+        correct_answers = original_question.options.filter_by(correct = True).all()
+
+        if selected_answers == correct_answers:
+            # if correct, send them off to the self rating form
+            attempt.correct = True
+            db.session.commit()
+            difficulty_form = DifficultyForm(attempt_id=attempt.id)
+            return render_template("difficulty.html",
+                                   page_title="Cadet Test: Rating",
+                                   form=difficulty_form,
+                                   post_url=url_for('.difficulty',
+                                                    course_name=course_name,
+                                                    mission_id=mission_id))
+
+        else:
+            attempt.correct = False
+
+            # they made an attempt but were wrong so set response quality to 2
+            attempt.sm2_update(2, repeat_attempt=repeated)
+            db.session.commit()
+
+            # show the user a page where they can view the correct answers
+            answer_html = ''
+            for option in correct_answers:
+                answer_html += markdown_to_html(option.text) + "\n"
+
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
+                                   prompt=Markup(prompt_html),
+                                   answer=Markup(answer_html))
 
     return render_template("test_multiple_choice.html",
                            page_title="Cadet Test",
@@ -663,7 +779,6 @@ def test(course_name, mission_id):
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(question_id=question.id)
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
-        form.response.choices.append((-1, "I Don't Know"))
 
         prompt_html = markdown_to_html(question.prompt)
 
@@ -676,6 +791,22 @@ def test(course_name, mission_id):
                                                 course_name=course_name,
                                                 mission_id=mission_id),
                                prompt=Markup(prompt_html))
+
+    elif question.type == QuestionType.MULTIPLE_SELECTION:
+        form = MultipleSelectionForm(question_id=question.id)
+        form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
+
+        prompt_html = markdown_to_html(question.prompt)
+
+        return render_template("test_multiple_choice.html",
+                                page_title="Cadet Test",
+                                course_name=course_name,
+                                fresh_question=fresh_question,
+                                form=form,
+                                post_url=url_for('.test_multiple_selection',
+                                                course_name=course_name,
+                                                mission_id=mission_id),
+                                prompt=Markup(prompt_html))
 
     elif question.type == QuestionType.CODE_JUMBLE:
         form = CodeJumbleForm(question_id=question.id, response="")
@@ -751,7 +882,24 @@ class CodeJumbleForm(FlaskForm):
 
 class MultipleChoiceForm(FlaskForm):
     question_id = HiddenField("Question ID")
-    response = RadioField('Select One', validators=[InputRequired()], coerce=int)
+    response = RadioField('Select One', coerce=int, validate_choice=False)
+    no_answer = SubmitField("I Don't Know")
+    submit = SubmitField("Submit")
+
+    def validate_response(form, field):
+        """ Validate that user selected something if they clicked submit
+        rather than no_answer. """
+        if form.submit.data and (not field.data):
+            raise ValidationError("Select one of the given options or click \"I Don't Know\"")
+
+class MultiCheckboxField(SelectMultipleField):
+    widget = ListWidget(prefix_label=False)
+    option_widget = CheckboxInput()
+
+class MultipleSelectionForm(FlaskForm):
+    question_id = HiddenField("Question ID")
+    response = MultiCheckboxField('Select All That Apply', coerce=int)
+    no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 
 from app.db_models import (

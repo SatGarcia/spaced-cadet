@@ -93,6 +93,7 @@ class QuestionType(enum.Enum):
     GENERIC = "generic"
     SHORT_ANSWER = "short-answer"
     MULTIPLE_CHOICE = "multiple-choice"
+    MULTIPLE_SELECTION = "multiple-selection"
     CODE_JUMBLE = "code-jumble"
     AUTO_CHECK = "auto-check"
 
@@ -168,6 +169,12 @@ topic_sources = db.Table(
     db.Column('source_id', db.Integer, db.ForeignKey('source.id'))
 )
 
+# association table for sources associated with a topic
+selected_answers = db.Table(
+    'selected_answers',
+    db.Column('attempt_id', db.Integer, db.ForeignKey('selection_attempt.id')),
+    db.Column('option_id', db.Integer, db.ForeignKey('answer_option.id'))
+)
 
 class Topic(SearchableMixin, db.Model):
     __searchable__ = ['text']
@@ -392,6 +399,58 @@ class MultipleChoiceQuestionSchema(QuestionSchema):
 
             question.options = answer_options
 
+class MultipleSelectionQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+
+    options = db.relationship('AnswerOption',
+                              foreign_keys='AnswerOption.question_id',
+                              backref='selection_question', lazy='dynamic',
+                              cascade="all, delete-orphan")
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.MULTIPLE_SELECTION,
+    }
+
+    def get_answer(self):
+        answers = self.options.filter_by(correct=True).all()
+
+        if len(answers) == 0:
+            return "None of the above"
+        else:
+            answer = ""
+            for a in answers:
+                answer+=markdown_to_html(a.text)
+            return answer
+
+class MultipleSelectionQuestionSchema(QuestionSchema):
+    options = fields.List(fields.Nested('AnswerOptionSchema'), required=True)
+
+    def make_obj(self, data):
+        answer_options = []
+
+        for opt in data['options']:
+            ao = AnswerOption(**opt)
+            answer_options.append(ao)
+            db.session.add(ao)
+
+        del data['options']
+
+        q = MultipleSelectionQuestion(**data)
+        q.options = answer_options
+
+        return q
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        if 'options' in data:
+            answer_options = []
+            for opt in data['options']:
+                ao = AnswerOption(**opt)
+                answer_options.append(ao)
+
+            question.options = answer_options
+
 
 class AnswerOption(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -399,10 +458,6 @@ class AnswerOption(db.Model):
 
     text = db.Column(db.String, nullable=False)
     correct = db.Column(db.Boolean, default=False, nullable=False)
-
-    attempts = db.relationship('SelectionAttempt',
-                                    foreign_keys='SelectionAttempt.option_id',
-                                    backref='response', lazy='dynamic')
 
 
 class AnswerOptionSchema(Schema):
@@ -573,11 +628,17 @@ class TextAttempt(Attempt):
 
 class SelectionAttempt(Attempt):
     id = db.Column(db.Integer, db.ForeignKey('attempt.id'), primary_key=True)
-    option_id = db.Column(db.Integer, db.ForeignKey('answer_option.id'))
 
     __mapper_args__ = {
         'polymorphic_identity': ResponseType.SELECTION,
     }
+
+    responses = db.relationship('AnswerOption',
+                                 secondary=selected_answers,
+                                 primaryjoin=('selected_answers.c.attempt_id == SelectionAttempt.id'),
+                                 secondaryjoin=('selected_answers.c.option_id == AnswerOption.id'),
+                                 backref=db.backref('attempts', lazy='dynamic'),
+                                 lazy='dynamic')
 
 
 class Course(SearchableMixin, db.Model):
@@ -627,7 +688,17 @@ class Course(SearchableMixin, db.Model):
         return self.assessments.filter(Assessment.time >= datetime.now())
 
     def past_assessments(self):
+        """Returns all ClassAssessments that occured before the current time"""
         return self.assessments.filter(Assessment.time < datetime.now())
+
+    def upcoming_meetings(self): 
+        """Returns all ClassMeetings that occur today or in the future"""
+
+        return self.meetings.filter(ClassMeeting.date >= date.today())
+
+    def previous_meetings(self):
+        """Returns all ClassMeetings that occured before today"""
+        return self.meetings.filter(ClassMeeting.date < date.today())
 
 
 class CourseSchema(Schema):
@@ -652,6 +723,9 @@ class CourseSchema(Schema):
     textbooks = fields.List(fields.Nested("TextbookSchema",
                                           only=("id", "title", "edition")),
                             dump_only=True)
+    assessments = fields.List(fields.Nested("AssessmentSchema",
+                                            only=("id", "title")),
+                              dump_only=True)
 
     @validates("name")
     def unique_name(self, course_name):
@@ -707,13 +781,25 @@ class User(UserMixin, db.Model):
         return password
 
     def get_current_courses(self):
+        """ Returns all courses whose start date is before today and end date is
+        after today """
+
         return self.courses.filter(Course.start_date <= date.today())\
             .filter(Course.end_date >= date.today())\
             .order_by(Course.start_date)\
             .all()
 
     def get_active_courses(self):
+        """ Returns all courses whose end date is today or later """
+        
         return self.courses.filter(Course.end_date >= date.today())\
+            .order_by(Course.start_date)\
+            .all()
+    
+    def get_past_courses(self):
+        """ Returns all courses whose end date is earlier than today """
+        
+        return self.courses.filter(Course.end_date < date.today())\
             .order_by(Course.start_date)\
             .all()
 
@@ -1028,7 +1114,8 @@ class Assessment(db.Model):
         poor_attempts = Attempt.query.filter(db.and_(Attempt.user_id == user.id,
                                                      Attempt.time >= midnight_today))\
                                      .group_by(Attempt.question_id)\
-                                     .having(db.func.max(Attempt.quality) < 4)
+                                     .having(db.func.max(Attempt.quality) < 4)\
+                                     .subquery()
 
         return self.questions.join(poor_attempts)
 

@@ -1,0 +1,49 @@
+name: End-to-End Tests (Cypress)
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+    #container: cypress/browsers:node16.14.0-chrome99-ff97
+    container: elsaturnino/cypress-python
+
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      elasticsearch:
+        image: bitnami/elasticsearch:7.17.4
+        env:
+          discovery.type: single-node
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: 'npm'
+      - name: Install Node dependencies
+        run: npm install
+      - name: Create Flask instance config
+        run: |
+          mkdir instance
+          echo "ELASTICSEARCH_URL = 'http://elasticsearch:9200'" > instance/config.py
+      - name: Start Flask and run Cypress
+        uses: cypress-io/github-action@v4
+        env:
+          APP_CONFIG_CLASS: config.E2ETestingConfig
+        with:
+          start: flask run
+          wait-on: 'http://localhost:5000'

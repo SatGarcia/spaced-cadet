@@ -5,3 +5,6 @@
 __pycache__
 venv
 cadet.log
+node_modules
+mailslurper
+.coverage
