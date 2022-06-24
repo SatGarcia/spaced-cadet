@@ -222,7 +222,72 @@ describe('Mission Training', function() {
       cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
 
       cy.contains("I Don't Know").click()
+
+      // check that "Incorrect Answer" appears
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
+  })
+
+  describe('Multiple Selection', function() {
+    beforeEach(function() {
+      cy.request('POST', '/test/seed/question/multiple-selection', { 
+        'author_id': this.instructorUser.id,
+        'assessment_id': 4,
+        'amount': 1
+      })
+    })
+
+    /* 
+     * Tests a multiple selection question, which is correctly answered and rated
+     * as easy.
+     */
+    it('Correct Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Good answer 1").click()
+      cy.contains("Good answer 2").click()
+      cy.get("input[name=submit]").click()
+
+      // check that they are on the page where they rate their performance
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/multiple-selection`)
+
+      cy.contains('Easy').click()
       cy.get('input[name=submit]').click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Congratulations")
+    })
+
+    /*
+     * Tests an incorrect response to a multiple selection question.
+     */
+    it('Incorrect Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      cy.contains("Good answer 2").click()
+      cy.contains("Good answer 1").click()
+      cy.contains("Bad answer").click()
+      cy.get('input[name=submit]').click()
+
+      // check that "Incorrect Answer" appears
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
+
+
+    /*
+     * Tests a response of "I Don't Know"
+     */
+    it('IDK Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      cy.contains("I Don't Know").click()
 
       // check that "Incorrect Answer" appears
       cy.contains("Incorrect Answer")
