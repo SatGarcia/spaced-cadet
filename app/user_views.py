@@ -299,13 +299,18 @@ def test_multiple_choice(course_name, mission_id):
 
     prompt_html = markdown_to_html(original_question.prompt)
 
+    mission = check_mission_inclusion(mission_id, course)
     return render_template("test_multiple_choice.html",
                            page_title="Cadet Test",
                            course_name=course_name,
                            fresh_question=(not repeated),
                            form=form,
                            post_url="", # same url as current so can leave this blank
-                           prompt=Markup(prompt_html))
+                           prompt=Markup(prompt_html),
+                           questions_left=len(mission.fresh_questions.all()) + len(mission.repeat_questions.all()),
+                           questions_total = len(mission.unattempted_questions.all())
+                           )
+
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-selection', methods=['POST'])
 @login_required
