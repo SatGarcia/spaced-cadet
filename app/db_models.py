@@ -169,6 +169,12 @@ topic_sources = db.Table(
     db.Column('source_id', db.Integer, db.ForeignKey('source.id'))
 )
 
+# association table for sources associated with a topic
+selected_answers = db.Table(
+    'selected_answers',
+    db.Column('attempt_id', db.Integer, db.ForeignKey('selection_attempt.id')),
+    db.Column('option_id', db.Integer, db.ForeignKey('answer_option.id'))
+)
 
 class Topic(SearchableMixin, db.Model):
     __searchable__ = ['text']
@@ -453,10 +459,6 @@ class AnswerOption(db.Model):
     text = db.Column(db.String, nullable=False)
     correct = db.Column(db.Boolean, default=False, nullable=False)
 
-    attempts = db.relationship('SelectionAttempt',
-                                    foreign_keys='SelectionAttempt.option_id',
-                                    backref='response', lazy='dynamic')
-
 
 class AnswerOptionSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -626,11 +628,17 @@ class TextAttempt(Attempt):
 
 class SelectionAttempt(Attempt):
     id = db.Column(db.Integer, db.ForeignKey('attempt.id'), primary_key=True)
-    option_id = db.Column(db.Integer, db.ForeignKey('answer_option.id'))
 
     __mapper_args__ = {
         'polymorphic_identity': ResponseType.SELECTION,
     }
+
+    responses = db.relationship('AnswerOption',
+                                 secondary=selected_answers,
+                                 primaryjoin=('selected_answers.c.attempt_id == SelectionAttempt.id'),
+                                 secondaryjoin=('selected_answers.c.option_id == AnswerOption.id'),
+                                 backref=db.backref('attempts', lazy='dynamic'),
+                                 lazy='dynamic')
 
 
 class Course(SearchableMixin, db.Model):

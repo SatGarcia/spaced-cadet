@@ -9,7 +9,7 @@ from wtforms import (
 )
 from wtforms.widgets import (ListWidget, CheckboxInput)
 from wtforms.validators import (
-    DataRequired, InputRequired
+    DataRequired, InputRequired, ValidationError
 )
 from flask_login import current_user, login_required
 
@@ -215,26 +215,15 @@ def test_multiple_choice(course_name, mission_id):
     repeated = is_a_repeat(previous_attempt)
 
     if form.validate_on_submit():
-
         # add the attempt to the database
         attempt = SelectionAttempt(question_id=original_question_id,
                                    user_id=current_user.id)
-
-        # Get the selected answer.
-        answer_id = form.response.data
-        selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
 
         # if there was a previous attempt, copy over e_factor and interval
         if previous_attempt:
             attempt.e_factor = previous_attempt.e_factor
             attempt.interval = previous_attempt.interval
             attempt.next_attempt = previous_attempt.next_attempt
-
-        if selected_answer:
-            # no selected answer means they didn't have a response (i.e. "I
-            # Don't Know" was their answer)
-            attempt.response = selected_answer
-
 
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
@@ -260,7 +249,12 @@ def test_multiple_choice(course_name, mission_id):
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
-        if selected_answer and selected_answer.correct:
+        # Get the selected answer.
+        answer_id = form.response.data
+        selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
+        attempt.responses.append(selected_answer)
+
+        if selected_answer.correct:
             # if correct, send them off to the self rating form
             attempt.correct = True
             db.session.commit()
@@ -278,7 +272,6 @@ def test_multiple_choice(course_name, mission_id):
             if selected_answer:
                 # they made an attempt but were wrong so set response quality to 2
                 attempt.sm2_update(2, repeat_attempt=repeated)
-          
 
             db.session.commit()
 
@@ -313,44 +306,37 @@ def test_multiple_selection(course_name, mission_id):
     # TODO: code duplication in this function
     course = check_course_authorization(course_name)
     check_mission_inclusion(mission_id, course)
- 
+
     form = MultipleSelectionForm(request.form)
     original_question_id = form.question_id.data
     original_question = Question.query.filter_by(id=original_question_id).first()
- 
+
     if not original_question:
         abort(400)
- 
+
     form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
-    
- 
+
     # grab the last attempt (before creating a new attempt which will be
     # the new "last" attempt
     previous_attempt = get_last_attempt(current_user.id, original_question_id)
- 
-    # determine if this question is repeated from earlier today
     repeated = is_a_repeat(previous_attempt)
- 
+
+    prompt_html = markdown_to_html(original_question.prompt)
+
     if form.validate_on_submit():
- 
         # add the attempt to the database
         attempt = SelectionAttempt(question_id=original_question_id,
                                    user_id=current_user.id)
- 
 
-        prompt_html = markdown_to_html(original_question.prompt)
-    
-        answer_ids = form.response.data 
-        selected_answers = AnswerOption.query.filter(AnswerOption.id.in_(answer_ids)).all()
- 
         # if there was a previous attempt, copy over e_factor and interval
         if previous_attempt:
             attempt.e_factor = previous_attempt.e_factor
             attempt.interval = previous_attempt.interval
             attempt.next_attempt = previous_attempt.next_attempt
- 
+
         db.session.add(attempt)
         db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
+
 
         if form.no_answer.data:
             # No response from user ("I Don't Know"), which is response
@@ -372,9 +358,13 @@ def test_multiple_selection(course_name, mission_id):
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
-        correct_list = original_question.options.filter_by(correct = True).all()
-        if selected_answers == correct_list: 
-            
+        answer_ids = form.response.data
+        selected_answers = AnswerOption.query.filter(AnswerOption.id.in_(answer_ids)).all()
+        attempt.responses = selected_answers
+
+        correct_answers = original_question.options.filter_by(correct = True).all()
+
+        if selected_answers == correct_answers:
             # if correct, send them off to the self rating form
             attempt.correct = True
             db.session.commit()
@@ -385,23 +375,19 @@ def test_multiple_selection(course_name, mission_id):
                                    post_url=url_for('.difficulty',
                                                     course_name=course_name,
                                                     mission_id=mission_id))
- 
+
         else:
             attempt.correct = False
- 
-            
+
             # they made an attempt but were wrong so set response quality to 2
             attempt.sm2_update(2, repeat_attempt=repeated)
- 
             db.session.commit()
- 
+
             # show the user a page where they can view the correct answers
-            correct_options = original_question.options.filter_by(correct=True).all()
             answer_html = ''
-            for option in correct_options:
+            for option in correct_answers:
                 answer_html += markdown_to_html(option.text) + "\n"
-     
- 
+
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
                                    continue_url=url_for('.test',
@@ -409,10 +395,7 @@ def test_multiple_selection(course_name, mission_id):
                                                         mission_id=mission_id),
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
- 
- 
-    prompt_html = markdown_to_html(original_question.prompt)
- 
+
     return render_template("test_multiple_choice.html",
                            page_title="Cadet Test",
                            course_name=course_name,
@@ -903,13 +886,19 @@ class MultipleChoiceForm(FlaskForm):
     no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 
+    def validate_response(form, field):
+        """ Validate that user selected something if they clicked submit
+        rather than no_answer. """
+        if form.submit.data and (not field.data):
+            raise ValidationError("Select one of the given options or click \"I Don't Know\"")
+
 class MultiCheckboxField(SelectMultipleField):
     widget = ListWidget(prefix_label=False)
     option_widget = CheckboxInput()
 
 class MultipleSelectionForm(FlaskForm):
     question_id = HiddenField("Question ID")
-    response = MultiCheckboxField('Select All That Apply', coerce=int) 
+    response = MultiCheckboxField('Select All That Apply', coerce=int)
     no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 
