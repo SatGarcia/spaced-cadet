@@ -85,6 +85,7 @@ def create_app(config_class='config.DevelopmentConfig'):
         from app.tests import tests
         app.register_blueprint(tests, url_prefix="/test")
 
+
     return app
 
 from app import db_models
