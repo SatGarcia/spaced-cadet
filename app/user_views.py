@@ -307,8 +307,9 @@ def test_multiple_choice(course_name, mission_id):
                             form=form,
                             post_url="", # same url as current so can leave this blank
                             prompt=Markup(prompt_html),
-                            questions_completed=mission.questions.count()-(mission.fresh_questions(current_user).count() + mission.repeat_questions(current_user).count()),
-                            questions_total = mission.questions.count()
+                            fresh_questions=mission.fresh_questions(current_user).count(),
+                            questions_total = mission.questions.count(),
+                            repeat_questions=mission.repeat_questions(current_user).count()
                            )
 
 
@@ -425,8 +426,9 @@ def test_multiple_selection(course_name, mission_id):
                            form=form,
                            post_url="", # same url as current so can leave this blank
                            prompt=Markup(prompt_html),
-                           questions_completed=mission.questions.count()-(mission.fresh_questions(current_user).count() + mission.repeat_questions(current_user).count()),
-                           questions_total = mission.questions.count()
+                            fresh_questions=mission.fresh_questions(current_user).count(),
+                            questions_total = mission.questions.count(),
+                            repeat_questions=mission.repeat_questions(current_user).count()
                            )
 
 
@@ -497,6 +499,7 @@ def test_short_answer(course_name, mission_id):
                                response=form.response.data,
                                correct_answer=Markup(answer_html))
 
+    mission = check_mission_inclusion(mission_id, course)
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
                            post_url=url_for(".test_short_answer",
@@ -504,7 +507,10 @@ def test_short_answer(course_name, mission_id):
                                             mission_id=mission_id),
                            fresh_question=(not repeated),
                            form=form,
-                           prompt=Markup(prompt_html))
+                           prompt=Markup(prompt_html),
+                            fresh_questions=mission.fresh_questions(current_user).count(),
+                            questions_total = mission.questions.count(),
+                            repeat_questions=mission.repeat_questions(current_user).count())
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/auto-check', methods=['POST'])
@@ -590,7 +596,7 @@ def test_auto_check(course_name, mission_id):
                                    prompt=Markup(prompt_html),
                                    answer=original_question.answer)
 
-
+    mission = check_mission_inclusion(mission_id, course)
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
                            post_url=url_for(".test_auto_check",
@@ -598,7 +604,10 @@ def test_auto_check(course_name, mission_id):
                                             mission_id=mission_id),
                            fresh_question=(not repeated),
                            form=form,
-                           prompt=Markup(prompt_html))
+                           prompt=Markup(prompt_html),
+                            fresh_questions=mission.fresh_questions(current_user).count(),
+                            questions_total = mission.questions.count(),
+                            repeat_questions=mission.repeat_questions(current_user).count())
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/code-jumble', methods=['POST'])
@@ -702,6 +711,7 @@ def test_code_jumble(course_name, mission_id):
 
     prompt_html = markdown_to_html(question.prompt)
     code_blocks = [(b.id, Markup(b.html())) for b in question.blocks]
+    mission = check_mission_inclusion(mission_id, course)
 
     return render_template("test_code_jumble.html",
                            page_title="Cadet Test",
@@ -711,7 +721,10 @@ def test_code_jumble(course_name, mission_id):
                                             course_name=course_name,
                                             mission_id=mission_id),
                            prompt=Markup(prompt_html),
-                           code_blocks=code_blocks)
+                           code_blocks=code_blocks,
+                            fresh_questions=mission.fresh_questions(current_user).count(),
+                            questions_total = mission.questions.count(),
+                            repeat_questions=mission.repeat_questions(current_user).count())
 
 
 @user_views.route('/c/<course_name>')
@@ -789,8 +802,9 @@ def test(course_name, mission_id):
                                                 mission_id=mission_id),
                                form=form,
                                prompt=Markup(prompt_html),
-                                questions_completed=mission.questions.count()-(mission.fresh_questions(current_user).count() + mission.repeat_questions(current_user).count()),
-                               questions_total = mission.questions.count())
+                                fresh_questions=mission.fresh_questions(current_user).count(),
+                                questions_total = mission.questions.count(),
+                                repeat_questions=mission.repeat_questions(current_user).count())
 
     elif question.type == QuestionType.AUTO_CHECK:
         form = AutoCheckForm(question_id=question.id)
@@ -803,8 +817,9 @@ def test(course_name, mission_id):
                                                 mission_id=mission_id),
                                form=form,
                                prompt=Markup(prompt_html),
-                                questions_completed=mission.questions.count()-(mission.fresh_questions(current_user).count() + mission.repeat_questions(current_user).count()),
-                               questions_total = mission.questions.count())
+                                fresh_questions=mission.fresh_questions(current_user).count(),
+                                questions_total = mission.questions.count(),
+                                repeat_questions=mission.repeat_questions(current_user).count())
 
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(question_id=question.id)
@@ -820,8 +835,9 @@ def test(course_name, mission_id):
                                                 course_name=course_name,
                                                 mission_id=mission_id),
                                prompt=Markup(prompt_html),
-                               questions_completed=mission.questions.count()-(mission.fresh_questions(current_user).count() + mission.repeat_questions(current_user).count()),
-                               questions_total = mission.questions.count())
+                                fresh_questions=mission.fresh_questions(current_user).count(),
+                                questions_total = mission.questions.count(),
+                                repeat_questions=mission.repeat_questions(current_user).count())
 
     elif question.type == QuestionType.MULTIPLE_SELECTION:
         form = MultipleSelectionForm(question_id=question.id)
@@ -856,8 +872,9 @@ def test(course_name, mission_id):
                                                 course_name=course_name,
                                                 mission_id=mission_id),
                                prompt=Markup(prompt_html),                               
-                               questions_completed=mission.questions.count()-(mission.fresh_questions(current_user).count() + mission.repeat_questions(current_user).count()),
-                               questions_total = mission.questions.count(),
+                                 fresh_questions=mission.fresh_questions(current_user).count(),
+                                questions_total = mission.questions.count(),
+                                repeat_questions=mission.repeat_questions(current_user).count(),
                                code_blocks=code_blocks)
     else:
         return "UNSUPPORTED QUESTION TYPE"
