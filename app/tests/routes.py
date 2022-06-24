@@ -10,10 +10,11 @@ from app import db
 from app.tests import tests
 from app.db_models import (
     User, UserSchema, Course, CourseSchema, Assessment, Objective,
-    LearningObjectiveSchema,
+    LearningObjectiveSchema, Question,
     ShortAnswerQuestion, ShortAnswerQuestionSchema,
     AutoCheckQuestion, AutoCheckQuestionSchema,
     MultipleChoiceQuestion, MultipleChoiceQuestionSchema, AnswerOption,
+    MultipleSelectionQuestion, MultipleSelectionQuestionSchema,
     CodeJumbleQuestion, CodeJumbleQuestionSchema, JumbleBlock
 )
 
@@ -185,6 +186,26 @@ def random_multiple_choice(author, is_public, is_enabled):
     q.options = options
     return q
 
+def random_multiple_selection(author, is_public, is_enabled):
+    options = []
+
+    # two correct options
+    for i in range(1,3):
+        options.append(AnswerOption(text=f"Good answer {i}", correct=True))
+
+    # two incorrect options
+    for i in range(1,3):
+        options.append(AnswerOption(text=f"Bad answer {i}", correct=False))
+
+    shuffle(options) # randomize the order of the options
+
+    prompt = "MULTIPLE SELECTION: " + fake.sentence(nb_words=3)
+    q = MultipleSelectionQuestion(prompt=prompt, author=author,
+                               public=is_public, enabled=is_enabled)
+
+    q.options = options
+    return q
+
 def random_code_jumble(author, is_public, is_enabled):
     blocks = []
     blocks.append(JumbleBlock(code=f"# line 0, indent 0",
@@ -270,6 +291,13 @@ def seed_multiple_choice():
     """ Creates randomized multiple choice questions. """
     new_questions = create_questions(random_multiple_choice)
     return jsonify(MultipleChoiceQuestionSchema().dump(new_questions, many=True))
+
+
+@tests.route('/seed/question/multiple-selection', methods=['POST'])
+def seed_multiple_selection():
+    """ Creates randomized multiple choice questions. """
+    new_questions = create_questions(random_multiple_selection)
+    return jsonify(MultipleSelectionQuestionSchema().dump(new_questions, many=True))
 
 
 @tests.route('/seed/question/code-jumble', methods=['POST'])
