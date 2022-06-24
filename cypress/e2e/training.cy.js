@@ -134,7 +134,20 @@ describe('Mission Training', function() {
       cy.contains("Congratulations")
     })
 
-    // TODO: Test for IDK response to Auto Check question
+    /*
+     * Tests a response of "I Don't Know"
+     */
+    it('IDK Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      cy.contains("I Don't Know").click()
+
+      cy.contains("Incorrect Answer")
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
 
     /*
      * Tests an incorrect response to the auto-graded question.
