@@ -59,6 +59,13 @@ class TrainingTests(unittest.TestCase):
         self.ms_question.options = [o4, o5, o6, o7]
         a.questions.append(self.ms_question)
 
+        self.ms_question2 = MultipleSelectionQuestion(prompt="Multiple Selection Question")
+        o8 = AnswerOption(text="Nope", correct=False)
+        o9 = AnswerOption(text="Still Nope", correct=False)
+        o10 = AnswerOption(text="Wrong again", correct=False)
+        self.ms_question2.options = [o8, o9, o10]
+        a.questions.append(self.ms_question2)
+
         self.cj_question = CodeJumbleQuestion(prompt="Code Jumble Question")
         b1 = JumbleBlock(code="line 1, indent 2",
                          correct_index=1, correct_indent=2)
@@ -222,29 +229,35 @@ class TrainingTests(unittest.TestCase):
         db.session.commit()
 
         for user in [self.u1, self.u2]:
-            client = self.app.test_client(user=user)
-            response = client.post(url_for('user_views.test_multiple_selection',
-                                                course_name="test-course",
-                                                mission_id=1),
-                                        data={
-                                            "question_id": str(self.ms_question.id),
-                                            "response": ["4","7"],
-                                            "submit": "y"
-                                        })
+            for question, response_data in [(self.ms_question, [4, 7]), (self.ms_question2, [])]:
+                with self.subTest(question_id=question.id, response=response_data):
+                    client = self.app.test_client(user=user)
+                    form_data = {
+                        "question_id": str(question.id),
+                        "submit": "y"
+                    }
 
-            # check that user was sent to the difficulty page
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Rate Your Performance", response.data)
+                    if response_data != []:
+                        form_data['response'] = [str(i) for i in response_data]
 
-            # check that there is now a single (selection) attempt
-            self.check_selection_attempt(self.ms_question.id, user.id, [4, 7])
+                    response = client.post(url_for('user_views.test_multiple_selection',
+                                                        course_name="test-course",
+                                                        mission_id=1),
+                                                data=form_data)
 
-            attempt = SelectionAttempt.query.first()
-            self.assertTrue(attempt.correct)
+                    # check that user was sent to the difficulty page
+                    self.assertEqual(response.status_code, 200)
+                    self.assertIn(b"Rate Your Performance", response.data)
 
-            # clear out attempts for next user test
-            Attempt.query.delete()
-            SelectionAttempt.query.delete()
+                    # check that there is now a single (selection) attempt
+                    self.check_selection_attempt(question.id, user.id, response_data)
+
+                    attempt = SelectionAttempt.query.first()
+                    self.assertTrue(attempt.correct)
+
+                    # clear out attempts for next user test
+                    Attempt.query.delete()
+                    SelectionAttempt.query.delete()
 
     def test_incorrect_multiple_choice_question_submission(self):
         for response_id in [2, 3]:
