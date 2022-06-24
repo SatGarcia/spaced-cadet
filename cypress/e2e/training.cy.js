@@ -192,7 +192,7 @@ describe('Mission Training', function() {
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/multiple-choice`)
 
       cy.contains('Easy').click()
-      cy.get('input[name=submit]').click()
+      cy.contains('Submit').click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
       cy.contains("Congratulations")
