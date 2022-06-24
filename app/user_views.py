@@ -307,8 +307,8 @@ def test_multiple_choice(course_name, mission_id):
                            form=form,
                            post_url="", # same url as current so can leave this blank
                            prompt=Markup(prompt_html),
-                           questions_left=len(mission.fresh_questions.all()) + len(mission.repeat_questions.all()),
-                           questions_total = len(mission.unattempted_questions.all())
+                           questions_left=len(mission.fresh_questions().all()) + len(mission.repeat_questions().all()),
+                           questions_total = len(mission.unattempted_questions().all())
                            )
 
 
