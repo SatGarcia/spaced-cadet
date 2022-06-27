@@ -383,7 +383,7 @@ class CourseApi(Resource):
         if c:
             # Limit access to admins and course instructors
             if (not current_user.admin)\
-                    and (not current_user.instructor or current_user not in course.users):
+                    and (not current_user.instructor or current_user not in c.users):
                 return {'message': "Unauthorized access"}, 401
 
             return course_schema.dump(c)
