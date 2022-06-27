@@ -7,14 +7,14 @@
 		{% if preview_mode %}
 			<div class="text-danger row mb-3">
 				<strong><i class="bi-eye-fill"></i> Question Preview</strong>
-			</div>			
+			</div>
+			
 		{% elif not fresh_question %}
 			<table style="width:100%; padding-left:40px; padding-right:40px">
 				<tr>
 					<tr style="float:right;padding-left:10px">
 						<a href="#" data-bs-toggle="tooltip" style= "float:right;padding-left:10px" data-bs-placement="bottom" data-html="true" 
-								title="Unattempted Questions Remaining: 
-								{{fresh_questions}}&#013;
+								title="Unattempted Questions Remaining: {{fresh_questions}}&#013;
 								Attempted Questions Remaining: {{repeat_questions}}&#013;
 								Completed Questions: {{(questions_total-fresh_questions-repeat_questions)}}">
 								<i class="bi bi-info-circle"></i></a>
