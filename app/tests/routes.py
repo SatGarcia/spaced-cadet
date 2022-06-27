@@ -15,7 +15,8 @@ from app.db_models import (
     AutoCheckQuestion, AutoCheckQuestionSchema,
     MultipleChoiceQuestion, MultipleChoiceQuestionSchema, AnswerOption,
     MultipleSelectionQuestion, MultipleSelectionQuestionSchema,
-    CodeJumbleQuestion, CodeJumbleQuestionSchema, JumbleBlock
+    CodeJumbleQuestion, CodeJumbleQuestionSchema, JumbleBlock, Topic,
+    TopicSchema, Textbook, TextbookSchema, TextbookSection
 )
 
 Faker.seed(0)
@@ -122,6 +123,27 @@ def seed_course():
 
     return jsonify(CourseSchema().dump(new_course))
 
+
+@tests.route('/seed/topics', methods=['POST'])
+def seed_topics():
+    AmountSchema = Schema.from_dict({
+        'amount': fields.Int(required=True)
+    })
+    try:
+        data = load_data(AmountSchema())
+    except LoadDataError as err:
+        return err.response, err.status_code
+
+    new_topics = []
+    for _ in range(data['amount']):
+        new_topics.append(Topic(text=fake.word(part_of_speech="noun")))
+
+    db.session.add_all(new_topics)
+    db.session.commit()
+
+    return jsonify(TopicSchema().dump(new_topics, many=True))
+
+
 @tests.route('/seed/objective', methods=['POST'])
 def seed_objective():
     AuthorIdSchema = Schema.from_dict({
@@ -141,6 +163,54 @@ def seed_objective():
     db.session.commit()
 
     return jsonify(LearningObjectiveSchema().dump(new_objective))
+
+
+@tests.route('/seed/textbook', methods=['POST'])
+def seed_textbook():
+    AmountSchema = Schema.from_dict({
+        'author_id': fields.Int(required=True),
+        'num_sections': fields.Int(required=True)
+    })
+    try:
+        data = load_data(AmountSchema())
+    except LoadDataError as err:
+        return err.response, err.status_code
+
+    author_id = data['author_id']
+    author = User.query.filter_by(id=author_id).first()
+
+    if not author:
+        return jsonify(message=f"No user found with ID {author_id}"), 422
+
+    new_tb = Textbook(title=fake.sentence(nb_words=5,
+                                          variable_nb_words=False),
+                      edition=randint(1,5),
+                      authors=f"{fake.name()} and {fake.name()}",
+                      publisher=f"{fake.last_name()} Publishing",
+                      year=int(fake.year()),
+                      isbn=fake.isbn10(),
+                      url=fake.url())
+
+    db.session.add(new_tb)
+
+    sections = []
+    for i in range(data['num_sections']):
+        tb_section = TextbookSection(title=fake.sentence(nb_words=5),
+                                     author=author,
+                                     number=str(i),
+                                     url=fake.url())
+
+        section_topics = []
+        for _ in range(3):
+            section_topics.append(Topic(text=fake.word(part_of_speech="noun")))
+
+        tb_section.topics = section_topics
+        sections.append(tb_section)
+
+    new_tb.sections = sections
+    db.session.commit()
+
+    return jsonify(TextbookSchema().dump(new_tb))
 
 
 def get_author_and_assessment(author_id, assessment_id):
