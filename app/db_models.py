@@ -190,7 +190,7 @@ class Topic(SearchableMixin, db.Model):
                                  secondary=topic_sources,
                                  primaryjoin=('topic_sources.c.topic_id == Topic.id'),
                                  secondaryjoin=('topic_sources.c.source_id == Source.id'),
-                                 backref=db.backref('topics', lazy='dynamic'),
+                                 backref=db.backref('topics', lazy='dynamic', order_by='Topic.text'),
                                  lazy='dynamic')
 
 
