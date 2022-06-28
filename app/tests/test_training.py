@@ -106,6 +106,8 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(attempt.user_id, user_id)
             self.assertEqual(attempt.response, response)
 
+            return attempt
+
     def check_selection_attempt(self, question_id, user_id, response_ids):
             self.assertEqual(Attempt.query.count(), 1)
             self.assertEqual(SelectionAttempt.query.count(), 1)
@@ -116,6 +118,8 @@ class TrainingTests(unittest.TestCase):
 
             selected_answers = AnswerOption.query.filter(AnswerOption.id.in_(response_ids)).all()
             self.assertCountEqual(selected_answers, attempt.responses)
+
+            return attempt
 
     def test_valid_short_answer_question_submission(self):
         self.course.users.append(self.u2)
@@ -133,12 +137,17 @@ class TrainingTests(unittest.TestCase):
                                             "submit": "y"
                                         })
 
-            # check that user was sent to the self verify page
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Was your answer correct?", response.data)
-
             # check that there is now a single (text) attempt
-            self.check_text_attempt(self.sa_question.id, user.id, "My response")
+            attempt = self.check_text_attempt(self.sa_question.id, user.id, "My response")
+
+            # check that user was redirected to the self-grade page
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(urlparse(response.location).path,
+                                      url_for('user_views.self_review',
+                                              course_name="test-course",
+                                              mission_id=1,
+                                              _external=False))
+
 
             # clear out attempts for next user test
             Attempt.query.delete()
@@ -161,8 +170,12 @@ class TrainingTests(unittest.TestCase):
                                         })
 
             # check that user was sent to the difficulty page
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Rate Your Performance", response.data)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(urlparse(response.location).path,
+                                      url_for('user_views.difficulty',
+                                              course_name="test-course",
+                                              mission_id=1,
+                                              _external=False))
 
             # check that there is now a single (text) attempt
             self.check_text_attempt(self.ac_question.id, user.id, "Answer 2")
@@ -187,9 +200,13 @@ class TrainingTests(unittest.TestCase):
                                         "submit": "y"
                                     })
 
-        # check that user was sent to the difficulty page
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Incorrect Answer", response.data)
+        # check that user was sent to the review correct answer page
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(urlparse(response.location).path,
+                                  url_for('user_views.review_answer',
+                                          course_name="test-course",
+                                          mission_id=1,
+                                          _external=False))
 
         attempt = TextAttempt.query.first()
         self.assertFalse(attempt.correct)
@@ -211,8 +228,12 @@ class TrainingTests(unittest.TestCase):
                                         })
 
             # check that user was sent to the difficulty page
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Rate Your Performance", response.data)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(urlparse(response.location).path,
+                                      url_for('user_views.difficulty',
+                                              course_name="test-course",
+                                              mission_id=1,
+                                              _external=False))
 
             # check that there is now a single (text) attempt
             self.check_selection_attempt(self.mc_question.id, user.id, [1])
@@ -246,8 +267,12 @@ class TrainingTests(unittest.TestCase):
                                                 data=form_data)
 
                     # check that user was sent to the difficulty page
-                    self.assertEqual(response.status_code, 200)
-                    self.assertIn(b"Rate Your Performance", response.data)
+                    self.assertEqual(response.status_code, 302)
+                    self.assertEqual(urlparse(response.location).path,
+                                              url_for('user_views.difficulty',
+                                                      course_name="test-course",
+                                                      mission_id=1,
+                                                      _external=False))
 
                     # check that there is now a single (selection) attempt
                     self.check_selection_attempt(question.id, user.id, response_data)
@@ -271,9 +296,13 @@ class TrainingTests(unittest.TestCase):
                                             "submit": "y"
                                         })
 
-            # check that user was sent to the difficulty page
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Incorrect Answer", response.data)
+            # check that user was sent to the review correct answer page
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(urlparse(response.location).path,
+                                      url_for('user_views.review_answer',
+                                              course_name="test-course",
+                                              mission_id=1,
+                                              _external=False))
 
             attempt = SelectionAttempt.query.first()
             self.assertFalse(attempt.correct)
@@ -300,9 +329,13 @@ class TrainingTests(unittest.TestCase):
                                                     mission_id=1),
                                        data=form_data)
 
-                # check that user was sent to the difficulty page
-                self.assertEqual(response.status_code, 200)
-                self.assertIn(b"Incorrect Answer", response.data)
+                # check that user was sent to the review correct answer page
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(urlparse(response.location).path,
+                                          url_for('user_views.review_answer',
+                                                  course_name="test-course",
+                                                  mission_id=1,
+                                                  _external=False))
 
                 attempt = SelectionAttempt.query.first()
                 self.assertFalse(attempt.correct)
@@ -329,8 +362,12 @@ class TrainingTests(unittest.TestCase):
                                         })
 
             # check that user was sent to the difficulty page
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Rate Your Performance", response.data)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(urlparse(response.location).path,
+                                      url_for('user_views.difficulty',
+                                              course_name="test-course",
+                                              mission_id=1,
+                                              _external=False))
 
             # check that there is now a single (text) attempt
             self.check_text_attempt(self.cj_question.id, user.id, "[(3,0), (1,2), (4,1)]")
@@ -358,9 +395,13 @@ class TrainingTests(unittest.TestCase):
                                             "submit": "y"
                                         })
 
-            # check that user was sent to the difficulty page
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Incorrect Answer", response.data)
+            # check that user was sent to the review correct answer page
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(urlparse(response.location).path,
+                                      url_for('user_views.review_answer',
+                                              course_name="test-course",
+                                              mission_id=1,
+                                              _external=False))
 
             # check that there is now a single (text) attempt
             self.check_text_attempt(self.cj_question.id, self.u1.id,
@@ -413,9 +454,13 @@ class TrainingTests(unittest.TestCase):
                                                mission_id=1),
                                             data=form_data)
 
-                # check that they are given the 'review answer' page
-                self.assertEqual(response.status_code, 200)
-                self.assertIn(b"Incorrect Answer", response.data)
+                # check that user was sent to the review correct answer page
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(urlparse(response.location).path,
+                                          url_for('user_views.review_answer',
+                                                  course_name="test-course",
+                                                  mission_id=1,
+                                                  _external=False))
 
                 # check that there is now a single (text) attempt
                 self.assertEqual(Attempt.query.count(), 1)
@@ -461,16 +506,20 @@ class TrainingTests(unittest.TestCase):
 
         client = self.app.test_client(user=self.u1)
         response = client.post(url_for('user_views.self_review',
-                                            course_name="test-course",
-                                            mission_id=1),
-                                        data={
-                                            "attempt_id": attempt.id,
-                                            "yes": "y"
-                                        })
+                                       course_name="test-course",
+                                       mission_id=1,
+                                       attempt=attempt.id),
+                               data={
+                                   "yes": "y"
+                               })
 
         # check that user was sent to the difficulty rating page
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Rate Your Performance", response.data)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(urlparse(response.location).path,
+                                  url_for('user_views.difficulty',
+                                          course_name="test-course",
+                                          mission_id=1,
+                                          _external=False))
 
         # check that attempt's correctness was set but that all other fields
         # remain unchanged
@@ -495,12 +544,12 @@ class TrainingTests(unittest.TestCase):
         client = self.app.test_client(user=self.u1)
         with patch('app.db_models.Attempt.sm2_update') as mock_sm2_update:
             response = client.post(url_for('user_views.self_review',
-                                                course_name="test-course",
-                                                mission_id=1),
-                                            data={
-                                                "attempt_id": attempt.id,
-                                                "no": "y"
-                                            })
+                                           course_name="test-course",
+                                           mission_id=1,
+                                           attempt=attempt.id),
+                                   data={
+                                       "no": "y"
+                                   })
 
             self.assertEqual(mock_sm2_update.call_count, 1)
             self.assertEqual(mock_sm2_update.call_args, call(2, repeat_attempt=False))
@@ -536,12 +585,12 @@ class TrainingTests(unittest.TestCase):
 
         client = self.app.test_client(user=self.u2)
         response = client.post(url_for('user_views.self_review',
-                                            course_name="test-course",
-                                            mission_id=1),
-                                        data={
-                                            "attempt_id": attempt.id,
-                                            "yes": "y"
-                                        })
+                                       course_name="test-course",
+                                       mission_id=1,
+                                       attempt=attempt.id),
+                               data={
+                                   "yes": "y"
+                               })
 
         self.assertEqual(response.status_code, 401)
 
@@ -551,11 +600,11 @@ class TrainingTests(unittest.TestCase):
 
         response = client.post(url_for('user_views.self_review',
                                             course_name="test-course",
-                                            mission_id=1),
-                                        data={
-                                            "attempt_id": attempt.id,
-                                            "yes": "y"
-                                        })
+                                            mission_id=1,
+                                            attempt=attempt.id),
+                               data={
+                                   "yes": "y"
+                               })
 
         self.assertEqual(response.status_code, 401)
 
@@ -573,9 +622,9 @@ class TrainingTests(unittest.TestCase):
             with patch('app.db_models.Attempt.sm2_update') as mock_sm2_update:
                 response = client.post(url_for('user_views.difficulty',
                                                course_name="test-course",
-                                               mission_id=1),
+                                               mission_id=1,
+                                               attempt=attempt.id),
                                        data={
-                                           "attempt_id": str(attempt.id),
                                            "difficulty": str(score),
                                            "submit": "y"
                                        })
