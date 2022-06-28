@@ -198,6 +198,37 @@ def check_mission_inclusion(mission_id, course):
         return mission
 
 
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review')
+@login_required
+def review_answer(course_name, mission_id):
+    course = check_course_authorization(course_name)
+    mission = check_mission_inclusion(mission_id, course)
+
+    attempt_id = request.args.get("attempt")
+    if not attempt_id:
+        # TODO: redirect here instead of 404?
+        abort(404)
+
+    # TODO: check that attempt is part of the given mission
+
+    attempt = Attempt.query.filter_by(id=int(attempt_id)).first()
+    if not attempt:
+        abort(404)
+
+    question = attempt.question
+
+    prompt_html = markdown_to_html(question.prompt)
+    answer_html = question.get_answer()
+
+    return render_template("review_correct_answer.html",
+                           page_title="Cadet Test: Review Correct Answer",
+                           continue_url=url_for('.test',
+                                                course_name=course_name,
+                                                mission_id=mission_id),
+                           prompt=Markup(prompt_html),
+                           answer=Markup(answer_html))
+
+
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-choice', methods=['POST'])
 @login_required
 def test_multiple_choice(course_name, mission_id):
@@ -243,19 +274,10 @@ def test_multiple_choice(course_name, mission_id):
             attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
-            # show the user a page where they can view the correct answer
-            prompt_html = markdown_to_html(original_question.prompt)
-
-            correct_option = original_question.options.filter_by(correct=True).first()
-            answer_html = markdown_to_html(correct_option.text)
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
+            return redirect(url_for('.review_answer',
+                                    course_name=course_name,
+                                    mission_id=mission_id,
+                                    attempt=attempt.id))
 
         # Get the selected answer.
         answer_id = form.response.data
@@ -279,20 +301,10 @@ def test_multiple_choice(course_name, mission_id):
 
             db.session.commit()
 
-            # show the user a page where they can view the correct answer
-            prompt_html = markdown_to_html(original_question.prompt)
-
-            correct_option = original_question.options.filter_by(correct=True).first()
-            answer_html = markdown_to_html(correct_option.text)
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
-
+            return redirect(url_for('.review_answer',
+                                    course_name=course_name,
+                                    mission_id=mission_id,
+                                    attempt=attempt.id))
 
     prompt_html = markdown_to_html(original_question.prompt)
 
@@ -349,18 +361,11 @@ def test_multiple_selection(course_name, mission_id):
             attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
-            correct_options = original_question.options.filter_by(correct=True).all()
-            answer_html = ''
-            for option in correct_options:
-                answer_html += markdown_to_html(option.text) + "\n"
+            return redirect(url_for('.review_answer',
+                                    course_name=course_name,
+                                    mission_id=mission_id,
+                                    attempt=attempt.id))
 
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
 
         answer_ids = form.response.data
         selected_answers = AnswerOption.query.filter(AnswerOption.id.in_(answer_ids)).all()
@@ -383,18 +388,10 @@ def test_multiple_selection(course_name, mission_id):
             attempt.sm2_update(2, repeat_attempt=repeated)
             db.session.commit()
 
-            # show the user a page where they can view the correct answers
-            answer_html = ''
-            for option in correct_answers:
-                answer_html += markdown_to_html(option.text) + "\n"
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
+            return redirect(url_for('.review_answer',
+                                    course_name=course_name,
+                                    mission_id=mission_id,
+                                    attempt=attempt.id))
 
     return render_template("test_multiple_choice.html",
                            page_title="Cadet Test",
@@ -451,14 +448,10 @@ def test_short_answer(course_name, mission_id):
             attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
-            # FIXME: redirect instead of render here
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
+            return redirect(url_for('.review_answer',
+                                    course_name=course_name,
+                                    mission_id=mission_id,
+                                    attempt=attempt.id))
 
         return redirect(url_for('.self_review',
                                 course_name=course_name, mission_id=mission_id,
@@ -519,13 +512,10 @@ def test_auto_check(course_name, mission_id):
             attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=original_question.answer)
+            return redirect(url_for('.review_answer',
+                                    course_name=course_name,
+                                    mission_id=mission_id,
+                                    attempt=attempt.id))
 
         # check whether they got it correct or not
         user_response = attempt.response.strip()
@@ -545,14 +535,10 @@ def test_auto_check(course_name, mission_id):
             attempt.sm2_update(2, repeat_attempt=repeated)
             db.session.commit()
 
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=original_question.answer)
-
+            return redirect(url_for('.review_answer',
+                                    course_name=course_name,
+                                    mission_id=mission_id,
+                                    attempt=attempt.id))
 
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
@@ -611,17 +597,10 @@ def test_code_jumble(course_name, mission_id):
             attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
-            prompt_html = markdown_to_html(question.prompt)
-            answer_html = question.get_answer()
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
-
+            return redirect(url_for('.review_answer',
+                                    course_name=course_name,
+                                    mission_id=mission_id,
+                                    attempt=attempt.id))
 
         try:
             user_response = ast.literal_eval(response_str)
@@ -646,18 +625,10 @@ def test_code_jumble(course_name, mission_id):
             attempt.sm2_update(2, repeat_attempt=repeated)
             db.session.commit()
 
-            # show the user a page where they can view the correct answer
-            prompt_html = markdown_to_html(question.prompt)
-            answer_html = question.get_answer()
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
-
+            return redirect(url_for('.review_answer',
+                                    course_name=course_name,
+                                    mission_id=mission_id,
+                                    attempt=attempt.id))
 
     prompt_html = markdown_to_html(question.prompt)
     code_blocks = [(b.id, Markup(b.html())) for b in question.blocks]
