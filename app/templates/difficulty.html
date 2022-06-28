@@ -9,9 +9,8 @@
         Nice work, cadet! How difficult was it for you to recall the info
         needed to answer this question?
 
-		<form method="POST" action="{{ post_url }}">
+		<form method="POST" action="">
             {{ form.csrf_token }}
-            {{ form.attempt_id }}
             <ul class="list-unstyled px-1 pt-2">
                 {% for option in form.difficulty %}
                     <li class="pt-1">

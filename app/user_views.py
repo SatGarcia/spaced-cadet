@@ -48,23 +48,30 @@ def is_a_repeat(last_attempt):
     return (last_attempt is not None) and (last_attempt.time.date() == date.today())
 
 
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/rating', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/rating',
+                  methods=['GET', 'POST'])
 @login_required
 def difficulty(course_name, mission_id):
     """ Route to handle self-reported difficulty of a problem that the user
     got correct. """
 
     course = check_course_authorization(course_name)
-    check_mission_inclusion(mission_id, course)
+    mission = check_mission_inclusion(mission_id, course)
 
-    form = DifficultyForm(request.form)
+    attempt_id = request.args.get("attempt")
+    if not attempt_id:
+        abort(404)
+
+    # TODO: check that attempt is for a question in this mission
+
+    form = DifficultyForm()
 
     if form.validate_on_submit():
         # get the question and update it's interval and e_factor
-        a = Attempt.query.filter_by(id=form.attempt_id.data).first()
+        a = Attempt.query.filter_by(id=int(attempt_id)).first()
 
         if not a:
-            abort(400)
+            abort(404)
         elif a.user != current_user:
             abort(401)
 
@@ -84,26 +91,29 @@ def difficulty(course_name, mission_id):
 
     return render_template("difficulty.html",
                            page_title="Cadet Test: Rating",
-                           form=form,
-                           post_url=url_for('.difficulty',
-                                            course_name=course_name,
-                                            mission_id=mission_id))
+                           form=form)
 
 
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/self-grade',
+                  methods=['GET', 'POST'])
 @login_required
 def self_review(course_name, mission_id):
-    """ User will self-verify whether the answer they submitted is the correct
-    one or not. """
+    """ Route for the student to self-grade their answer. """
 
     course = check_course_authorization(course_name)
-    check_mission_inclusion(mission_id, course)
+    mission = check_mission_inclusion(mission_id, course)
 
-    form = SelfReviewForm(request.form)
-    attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
+    attempt_id = request.args.get("attempt")
+    if not attempt_id:
+        abort(404)
+
+    # TODO: check that attempt is part of the given mission
+
+    form = SelfReviewForm()
+    attempt = Attempt.query.filter_by(id=int(attempt_id)).first()
 
     if not attempt:
-        abort(400)
+        abort(404)
     elif attempt.user != current_user:
         abort(401)
 
@@ -114,13 +124,11 @@ def self_review(course_name, mission_id):
             # user reported they got it correct so show them difficulty rating form
             attempt.correct = True
             db.session.commit()
-            difficulty_form = DifficultyForm(attempt_id=form.attempt_id.data)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
+
+            return redirect(url_for('.difficulty',
+                                    course_name=course_name, mission_id=mission_id,
+                                    attempt=attempt_id))
+
 
         else:
             # user reported they were wrong
@@ -258,13 +266,9 @@ def test_multiple_choice(course_name, mission_id):
             # if correct, send them off to the self rating form
             attempt.correct = True
             db.session.commit()
-            difficulty_form = DifficultyForm(attempt_id=attempt.id)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
+            return redirect(url_for('.difficulty',
+                                    course_name=course_name, mission_id=mission_id,
+                                    attempt=attempt.id))
 
         else:
             attempt.correct = False
@@ -368,13 +372,9 @@ def test_multiple_selection(course_name, mission_id):
             # if correct, send them off to the self rating form
             attempt.correct = True
             db.session.commit()
-            difficulty_form = DifficultyForm(attempt_id=attempt.id)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
+            return redirect(url_for('.difficulty',
+                                    course_name=course_name, mission_id=mission_id,
+                                    attempt=attempt.id))
 
         else:
             attempt.correct = False
@@ -451,6 +451,7 @@ def test_short_answer(course_name, mission_id):
             attempt.sm2_update(1, repeat_attempt=repeated)
             db.session.commit()
 
+            # FIXME: redirect instead of render here
             return render_template("review_correct_answer.html",
                                    page_title="Cadet Test: Review",
                                    continue_url=url_for('.test',
@@ -459,18 +460,9 @@ def test_short_answer(course_name, mission_id):
                                    prompt=Markup(prompt_html),
                                    answer=Markup(answer_html))
 
-        review_form = SelfReviewForm(attempt_id=attempt.id)
-
-        return render_template("self_verify.html",
-                               page_title="Cadet Test: Self Verification",
-                               course_name=course_name,
-                               form=review_form,
-                               post_url=url_for('.self_review',
-                                                course_name=course_name,
-                                                mission_id=mission_id),
-                               prompt=Markup(prompt_html),
-                               response=form.response.data,
-                               correct_answer=Markup(answer_html))
+        return redirect(url_for('.self_review',
+                                course_name=course_name, mission_id=mission_id,
+                                attempt=attempt.id))
 
     return render_template("test_short_answer.html",
                            page_title="Cadet Test",
@@ -543,13 +535,9 @@ def test_auto_check(course_name, mission_id):
             attempt.correct = True
             db.session.commit()
 
-            difficulty_form = DifficultyForm(attempt_id=attempt.id)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
+            return redirect(url_for('.difficulty',
+                                    course_name=course_name, mission_id=mission_id,
+                                    attempt=attempt.id))
 
         else:
             # User was wrong so show them the correct answer
@@ -647,13 +635,9 @@ def test_code_jumble(course_name, mission_id):
             # if correct, send them off to the self rating form
             attempt.correct = True
             db.session.commit()
-            difficulty_form = DifficultyForm(attempt_id=attempt.id)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
+            return redirect(url_for('.difficulty',
+                                    course_name=course_name, mission_id=mission_id,
+                                    attempt=attempt.id))
 
         else:
             attempt.correct = False
@@ -844,7 +828,6 @@ class DataRequiredIf(DataRequired):
 
 class DifficultyForm(FlaskForm):
     """ Form to report the difficulty they had in answering a question. """
-    attempt_id = HiddenField("Attempt ID")
     difficulty = RadioField('Difficulty',
                              choices=[(5, "Easy: The info was easy to recall"),
                                       (4, 'Medium: I had to take a moment to recall something'),
@@ -854,7 +837,6 @@ class DifficultyForm(FlaskForm):
 
 
 class SelfReviewForm(FlaskForm):
-    attempt_id = HiddenField("Attempt ID")
     yes = SubmitField("Yes")
     no = SubmitField("No")
 
