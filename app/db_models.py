@@ -169,7 +169,7 @@ topic_sources = db.Table(
     db.Column('source_id', db.Integer, db.ForeignKey('source.id'))
 )
 
-# association table for sources associated with a topic
+# association table for answer options associated with an attempt
 selected_answers = db.Table(
     'selected_answers',
     db.Column('attempt_id', db.Integer, db.ForeignKey('selection_attempt.id')),
