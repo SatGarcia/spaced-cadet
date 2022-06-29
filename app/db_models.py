@@ -8,7 +8,7 @@ from marshmallow import (
 )
 
 from app import db
-from app.search import add_to_index, remove_from_index, query_index
+from app.search import add_to_index, remove_from_index, query_index, clear_index
 
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
@@ -80,7 +80,9 @@ class SearchableMixin(object):
 
     @classmethod
     def reindex(cls):
-        """ Updates all entries in this table. """
+        """ Updates all entries in this table, clearing out any index
+        documents that aren't current in this table. """
+        clear_index(cls.__tablename__)
         for obj in cls.query:
             add_to_index(cls.__tablename__, obj)
 
