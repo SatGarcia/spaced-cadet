@@ -58,8 +58,12 @@ def create_app(config_class='config.DevelopmentConfig'):
     if es_url:
         app.elasticsearch = Elasticsearch(es_url)
 
-        # check that elasticsearch server is actually available
-        if not app.elasticsearch.ping():
+        # check that elasticsearch server is actually available before
+        # initializing it.
+        if app.elasticsearch.ping():
+            from app.search import init_app as init_search
+            init_search(app)
+        else:
             app.logger.warn("Could not connect to Elasticsearch server.")
             app.elasticsearch = None
 

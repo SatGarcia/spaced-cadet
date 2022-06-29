@@ -26,3 +26,14 @@ def query_index(index, query, page, per_page):
               'from': page * per_page, 'size': per_page})
     ids = [int(hit['_id']) for hit in search['hits']['hits']]
     return ids, search['hits']['total']['value']
+
+
+def init_app(app):
+    """ Initializes the app by making sure all indicies are created. """
+    from app.db_models import SearchableMixin
+    for cls in SearchableMixin.__subclasses__():
+        index_name = cls.__tablename__
+        if not app.elasticsearch.indices.exists(index_name):
+            app.logger.info(f"Creating index {index_name}")
+            app.elasticsearch.indices.create(index_name)
+
