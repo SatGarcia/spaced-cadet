@@ -16,6 +16,18 @@ def remove_from_index(index, model):
     current_app.elasticsearch.delete(index=index, id=model.id)
 
 
+def clear_index(index):
+    """ Clears the contents of the given index. """
+    if not current_app.elasticsearch:
+        return
+
+    # If the index exists, delete it. Otherwise, just create the empty index.
+    if current_app.elasticsearch.indices.exists(index):
+        current_app.elasticsearch.indices.delete(index)
+
+    current_app.elasticsearch.indices.create(index)
+
+
 def query_index(index, query, page, per_page):
     if not current_app.elasticsearch:
         return [], 0
