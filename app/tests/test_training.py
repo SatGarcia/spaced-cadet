@@ -10,7 +10,8 @@ from app import create_app, db
 from app.db_models import (
     User, Course, ShortAnswerQuestion, Assessment, Attempt, TextAttempt,
     AutoCheckQuestion, MultipleChoiceQuestion, MultipleSelectionQuestion,
-    AnswerOption, SelectionAttempt, CodeJumbleQuestion, JumbleBlock
+    AnswerOption, SelectionAttempt, CodeJumbleQuestion, JumbleBlock,
+    selected_answers
 )
 
 
@@ -116,8 +117,8 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(attempt.question_id, question_id)
             self.assertEqual(attempt.user_id, user_id)
 
-            selected_answers = AnswerOption.query.filter(AnswerOption.id.in_(response_ids)).all()
-            self.assertCountEqual(selected_answers, attempt.responses)
+            selected_options = AnswerOption.query.filter(AnswerOption.id.in_(response_ids)).all()
+            self.assertCountEqual(selected_options, attempt.responses)
 
             return attempt
 
@@ -127,12 +128,11 @@ class TrainingTests(unittest.TestCase):
 
         for user in [self.u1, self.u2]:
             client = self.app.test_client(user=user)
-            response = client.post(url_for('user_views.test_short_answer',
+            response = client.post(url_for('user_views.test',
                                                 course_name="test-course",
                                                 mission_id=1),
                                         data={
-                                            "question_id":
-                                            str(self.sa_question.id),
+                                            "question_id": str(self.sa_question.id),
                                             "response": "My response",
                                             "submit": "y"
                                         })
@@ -160,12 +160,13 @@ class TrainingTests(unittest.TestCase):
 
         for user in [self.u1, self.u2]:
             client = self.app.test_client(user=user)
-            response = client.post(url_for('user_views.test_auto_check',
+            response = client.post(url_for('user_views.test',
                                                 course_name="test-course",
                                                 mission_id=1),
                                         data={
                                             "question_id": str(self.ac_question.id),
                                             "response": "Answer 2",
+                                            "booger": "MEOW",
                                             "submit": "y"
                                         })
 
@@ -191,7 +192,7 @@ class TrainingTests(unittest.TestCase):
 
     def test_incorrect_auto_check_question_submission(self):
         client = self.app.test_client(user=self.u1)
-        response = client.post(url_for('user_views.test_auto_check',
+        response = client.post(url_for('user_views.test',
                                             course_name="test-course",
                                             mission_id=1),
                                     data={
@@ -217,33 +218,33 @@ class TrainingTests(unittest.TestCase):
         db.session.commit()
 
         for user in [self.u1, self.u2]:
-            client = self.app.test_client(user=user)
-            response = client.post(url_for('user_views.test_multiple_choice',
-                                                course_name="test-course",
-                                                mission_id=1),
-                                        data={
-                                            "question_id": str(self.mc_question.id),
-                                            "response": "1",
-                                            "submit": "y"
-                                        })
+            with self.subTest(user_id=user.id):
+                client = self.app.test_client(user=user)
+                response = client.post(url_for('user_views.test',
+                                               course_name="test-course",
+                                               mission_id=1),
+                                       data={
+                                           "question_id": str(self.mc_question.id),
+                                           "response": "1",
+                                           "submit": "y"
+                                       })
 
-            # check that user was sent to the difficulty page
-            self.assertEqual(response.status_code, 302)
-            self.assertEqual(urlparse(response.location).path,
-                                      url_for('user_views.difficulty',
-                                              course_name="test-course",
-                                              mission_id=1,
-                                              _external=False))
+                # check that there is now a single (text) attempt
+                attempt = self.check_selection_attempt(self.mc_question.id, user.id, [1])
+                self.assertTrue(attempt.correct)
 
-            # check that there is now a single (text) attempt
-            self.check_selection_attempt(self.mc_question.id, user.id, [1])
+                # check that user was sent to the difficulty page
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(urlparse(response.location).path,
+                                          url_for('user_views.difficulty',
+                                                  course_name="test-course",
+                                                  mission_id=1,
+                                                  _external=False))
 
-            attempt = SelectionAttempt.query.first()
-            self.assertTrue(attempt.correct)
-
-            # clear out attempts for next user test
-            Attempt.query.delete()
-            SelectionAttempt.query.delete()
+                # clear out attempts for next user test
+                Attempt.query.delete()
+                SelectionAttempt.query.delete()
+                db.session.query(selected_answers).delete()
 
     def test_correct_multiple_selection_question_submission(self):
         self.course.users.append(self.u2)
@@ -261,10 +262,10 @@ class TrainingTests(unittest.TestCase):
                     if response_data != []:
                         form_data['response'] = [str(i) for i in response_data]
 
-                    response = client.post(url_for('user_views.test_multiple_selection',
-                                                        course_name="test-course",
-                                                        mission_id=1),
-                                                data=form_data)
+                    response = client.post(url_for('user_views.test',
+                                                   course_name="test-course",
+                                                   mission_id=1),
+                                           data=form_data)
 
                     # check that user was sent to the difficulty page
                     self.assertEqual(response.status_code, 302)
@@ -283,18 +284,19 @@ class TrainingTests(unittest.TestCase):
                     # clear out attempts for next user test
                     Attempt.query.delete()
                     SelectionAttempt.query.delete()
+                    db.session.query(selected_answers).delete()
 
     def test_incorrect_multiple_choice_question_submission(self):
         for response_id in [2, 3]:
             client = self.app.test_client(user=self.u1)
-            response = client.post(url_for('user_views.test_multiple_choice',
-                                                course_name="test-course",
-                                                mission_id=1),
-                                        data={
-                                            "question_id": str(self.mc_question.id),
-                                            "response": str(response_id),
-                                            "submit": "y"
-                                        })
+            response = client.post(url_for('user_views.test',
+                                           course_name="test-course",
+                                           mission_id=1),
+                                   data={
+                                       "question_id": str(self.mc_question.id),
+                                       "response": str(response_id),
+                                       "submit": "y"
+                                   })
 
             # check that user was sent to the review correct answer page
             self.assertEqual(response.status_code, 302)
@@ -311,6 +313,7 @@ class TrainingTests(unittest.TestCase):
             # clear out attempts for next user test
             Attempt.query.delete()
             SelectionAttempt.query.delete()
+            db.session.query(selected_answers).delete()
 
     def test_incorrect_multiple_selection_question_submission(self):
         for response_ids in [["5"], ["5", "6"], ["4", "5", "7"], None]:
@@ -324,9 +327,9 @@ class TrainingTests(unittest.TestCase):
                 if response_ids is not None:
                     form_data['response'] = response_ids
 
-                response = client.post(url_for('user_views.test_multiple_selection',
-                                                    course_name="test-course",
-                                                    mission_id=1),
+                response = client.post(url_for('user_views.test',
+                                               course_name="test-course",
+                                               mission_id=1),
                                        data=form_data)
 
                 # check that user was sent to the review correct answer page
@@ -344,6 +347,7 @@ class TrainingTests(unittest.TestCase):
                 # clear out attempts for next user test
                 Attempt.query.delete()
                 SelectionAttempt.query.delete()
+                db.session.query(selected_answers).delete()
 
 
     def test_correct_code_jumble_question_submission(self):
@@ -352,14 +356,14 @@ class TrainingTests(unittest.TestCase):
 
         for user in [self.u1, self.u2]:
             client = self.app.test_client(user=user)
-            response = client.post(url_for('user_views.test_code_jumble',
-                                                course_name="test-course",
-                                                mission_id=1),
-                                        data={
-                                            "question_id": str(self.cj_question.id),
-                                            "response": "[(3,0), (1,2), (4,1)]",
-                                            "submit": "y"
-                                        })
+            response = client.post(url_for('user_views.test',
+                                           course_name="test-course",
+                                           mission_id=1),
+                                   data={
+                                       "question_id": str(self.cj_question.id),
+                                       "response": "[(3,0), (1,2), (4,1)]",
+                                       "submit": "y"
+                                   })
 
             # check that user was sent to the difficulty page
             self.assertEqual(response.status_code, 302)
@@ -386,14 +390,14 @@ class TrainingTests(unittest.TestCase):
                              "[(3,0), (1,2)]", # missing block
                              "[(3,0), (1,2), (4,1), (2,0)]"]: # extraneous block
             client = self.app.test_client(user=self.u1)
-            response = client.post(url_for('user_views.test_code_jumble',
-                                                course_name="test-course",
-                                                mission_id=1),
-                                        data={
-                                            "question_id": str(self.cj_question.id),
-                                            "response": response_str,
-                                            "submit": "y"
-                                        })
+            response = client.post(url_for('user_views.test',
+                                           course_name="test-course",
+                                           mission_id=1),
+                                   data={
+                                       "question_id": str(self.cj_question.id),
+                                       "response": response_str,
+                                       "submit": "y"
+                                   })
 
             # check that user was sent to the review correct answer page
             self.assertEqual(response.status_code, 302)
@@ -417,27 +421,27 @@ class TrainingTests(unittest.TestCase):
 
     def test_unauthorized_user(self):
         client = self.app.test_client(user=self.u2)
-        response = client.post(url_for('user_views.test_short_answer',
-                                            course_name="test-course",
-                                            mission_id=1),
-                                    data={
-                                        "question_id": str(self.sa_question.id),
-                                        "response": "My response",
-                                        "submit": "y"
-                                    })
+        response = client.post(url_for('user_views.test',
+                                       course_name="test-course",
+                                       mission_id=1),
+                               data={
+                                   "question_id": str(self.sa_question.id),
+                                   "response": "My response",
+                                   "submit": "y"
+                               })
 
         self.assertEqual(response.status_code, 401)
 
     def test_idk_responses(self):
-        for route_url, question_id, response_data in [
-                ('user_views.test_short_answer', self.sa_question.id, ""),
-                ('user_views.test_auto_check', self.ac_question.id, ""),
-                ('user_views.test_code_jumble', self.cj_question.id, ""),
-                ('user_views.test_multiple_choice', self.mc_question.id, None),
-                ('user_views.test_multiple_selection', self.ms_question.id, None),
+        for question_type, question_id, response_data in [
+                ('short_answer', self.sa_question.id, ""),
+                ('auto_check', self.ac_question.id, ""),
+                ('code_jumble', self.cj_question.id, ""),
+                ('multiple_choice', self.mc_question.id, None),
+                ('multiple_selection', self.ms_question.id, None),
         ]:
 
-            with self.subTest(url=route_url, response=response_data):
+            with self.subTest(question_type=question_type, response=response_data):
                 client = self.app.test_client(user=self.u1)
 
                 form_data = {
@@ -449,10 +453,10 @@ class TrainingTests(unittest.TestCase):
                 if response_data is not None:
                     form_data['response'] = response_data
 
-                response = client.post(url_for(route_url,
+                response = client.post(url_for('user_views.test',
                                                course_name="test-course",
                                                mission_id=1),
-                                            data=form_data)
+                                       data=form_data)
 
                 # check that user was sent to the review correct answer page
                 self.assertEqual(response.status_code, 302)
@@ -474,6 +478,7 @@ class TrainingTests(unittest.TestCase):
                 Attempt.query.delete()
                 TextAttempt.query.delete()
                 SelectionAttempt.query.delete()
+                db.session.query(selected_answers).delete()
 
 
     def test_missing_short_answer_response(self):
@@ -481,14 +486,14 @@ class TrainingTests(unittest.TestCase):
         # whitespace characters
         for response in ["", " ", "\n"]:
             client = self.app.test_client(user=self.u1)
-            response = client.post(url_for('user_views.test_short_answer',
-                                                course_name="test-course",
-                                                mission_id=1),
-                                        data={
-                                            "question_id": str(self.sa_question.id),
-                                            "response": response,
-                                            "submit": "y"
-                                        })
+            response = client.post(url_for('user_views.test',
+                                           course_name="test-course",
+                                           mission_id=1),
+                                   data={
+                                       "question_id": str(self.sa_question.id),
+                                       "response": response,
+                                       "submit": "y"
+                                   })
             self.assertEqual(response.status_code, 200)
             self.assertIn(b"Enter an answer or click", response.data)
 

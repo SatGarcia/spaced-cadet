@@ -39,11 +39,11 @@ describe('Mission Training', function() {
       cy.get('input[name=submit]').click()
 
       // confirm that they got it correct
-      cy.location('pathname').should('eq', `/c/${courseName}/mission/4/train/short-answer`)
+      cy.location('pathname').should('eq', `/c/${courseName}/mission/4/train/self-grade`)
       cy.get('input[name=yes]').click()
 
       // check that they are on the page where they rate their performance
-      cy.location('pathname').should('eq', `/c/${courseName}/mission/4/train/review`)
+      cy.location('pathname').should('eq', `/c/${courseName}/mission/4/train/rating`)
 
       cy.contains(difficulty).click()
       cy.get('input[name=submit]').click()
@@ -73,6 +73,7 @@ describe('Mission Training', function() {
       cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
       cy.contains("I Don't Know").click()
 
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Incorrect Answer")
       cy.contains("Continue Training").click()
 
@@ -93,7 +94,7 @@ describe('Mission Training', function() {
 
       // check that they are on the page where they say whether their answer was
       // correct and select "No"
-      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/short-answer`)
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/self-grade`)
       cy.get('input[name=no]').click()
 
       // Should be back at the main training page with the same question ready
@@ -125,7 +126,7 @@ describe('Mission Training', function() {
       cy.get('input[name=submit]').click()
 
       // check that they are on the page where they rate their performance
-      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/auto-check`)
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/rating`)
 
       cy.contains('Easy').click()
       cy.get('input[name=submit]').click()
@@ -142,7 +143,7 @@ describe('Mission Training', function() {
 
       cy.contains("I Don't Know").click()
 
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
@@ -160,8 +161,7 @@ describe('Mission Training', function() {
       cy.get('input[name=response]').type("-1")
       cy.get('input[name=submit]').click()
 
-      // check that "Incorrect Answer" appears
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
@@ -189,8 +189,7 @@ describe('Mission Training', function() {
       cy.get("input[name=submit]").click()
 
       // check that they are on the page where they rate their performance
-      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/multiple-choice`)
-
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/rating`)
       cy.contains('Easy').click()
       cy.contains('Submit').click()
 
@@ -207,8 +206,7 @@ describe('Mission Training', function() {
       cy.contains("Bad answer").click()
       cy.get('input[name=submit]').click()
 
-      // check that "Incorrect Answer" appears
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
@@ -223,8 +221,7 @@ describe('Mission Training', function() {
 
       cy.contains("I Don't Know").click()
 
-      // check that "Incorrect Answer" appears
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
@@ -252,7 +249,7 @@ describe('Mission Training', function() {
       cy.get("input[name=submit]").click()
 
       // check that they are on the page where they rate their performance
-      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/multiple-selection`)
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/rating`)
 
       cy.contains('Easy').click()
       cy.get('input[name=submit]').click()
@@ -272,8 +269,7 @@ describe('Mission Training', function() {
       cy.contains("Bad answer").click()
       cy.get('input[name=submit]').click()
 
-      // check that "Incorrect Answer" appears
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
@@ -289,8 +285,7 @@ describe('Mission Training', function() {
 
       cy.contains("I Don't Know").click()
 
-      // check that "Incorrect Answer" appears
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
@@ -347,10 +342,11 @@ describe('Mission Training', function() {
       cy.contains("Submit").click()
 
       // should be on rating page
-      cy.contains("Rate Your Performance")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/rating`)
       cy.contains("Easy").click()
       cy.contains("Submit").click()
 
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
       cy.contains("Congratulations")
     })
 
@@ -366,7 +362,7 @@ describe('Mission Training', function() {
       // Scenario 1 (wrong blocks/order/indentation)
       cy.contains("Submit").click()
 
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
@@ -384,7 +380,7 @@ describe('Mission Training', function() {
 
       cy.contains("Submit").click()
 
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
@@ -409,7 +405,7 @@ describe('Mission Training', function() {
 
       cy.contains("Submit").click()
 
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
@@ -420,8 +416,7 @@ describe('Mission Training', function() {
       cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
       cy.contains("I Don't Know").click()
 
-      // check that "Incorrect Answer" appears
-      cy.contains("Incorrect Answer")
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
       cy.contains("Continue Training").click()
 
       cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
