@@ -1,4 +1,24 @@
+import click
+
 from flask import current_app
+from flask.cli import AppGroup, with_appcontext
+
+
+search_cli = AppGroup('search')
+
+@search_cli.command('reindex')
+@with_appcontext
+def reindex_all():
+    from app.db_models import SearchableMixin
+    if not current_app.elasticsearch:
+        click.echo("Elasticsearch is not configured and/or running.")
+        return
+
+    for cls in SearchableMixin.__subclasses__():
+        index_name = cls.__tablename__
+        click.echo(f"Reindexing {index_name}")
+        cls.reindex()
+
 
 def add_to_index(index, model):
     if not current_app.elasticsearch:
