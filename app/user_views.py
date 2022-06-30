@@ -145,6 +145,7 @@ def self_review(course_name, mission_id):
     prompt_html = markdown_to_html(attempt.question.prompt)
     answer_html = markdown_to_html(attempt.question.answer)
 
+    mission = check_mission_inclusion(mission_id, course)
     return render_template("self_verify.html",
                            page_title="Cadet Test: Self Verification",
                            course_name=course_name,
@@ -152,7 +153,11 @@ def self_review(course_name, mission_id):
                            post_url="", # same as current route!
                            prompt=Markup(prompt_html),
                            response=attempt.response,
-                           correct_answer=Markup(answer_html))
+                           correct_answer=Markup(answer_html),
+                           fresh_questions=mission.fresh_questions(current_user).count(),
+                           questions_total = mission.questions.count(),
+                           repeat_questions=mission.repeat_questions(current_user).count()
+                           )
 
 
 # TODO: move this to be a method in Question (or student?) class
