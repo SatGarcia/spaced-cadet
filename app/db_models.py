@@ -79,10 +79,10 @@ class SearchableMixin(object):
 
 
     @classmethod
-    def reindex(cls):
+    def reindex(cls, analyzer="english"):
         """ Updates all entries in this table, clearing out any index
         documents that aren't current in this table. """
-        clear_index(cls.__tablename__)
+        clear_index(cls.__tablename__, analyzer)
         for obj in cls.query:
             add_to_index(cls.__tablename__, obj)
 
