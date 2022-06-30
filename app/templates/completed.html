@@ -11,4 +11,31 @@
         <a href="{{ url_for('user_views.missions_overview', course_name=course_name) }}">check
             for other missions to train for</a>.
     </div>
+
+    <div class="container pt-3">
+        <br>
+
+        <table>
+            <!-- % for lo in objectives
+                total = missions.questions.filter_by(objective_id = lo.id).count()
+                correct =  % -->
+            <tr style="vertical-align: middle">
+                <td style="padding-right:5px; padding-left: 5px; vertical-align: middle">
+                    <h4><i class="bi bi-star-fill" style="color: gold"></i></h4>
+                </td>
+                <td style="vertical-align: middle">LO1: </td>
+                <td style="padding-right:5px; padding-left: 5px; vertical-align: middle">
+                    <div class="progress" style="height: 20px; width: 400px">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 50%"
+                            aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                      </div>
+                </td>
+                <td style="padding-right:5px; padding-left: 5px; vertical-align: middle">3/10</td>
+            </tr>
+            <!-- % endfor % -->
+        </table>
+        
+        
+    </div>
+    
 {% endblock %}

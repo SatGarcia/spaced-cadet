@@ -763,9 +763,14 @@ def test(course_name, mission_id):
     if questions.count() == 0:
         # No questions that need more reps today so display a "congrats" page
         # for the user.
+        mission = check_mission_inclusion(mission_id, course)
+
         return render_template("completed.html",
                                page_title="Cadet: Complete",
-                               course_name=course_name)
+                               course_name=course_name,
+                               objectives = mission.objectives,
+                               mission = mission,
+                               )
 
     question = questions.first()
 
