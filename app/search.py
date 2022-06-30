@@ -19,6 +19,46 @@ def reindex_all():
         click.echo(f"Reindexing {index_name}")
         cls.reindex()
 
+@search_cli.command('moo')
+@with_appcontext
+def moo():
+    from app.db_models import SearchableMixin
+    if not current_app.elasticsearch:
+        click.echo("Elasticsearch is not configured and/or running.")
+        return
+
+    foo = current_app.elasticsearch.indices.get_settings('topic')
+    #click.echo(foo)
+
+    bar = {
+            "properties": {
+                "title": {
+                    "type": "text",
+                    "analyzer": "english"
+                    }
+                }
+            }
+
+    baz = {
+            "analysis": {
+                "analyzer": {
+                    "default": {
+                        "type": "english"
+                        }
+                    }
+                }
+            }
+
+    #current_app.elasticsearch.indices.put_mapping(bar, index='topic')
+    current_app.elasticsearch.indices.close('topic')
+    current_app.elasticsearch.indices.put_settings(baz, index='topic')
+    current_app.elasticsearch.indices.open('topic')
+
+    foo = current_app.elasticsearch.indices.get_settings('topic')
+    #click.echo(foo)
+
+    foo = current_app.elasticsearch.indices.analyze(body={'text': 'The quick brown fox jumped over the lazy brown dog'}, index='objective')
+    click.echo(foo)
 
 def add_to_index(index, model):
     if not current_app.elasticsearch:
