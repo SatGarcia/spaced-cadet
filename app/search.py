@@ -88,5 +88,6 @@ def init_app(app):
         index_name = cls.__tablename__
         if not app.elasticsearch.indices.exists(index_name):
             app.logger.info(f"Creating index {index_name}")
-            __create_index(index_name)
+            with app.app_context():
+                __create_index(index_name)
 
