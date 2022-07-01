@@ -9,7 +9,7 @@ from wtforms import (
 )
 from wtforms.widgets import (ListWidget, CheckboxInput)
 from wtforms.validators import (
-    DataRequired, InputRequired
+    DataRequired, InputRequired, ValidationError
 )
 from flask_login import current_user, login_required
 
@@ -48,23 +48,30 @@ def is_a_repeat(last_attempt):
     return (last_attempt is not None) and (last_attempt.time.date() == date.today())
 
 
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/rating', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/rating',
+                  methods=['GET', 'POST'])
 @login_required
 def difficulty(course_name, mission_id):
     """ Route to handle self-reported difficulty of a problem that the user
     got correct. """
 
     course = check_course_authorization(course_name)
-    check_mission_inclusion(mission_id, course)
+    mission = check_mission_inclusion(mission_id, course)
 
-    form = DifficultyForm(request.form)
+    attempt_id = request.args.get("attempt")
+    if not attempt_id:
+        abort(404)
+
+    # TODO: check that attempt is for a question in this mission
+
+    form = DifficultyForm()
 
     if form.validate_on_submit():
         # get the question and update it's interval and e_factor
-        a = Attempt.query.filter_by(id=form.attempt_id.data).first()
+        a = Attempt.query.filter_by(id=int(attempt_id)).first()
 
         if not a:
-            abort(400)
+            abort(404)
         elif a.user != current_user:
             abort(401)
 
@@ -84,26 +91,29 @@ def difficulty(course_name, mission_id):
 
     return render_template("difficulty.html",
                            page_title="Cadet Test: Rating",
-                           form=form,
-                           post_url=url_for('.difficulty',
-                                            course_name=course_name,
-                                            mission_id=mission_id))
+                           form=form)
 
 
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/self-grade',
+                  methods=['GET', 'POST'])
 @login_required
 def self_review(course_name, mission_id):
-    """ User will self-verify whether the answer they submitted is the correct
-    one or not. """
+    """ Route for the student to self-grade their answer. """
 
     course = check_course_authorization(course_name)
-    check_mission_inclusion(mission_id, course)
+    mission = check_mission_inclusion(mission_id, course)
 
-    form = SelfReviewForm(request.form)
-    attempt = Attempt.query.filter_by(id=form.attempt_id.data).first()
+    attempt_id = request.args.get("attempt")
+    if not attempt_id:
+        abort(404)
+
+    # TODO: check that attempt is part of the given mission
+
+    form = SelfReviewForm()
+    attempt = Attempt.query.filter_by(id=int(attempt_id)).first()
 
     if not attempt:
-        abort(400)
+        abort(404)
     elif attempt.user != current_user:
         abort(401)
 
@@ -114,13 +124,11 @@ def self_review(course_name, mission_id):
             # user reported they got it correct so show them difficulty rating form
             attempt.correct = True
             db.session.commit()
-            difficulty_form = DifficultyForm(attempt_id=form.attempt_id.data)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
+
+            return redirect(url_for('.difficulty',
+                                    course_name=course_name, mission_id=mission_id,
+                                    attempt=attempt_id))
+
 
         else:
             # user reported they were wrong
@@ -190,520 +198,77 @@ def check_mission_inclusion(mission_id, course):
         return mission
 
 
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-choice', methods=['POST'])
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review')
 @login_required
-def test_multiple_choice(course_name, mission_id):
-
-    # TODO: code duplication in this function
+def review_answer(course_name, mission_id):
     course = check_course_authorization(course_name)
-    check_mission_inclusion(mission_id, course)
+    mission = check_mission_inclusion(mission_id, course)
 
-    form = MultipleChoiceForm(request.form)
-    original_question_id = form.question_id.data
-    original_question = Question.query.filter_by(id=original_question_id).first()
+    attempt_id = request.args.get("attempt")
+    if not attempt_id:
+        # TODO: redirect here instead of 404?
+        abort(404)
 
-    if not original_question:
-        abort(400)
+    # TODO: check that attempt is part of the given mission
 
-    form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
+    attempt = Attempt.query.filter_by(id=int(attempt_id)).first()
+    if not attempt:
+        abort(404)
 
-    # grab the last attempt (before creating a new attempt which will be
-    # the new "last" attempt
-    previous_attempt = get_last_attempt(current_user.id, original_question_id)
-
-    # determine if this question is repeated from earlier today
-    repeated = is_a_repeat(previous_attempt)
-
-    if form.validate_on_submit():
-
-        # add the attempt to the database
-        attempt = SelectionAttempt(question_id=original_question_id,
-                                   user_id=current_user.id)
-
-        # Get the selected answer.
-        answer_id = form.response.data
-        selected_answer = AnswerOption.query.filter_by(id=answer_id).first()
-
-        # if there was a previous attempt, copy over e_factor and interval
-        if previous_attempt:
-            attempt.e_factor = previous_attempt.e_factor
-            attempt.interval = previous_attempt.interval
-            attempt.next_attempt = previous_attempt.next_attempt
-
-        if selected_answer:
-            # no selected answer means they didn't have a response (i.e. "I
-            # Don't Know" was their answer)
-            attempt.response = selected_answer
-
-
-        db.session.add(attempt)
-        db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
-
-        if form.no_answer.data:
-            # No response from user ("I Don't Know"), which is response
-            # quality 1 in SM-2
-            attempt.correct = False
-            attempt.sm2_update(1, repeat_attempt=repeated)
-            db.session.commit()
-
-            # show the user a page where they can view the correct answer
-            prompt_html = markdown_to_html(original_question.prompt)
-
-            correct_option = original_question.options.filter_by(correct=True).first()
-            answer_html = markdown_to_html(correct_option.text)
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
-
-        if selected_answer and selected_answer.correct:
-            # if correct, send them off to the self rating form
-            attempt.correct = True
-            db.session.commit()
-            difficulty_form = DifficultyForm(attempt_id=attempt.id)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
-
-        else:
-            attempt.correct = False
-
-            if selected_answer:
-                # they made an attempt but were wrong so set response quality to 2
-                attempt.sm2_update(2, repeat_attempt=repeated)
-          
-
-            db.session.commit()
-
-            # show the user a page where they can view the correct answer
-            prompt_html = markdown_to_html(original_question.prompt)
-
-            correct_option = original_question.options.filter_by(correct=True).first()
-            answer_html = markdown_to_html(correct_option.text)
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
-
-
-    prompt_html = markdown_to_html(original_question.prompt)
-
-    return render_template("test_multiple_choice.html",
-                           page_title="Cadet Test",
-                           course_name=course_name,
-                           fresh_question=(not repeated),
-                           form=form,
-                           post_url="", # same url as current so can leave this blank
-                           prompt=Markup(prompt_html))
-
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/multiple-selection', methods=['POST'])
-@login_required
-def test_multiple_selection(course_name, mission_id):
-    # TODO: code duplication in this function
-    course = check_course_authorization(course_name)
-    check_mission_inclusion(mission_id, course)
- 
-    form = MultipleSelectionForm(request.form)
-    original_question_id = form.question_id.data
-    original_question = Question.query.filter_by(id=original_question_id).first()
- 
-    if not original_question:
-        abort(400)
- 
-    form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in original_question.options]
-    
- 
-    # grab the last attempt (before creating a new attempt which will be
-    # the new "last" attempt
-    previous_attempt = get_last_attempt(current_user.id, original_question_id)
- 
-    # determine if this question is repeated from earlier today
-    repeated = is_a_repeat(previous_attempt)
- 
-    if form.validate_on_submit():
- 
-        # add the attempt to the database
-        attempt = SelectionAttempt(question_id=original_question_id,
-                                   user_id=current_user.id)
- 
-
-        prompt_html = markdown_to_html(original_question.prompt)
-    
-        answer_ids = form.response.data 
-        selected_answers = AnswerOption.query.filter(AnswerOption.id.in_(answer_ids)).all()
- 
-        # if there was a previous attempt, copy over e_factor and interval
-        if previous_attempt:
-            attempt.e_factor = previous_attempt.e_factor
-            attempt.interval = previous_attempt.interval
-            attempt.next_attempt = previous_attempt.next_attempt
- 
-        db.session.add(attempt)
-        db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
-
-        if form.no_answer.data:
-            # No response from user ("I Don't Know"), which is response
-            # quality 1 in SM-2
-            attempt.correct = False
-            attempt.sm2_update(1, repeat_attempt=repeated)
-            db.session.commit()
-
-            correct_options = original_question.options.filter_by(correct=True).all()
-            answer_html = ''
-            for option in correct_options:
-                answer_html += markdown_to_html(option.text) + "\n"
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
-
-        correct_list = original_question.options.filter_by(correct = True).all()
-        if selected_answers == correct_list: 
-            
-            # if correct, send them off to the self rating form
-            attempt.correct = True
-            db.session.commit()
-            difficulty_form = DifficultyForm(attempt_id=attempt.id)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
- 
-        else:
-            attempt.correct = False
- 
-            
-            # they made an attempt but were wrong so set response quality to 2
-            attempt.sm2_update(2, repeat_attempt=repeated)
- 
-            db.session.commit()
- 
-            # show the user a page where they can view the correct answers
-            correct_options = original_question.options.filter_by(correct=True).all()
-            answer_html = ''
-            for option in correct_options:
-                answer_html += markdown_to_html(option.text) + "\n"
-     
- 
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
- 
- 
-    prompt_html = markdown_to_html(original_question.prompt)
- 
-    return render_template("test_multiple_choice.html",
-                           page_title="Cadet Test",
-                           course_name=course_name,
-                           fresh_question=(not repeated),
-                           form=form,
-                           post_url="", # same url as current so can leave this blank
-                           prompt=Markup(prompt_html))
-
-
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/short-answer', methods=['POST'])
-@login_required
-def test_short_answer(course_name, mission_id):
-    """ Checks answer given to a short answer question. """
-
-    course = check_course_authorization(course_name)
-    check_mission_inclusion(mission_id, course)
-
-    form = ShortAnswerForm(request.form)
-    original_question_id = form.question_id.data
-    original_question = Question.query.filter_by(id=original_question_id).first()
-
-    if not original_question:
-        abort(400)
-
-    prompt_html = markdown_to_html(original_question.prompt)
-    answer_html = markdown_to_html(original_question.answer)
-
-    previous_attempt = get_last_attempt(current_user.id, original_question_id)
-
-    # determine if this question is repeated from earlier today
-    repeated = is_a_repeat(previous_attempt)
-
-    if form.validate_on_submit():
-
-        # add the attempt to the database (leaving the outcome undefined for
-        # now)
-        attempt = TextAttempt(response=form.response.data,
-                              question_id=original_question_id,
-                              user_id=current_user.id)
-
-        # if there was a previous attempt, copy over e_factor and interval
-        if previous_attempt:
-            attempt.e_factor = previous_attempt.e_factor
-            attempt.interval = previous_attempt.interval
-            attempt.next_attempt = previous_attempt.next_attempt
-
-        db.session.add(attempt)
-        db.session.commit() # TRICKY: need to commit to get default e_factor and interval
-
-        if form.no_answer.data:
-            # No response from user ("I Don't Know"), which is response
-            # quality 1 in SM-2
-            attempt.sm2_update(1, repeat_attempt=repeated)
-            db.session.commit()
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
-
-        review_form = SelfReviewForm(attempt_id=attempt.id)
-
-        return render_template("self_verify.html",
-                               page_title="Cadet Test: Self Verification",
-                               course_name=course_name,
-                               form=review_form,
-                               post_url=url_for('.self_review',
-                                                course_name=course_name,
-                                                mission_id=mission_id),
-                               prompt=Markup(prompt_html),
-                               response=form.response.data,
-                               correct_answer=Markup(answer_html))
-
-    return render_template("test_short_answer.html",
-                           page_title="Cadet Test",
-                           post_url=url_for(".test_short_answer",
-                                            course_name=course_name,
-                                            mission_id=mission_id),
-                           fresh_question=(not repeated),
-                           form=form,
-                           prompt=Markup(prompt_html))
-
-
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/auto-check', methods=['POST'])
-@login_required
-def test_auto_check(course_name, mission_id):
-    """ Checks the correctness of an auto-check type of question. """
-
-    course = check_course_authorization(course_name)
-    check_mission_inclusion(mission_id, course)
-
-    form = AutoCheckForm(request.form)
-    original_question_id = form.question_id.data
-    original_question = Question.query.filter_by(id=original_question_id).first()
-
-    if not original_question:
-        abort(400)
-
-    prompt_html = markdown_to_html(original_question.prompt)
-
-    previous_attempt = get_last_attempt(current_user.id, original_question_id)
-
-    # determine if this question is repeated from earlier today
-    repeated = is_a_repeat(previous_attempt)
-
-    if form.validate_on_submit():
-        # add the attempt to the database (leaving the outcome undefined for
-        # now)
-        attempt = TextAttempt(response=form.response.data,
-                              question_id=original_question_id,
-                              user_id=current_user.id)
-
-        # if there was a previous attempt, copy over e_factor and interval
-        if previous_attempt:
-            attempt.e_factor = previous_attempt.e_factor
-            attempt.interval = previous_attempt.interval
-            attempt.next_attempt = previous_attempt.next_attempt
-
-        db.session.add(attempt)
-        db.session.commit() # TRICKY: need to commit to get default e_factor and interval
-
-        if form.no_answer.data:
-            # No response from user ("I Don't Know"), which is response
-            # quality 1 in SM-2
-            attempt.correct = False
-            attempt.sm2_update(1, repeat_attempt=repeated)
-            db.session.commit()
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=original_question.answer)
-
-        # check whether they got it correct or not
-        user_response = attempt.response.strip()
-        if user_response == original_question.answer:
-            # The user was correct so send them to the form to rate the
-            # quality of their response.
-            attempt.correct = True
-            db.session.commit()
-
-            difficulty_form = DifficultyForm(attempt_id=attempt.id)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
-
-        else:
-            # User was wrong so show them the correct answer
-            attempt.correct = False
-            attempt.sm2_update(2, repeat_attempt=repeated)
-            db.session.commit()
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=original_question.answer)
-
-
-    return render_template("test_short_answer.html",
-                           page_title="Cadet Test",
-                           post_url=url_for(".test_auto_check",
-                                            course_name=course_name,
-                                            mission_id=mission_id),
-                           fresh_question=(not repeated),
-                           form=form,
-                           prompt=Markup(prompt_html))
-
-
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/code-jumble', methods=['POST'])
-@login_required
-def test_code_jumble(course_name, mission_id):
-    """ Checks the correctness of a code jumble type of question. """
-
-    course = check_course_authorization(course_name)
-    check_mission_inclusion(mission_id, course)
-
-    form = CodeJumbleForm(request.form)
-
-    question_id = form.question_id.data
-    question = Question.query.filter_by(id=question_id).first()
-
-    if not question:
-        abort(400)
-
-    # check for a previous attempt
-    previous_attempt = get_last_attempt(current_user.id, question_id)
-
-    # determine if this question is repeated from earlier today
-    repeated = is_a_repeat(previous_attempt)
-
-    if form.validate_on_submit():
-        # add the attempt to the database
-        attempt = TextAttempt(question_id=question_id,
-                              user_id=current_user.id)
-
-        # Get the selected answer.
-        response_str = form.response.data
-        attempt.response = response_str
-
-
-        # if there was a previous attempt, copy over e_factor and interval
-        if previous_attempt:
-            attempt.e_factor = previous_attempt.e_factor
-            attempt.interval = previous_attempt.interval
-            attempt.next_attempt = previous_attempt.next_attempt
-
-        db.session.add(attempt)
-        db.session.commit() # TRICKY: default values for e-factor/interval not set until commit
-
-        if form.no_answer.data:
-            # No response from user ("I Don't Know"), which is response
-            # quality 1 in SM-2
-            attempt.sm2_update(1, repeat_attempt=repeated)
-            db.session.commit()
-
-            prompt_html = markdown_to_html(question.prompt)
-            answer_html = question.get_answer()
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
-
-
-        try:
-            user_response = ast.literal_eval(response_str)
-        except:
-            # if we couldn't parse the response, we're in trouble
-            abort(400)
-
-        correct_response = question.get_correct_response()
-
-        if correct_response == user_response:
-            # if correct, send them off to the self rating form
-            attempt.correct = True
-            db.session.commit()
-            difficulty_form = DifficultyForm(attempt_id=attempt.id)
-            return render_template("difficulty.html",
-                                   page_title="Cadet Test: Rating",
-                                   form=difficulty_form,
-                                   post_url=url_for('.difficulty',
-                                                    course_name=course_name,
-                                                    mission_id=mission_id))
-
-        else:
-            attempt.correct = False
-
-            # they made an attempt but were wrong so set response quality to 2
-            attempt.sm2_update(2, repeat_attempt=repeated)
-            db.session.commit()
-
-            # show the user a page where they can view the correct answer
-            prompt_html = markdown_to_html(question.prompt)
-            answer_html = question.get_answer()
-
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   answer=Markup(answer_html))
-
+    question = attempt.question
 
     prompt_html = markdown_to_html(question.prompt)
-    code_blocks = [(b.id, Markup(b.html())) for b in question.blocks]
+    answer_html = question.get_answer()
 
-    return render_template("test_code_jumble.html",
-                           page_title="Cadet Test",
-                           fresh_question=(not repeated),
-                           form=form,
-                           post_url=url_for('.test_code_jumble',
-                                            course_name=course_name,
-                                            mission_id=mission_id),
+    return render_template("review_correct_answer.html",
+                           page_title="Cadet Test: Review Correct Answer",
+                           continue_url=url_for('.test',
+                                                course_name=course_name,
+                                                mission_id=mission_id),
                            prompt=Markup(prompt_html),
-                           code_blocks=code_blocks)
+                           answer=Markup(answer_html))
+
+
+
+def create_new_text_attempt(question, user, response, previous_attempt):
+    """ Creates a new attempt and adds it to the database. If there was a
+    previous attempt for the question, copy over the relevent data to the new
+    attempt. """
+    attempt = TextAttempt(question_id=question.id,
+                          user_id=user.id,
+                          response=response)
+
+    # if there was a previous attempt, copy over e_factor and interval
+    if previous_attempt:
+        attempt.e_factor = previous_attempt.e_factor
+        attempt.interval = previous_attempt.interval
+        attempt.next_attempt = previous_attempt.next_attempt
+
+    db.session.add(attempt)
+    db.session.commit()
+
+    return attempt
+
+def create_new_selection_attempt(question, user, responses, previous_attempt):
+    """ Creates a new selection attempt and adds it to the database. If there
+    was a previous attempt for the question, copy over the relevent data to
+    the new attempt. """
+    attempt = SelectionAttempt(question_id=question.id,
+                               user_id=user.id)
+
+    for r in responses:
+        attempt.responses.append(r)
+
+    # if there was a previous attempt, copy over e_factor and interval
+    if previous_attempt:
+        attempt.e_factor = previous_attempt.e_factor
+        attempt.interval = previous_attempt.interval
+        attempt.next_attempt = previous_attempt.next_attempt
+
+    db.session.add(attempt)
+    db.session.commit()
+
+    return attempt
 
 
 @user_views.route('/c/<course_name>')
@@ -738,114 +303,196 @@ def missions_overview(course_name):
                            course=course)
 
 
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train')
+def get_next_question(assessment):
+    """ Finds the next question to present to the student. Returns the
+    question (or None if there is no more questions to train for) and whether
+    the question is 'fresh' or a repeat. """
+
+    # set the question bank based on whether there are fresh questions or not
+    fresh_questions = assessment.fresh_questions(current_user).order_by(db.func.random())
+
+    if fresh_questions.count() != 0:
+        return fresh_questions.first(), True
+
+    repeat_questions = assessment.repeat_questions(current_user).order_by(db.func.random())
+
+    if repeat_questions.count() != 0:
+        return repeat_questions.first(), False
+    else:
+        return None, None
+
+
+def get_form(question, use_existing):
+    kwargs = {}
+    if not use_existing:
+        kwargs['question_id'] = question.id
+
+    if question.type == QuestionType.SHORT_ANSWER:
+        return ShortAnswerForm(**kwargs)
+
+    elif question.type == QuestionType.AUTO_CHECK:
+        return AutoCheckForm(**kwargs)
+
+    elif question.type == QuestionType.MULTIPLE_CHOICE:
+        form = MultipleChoiceForm(**kwargs)
+        form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
+        return form
+
+    elif question.type == QuestionType.MULTIPLE_SELECTION:
+        form = MultipleSelectionForm(**kwargs)
+        form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
+        return form
+
+    elif question.type == QuestionType.CODE_JUMBLE:
+        return CodeJumbleForm(response="", **kwargs)
+
+    else:
+        # TODO: log error
+        abort(400)
+
+
+def render_question(question, is_fresh, form):
+    prompt_html = markdown_to_html(question.prompt)
+
+    extra_kw_args = {}
+
+    if question.type == QuestionType.SHORT_ANSWER:
+        #form = ShortAnswerForm(question_id=question.id)
+        template_filename = "test_short_answer.html"
+
+    elif question.type == QuestionType.AUTO_CHECK:
+        #form = AutoCheckForm(question_id=question.id)
+        template_filename = "test_short_answer.html"
+
+    elif question.type == QuestionType.MULTIPLE_CHOICE:
+        #form = MultipleChoiceForm(question_id=question.id)
+        #form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
+        template_filename = "test_multiple_choice.html"
+
+    elif question.type == QuestionType.MULTIPLE_SELECTION:
+        #form = MultipleSelectionForm(question_id=question.id)
+        #form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
+        template_filename = "test_multiple_choice.html"
+
+    elif question.type == QuestionType.CODE_JUMBLE:
+        #form = CodeJumbleForm(question_id=question.id, response="")
+        template_filename = "test_code_jumble.html"
+        extra_kw_args['code_blocks'] = [(b.id, Markup(b.html())) for b in question.blocks]
+
+    else:
+        # TODO: log error
+        abort(400)
+
+    return render_template(template_filename,
+                           page_title="Cadet: Mission Training",
+                           fresh_question=is_fresh,
+                           post_url="",
+                           form=form,
+                           prompt=Markup(prompt_html),
+                           **extra_kw_args)
+
+
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train',
+                  methods=['GET', 'POST'])
 @login_required
 def test(course_name, mission_id):
     """ Presents a random question to the user. """
 
-    course = Course.query.filter_by(name=course_name).first()
-    assessment = Assessment.query.filter_by(id=mission_id).first()
-    if (not course) or (not assessment):
-        abort(404)
-    try:
-        check_authorization(current_user, course=course)
-    except AuthorizationError:
-        abort(401)
+    course = check_course_authorization(course_name)
+    assessment = check_mission_inclusion(mission_id, course)
 
-    # set the question bank based on whether there are fresh questions or not
-    questions = assessment.fresh_questions(current_user).order_by(db.func.random())
-    fresh_question = True
+    if request.method == 'GET':
+        question, fresh_question = get_next_question(assessment)
 
-    if questions.count() == 0:
-        fresh_question = False
-        questions = assessment.repeat_questions(current_user).order_by(db.func.random())
+        if question is None:
+            # Training is done (for today) so display a congrats/completed page
+            return render_template("completed.html",
+                                   page_title="Cadet: Complete",
+                                   course_name=course_name)
+        else:
+            form = get_form(question, False)
 
-    if questions.count() == 0:
-        # No questions that need more reps today so display a "congrats" page
-        # for the user.
-        mission = check_mission_inclusion(mission_id, course)
-
-        return render_template("completed.html",
-                               page_title="Cadet: Complete",
-                               course_name=course_name,
-                               objectives = mission.objectives.all(),
-                               mission = mission
-                               )
-
-    question = questions.first()
-
-    if question.type == QuestionType.SHORT_ANSWER:
-        form = ShortAnswerForm(question_id=question.id)
-        prompt_html = markdown_to_html(question.prompt)
-        return render_template("test_short_answer.html",
-                               page_title="Cadet Test",
-                               fresh_question=fresh_question,
-                               post_url=url_for(".test_short_answer",
-                                                course_name=course_name,
-                                                mission_id=mission_id),
-                               form=form,
-                               prompt=Markup(prompt_html))
-
-    elif question.type == QuestionType.AUTO_CHECK:
-        form = AutoCheckForm(question_id=question.id)
-        prompt_html = markdown_to_html(question.prompt)
-        return render_template("test_short_answer.html",
-                               page_title="Cadet Test",
-                               fresh_question=fresh_question,
-                               post_url=url_for(".test_auto_check",
-                                                course_name=course_name,
-                                                mission_id=mission_id),
-                               form=form,
-                               prompt=Markup(prompt_html))
-
-    elif question.type == QuestionType.MULTIPLE_CHOICE:
-        form = MultipleChoiceForm(question_id=question.id)
-        form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
-
-        prompt_html = markdown_to_html(question.prompt)
-
-        return render_template("test_multiple_choice.html",
-                               page_title="Cadet Test",
-                               course_name=course_name,
-                               fresh_question=fresh_question,
-                               form=form,
-                               post_url=url_for('.test_multiple_choice',
-                                                course_name=course_name,
-                                                mission_id=mission_id),
-                               prompt=Markup(prompt_html))
-
-    elif question.type == QuestionType.MULTIPLE_SELECTION:
-        form = MultipleSelectionForm(question_id=question.id)
-        form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
-
-        prompt_html = markdown_to_html(question.prompt)
-
-        return render_template("test_multiple_choice.html",
-                                page_title="Cadet Test",
-                                course_name=course_name,
-                                fresh_question=fresh_question,
-                                form=form,
-                                post_url=url_for('.test_multiple_selection',
-                                                course_name=course_name,
-                                                mission_id=mission_id),
-                                prompt=Markup(prompt_html))
-
-    elif question.type == QuestionType.CODE_JUMBLE:
-        form = CodeJumbleForm(question_id=question.id, response="")
-        prompt_html = markdown_to_html(question.prompt)
-        code_blocks = [(b.id, Markup(b.html())) for b in question.blocks]
-
-        return render_template("test_code_jumble.html",
-                               page_title="Cadet Test",
-                               fresh_question=fresh_question,
-                               form=form,
-                               post_url=url_for('.test_code_jumble',
-                                                course_name=course_name,
-                                                mission_id=mission_id),
-                               prompt=Markup(prompt_html),
-                               code_blocks=code_blocks)
     else:
-        return "UNSUPPORTED QUESTION TYPE"
+        try:
+            question_id = int(request.form['question_id'])
+        except:
+            abort(400)
+
+        question = Question.query.filter_by(id=question_id).first()
+
+        previous_attempt = get_last_attempt(current_user.id, question_id)
+        repeated = is_a_repeat(previous_attempt)
+        fresh_question = not repeated
+
+        form = get_form(question, True)
+
+        if form.validate_on_submit():
+            attempt = form.create_attempt(question, current_user,
+                                          previous_attempt)
+
+            if form.no_answer.data:
+                # User indicated they didn't know the answer, which we will
+                # consider a quality 1 response in SM-2
+                attempt.correct = False
+                attempt.sm2_update(1, repeat_attempt=repeated)
+                db.session.commit()
+
+                return redirect(url_for('.review_answer',
+                                        course_name=course_name,
+                                        mission_id=mission_id,
+                                        attempt=attempt.id))
+
+            # if this is a self-graded question, send them to the review page
+            if question.type == QuestionType.SHORT_ANSWER:
+                return redirect(url_for('.self_review',
+                                        course_name=course_name, mission_id=mission_id,
+                                        attempt=attempt.id))
+
+            # Other question types can be graded automatically 
+            if question.type == QuestionType.AUTO_CHECK:
+                user_response = attempt.response.strip()
+                attempt.correct = attempt.response.strip() == question.answer
+
+            elif question.type == QuestionType.MULTIPLE_CHOICE:
+                attempt.correct = attempt.responses.filter_by(correct=True).count() == 1
+                #AnswerOption.query.filter_by(id=form.response.data).first().correct
+
+            elif question.type == QuestionType.MULTIPLE_SELECTION:
+                correct_answers = question.options.filter_by(correct=True).order_by(AnswerOption.id).all()
+                user_answers = attempt.responses.order_by(AnswerOption.id).all()
+                attempt.correct = user_answers == correct_answers
+
+            elif question.type == QuestionType.CODE_JUMBLE:
+                try:
+                    user_response = ast.literal_eval(attempt.response)
+                except:
+                    # if we couldn't parse the response, we're in trouble
+                    abort(400)
+
+                correct_response = question.get_correct_response()
+                attempt.correct = correct_response == user_response
+
+            else:
+                abort(400)
+
+            if attempt.correct:
+                db.session.commit()
+                return redirect(url_for('.difficulty',
+                                        course_name=course_name,
+                                        mission_id=mission_id,
+                                        attempt=attempt.id))
+
+            else:
+                # they made an attempt but were wrong so set response quality to 2
+                attempt.sm2_update(2, repeat_attempt=repeated)
+                db.session.commit()
+
+                return redirect(url_for('.review_answer',
+                                        course_name=course_name,
+                                        mission_id=mission_id,
+                                        attempt=attempt.id))
+
+    return render_question(question, fresh_question, form)
 
 
 class DataRequiredIf(DataRequired):
@@ -866,7 +513,6 @@ class DataRequiredIf(DataRequired):
 
 class DifficultyForm(FlaskForm):
     """ Form to report the difficulty they had in answering a question. """
-    attempt_id = HiddenField("Attempt ID")
     difficulty = RadioField('Difficulty',
                              choices=[(5, "Easy: The info was easy to recall"),
                                       (4, 'Medium: I had to take a moment to recall something'),
@@ -876,31 +522,30 @@ class DifficultyForm(FlaskForm):
 
 
 class SelfReviewForm(FlaskForm):
-    attempt_id = HiddenField("Attempt ID")
     yes = SubmitField("Yes")
     no = SubmitField("No")
 
 
-class ShortAnswerForm(FlaskForm):
+class TextResponseForm(FlaskForm):
     question_id = HiddenField("Question ID")
+    no_answer = SubmitField("I Don't Know")
+    submit = SubmitField("Submit")
+
+    def create_attempt(self, question, user, previous_attempt):
+        attempt = create_new_text_attempt(question, user,
+                                          self.response.data,
+                                          previous_attempt)
+
+        return attempt
+
+class ShortAnswerForm(TextResponseForm):
     response = TextAreaField('answer', validators=[DataRequiredIf('submit')])
-    no_answer = SubmitField("I Don't Know")
-    submit = SubmitField("Submit")
 
-
-class AutoCheckForm(FlaskForm):
-    question_id = HiddenField("Question ID")
+class AutoCheckForm(TextResponseForm):
     response = StringField('answer', validators=[DataRequiredIf('submit')])
-    no_answer = SubmitField("I Don't Know")
-    submit = SubmitField("Submit")
 
-
-class CodeJumbleForm(FlaskForm):
-    question_id = HiddenField("Question ID")
+class CodeJumbleForm(TextResponseForm):
     response = HiddenField("Ordered Code")
-    no_answer = SubmitField("I Don't Know")
-    submit = SubmitField("Submit")
-
 
 class MultipleChoiceForm(FlaskForm):
     question_id = HiddenField("Question ID")
@@ -908,15 +553,45 @@ class MultipleChoiceForm(FlaskForm):
     no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
 
+    def validate_response(form, field):
+        """ Validate that user selected something if they clicked submit
+        rather than no_answer. """
+        if form.submit.data and (not field.data):
+            raise ValidationError("Select one of the given options or click \"I Don't Know\"")
+
+    def create_attempt(self, question, user, previous_attempt):
+        if self.response.data:
+            selected_response = AnswerOption.query.filter_by(id=self.response.data).all()
+        else:
+            selected_response = []
+
+        attempt = create_new_selection_attempt(question, user,
+                                               selected_response,
+                                               previous_attempt)
+
+        return attempt
+
 class MultiCheckboxField(SelectMultipleField):
     widget = ListWidget(prefix_label=False)
     option_widget = CheckboxInput()
 
 class MultipleSelectionForm(FlaskForm):
     question_id = HiddenField("Question ID")
-    response = MultiCheckboxField('Select All That Apply', coerce=int) 
+    response = MultiCheckboxField('Select All That Apply', coerce=int)
     no_answer = SubmitField("I Don't Know")
     submit = SubmitField("Submit")
+
+    def create_attempt(self, question, user, previous_attempt):
+        if self.response.data:
+            selected_response = AnswerOption.query.filter(AnswerOption.id.in_(self.response.data)).all()
+        else:
+            selected_response = []
+
+        attempt = create_new_selection_attempt(question, user,
+                                               selected_response,
+                                               previous_attempt)
+
+        return attempt
 
 from app.db_models import (
     Question, Attempt, enrollments, QuestionType, AnswerOption, TextAttempt,
