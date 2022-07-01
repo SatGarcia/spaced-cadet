@@ -399,10 +399,10 @@ def test(course_name, mission_id):
     """ Presents a random question to the user. """
 
     course = check_course_authorization(course_name)
-    assessment = check_mission_inclusion(mission_id, course)
+    mission = check_mission_inclusion(mission_id, course)
 
     if request.method == 'GET':
-        question, fresh_question = get_next_question(assessment)
+        question, fresh_question = get_next_question(mission)
 
         if question is None:
             # Training is done (for today) so display a congrats/completed page
