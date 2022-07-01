@@ -351,7 +351,7 @@ def get_form(question, use_existing):
         abort(400)
 
 
-def render_question(question, is_fresh, form, mission):
+def render_question(question, is_fresh, form):
     prompt_html = markdown_to_html(question.prompt)
 
     extra_kw_args = {}
@@ -389,10 +389,7 @@ def render_question(question, is_fresh, form, mission):
                            post_url="",
                            form=form,
                            prompt=Markup(prompt_html),
-                           **extra_kw_args,
-                           fresh_questions=mission.fresh_questions(current_user).count(),
-                           questions_total = mission.questions.count(),
-                           repeat_questions=mission.repeat_questions(current_user).count())
+                           **extra_kw_args)
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train',
@@ -402,10 +399,10 @@ def test(course_name, mission_id):
     """ Presents a random question to the user. """
 
     course = check_course_authorization(course_name)
-    mission = check_mission_inclusion(mission_id, course)
+    assessment = check_mission_inclusion(mission_id, course)
 
     if request.method == 'GET':
-        question, fresh_question = get_next_question(mission)
+        question, fresh_question = get_next_question(assessment)
 
         if question is None:
             # Training is done (for today) so display a congrats/completed page
@@ -495,7 +492,7 @@ def test(course_name, mission_id):
                                         mission_id=mission_id,
                                         attempt=attempt.id))
 
-    return render_question(question, fresh_question, form, mission)
+    return render_question(question, fresh_question, form)
 
 
 class DataRequiredIf(DataRequired):
