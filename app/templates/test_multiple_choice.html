@@ -1,72 +1,15 @@
-{% extends "base.html" %}
+{% extends "question.html" %}
 {% import 'forms.html' as forms %}
 
-{% block body %}
-
-    <div class="container pt-3">
-		{% if preview_mode %}
-			<div class="text-danger row mb-3">
-				<strong><i class="bi-eye-fill"></i> Question Preview</strong>
-			</div>
-			
-		{% elif not fresh_question %}
-			<table style="width:100%; padding-left:40px; padding-right:40px">
-				<tr>
-					<tr style="float:right;padding-left:10px">
-						<a href="#" data-bs-toggle="tooltip" style= "float:right;padding-left:10px" data-bs-placement="bottom" data-html="true" 
-								title="Questions Completed: {{(questions_total-fresh_questions-repeat_questions)}}&#013; Let's try Again!: {{repeat_questions}}&#013; Questions Remaining: {{fresh_questions}}">
-								<i class="bi bi-info-circle"></i></a>
-					</tr>
-					<tr style="float:right">
-						<div class="progress" style="height: 20px; float:right; width:20%;">
-							<div class="progress-bar bg-success w3-container w3-center" role="progressbar" style="width:{{(questions_total-fresh_questions-repeat_questions)/questions_total*100}}%" aria-valuenow={{fresh_questions/questions_total*100}} aria-valuemin="0" aria-valuemax={{questions_total}}>{{questions_total-fresh_questions-repeat_questions}}</div>
-							<div class="progress-bar bg-warning w3-container w3-center" role="progressbar" style="width:{{repeat_questions/questions_total*100}}%" aria-valuenow={{repeat_questions/questions_total*100}} aria-valuemin="0" aria-valuemax={{questions_total}}>{{repeat_questions}}</div>
-							<div class="progress-bar bg-dark w3-container w3-center" role="progressbar" style="width:{{fresh_questions/questions_total*100}}%" aria-valuenow={{fresh_questions/questions_total*100}} aria-valuemin="0" aria-valuemax={{questions_total}}>{{fresh_questions}}</div>
-						</div>
-					</tr>
-				</tr>
-				<td style="float:center">
-					<strong style="float:right"><i class="bi-arrow-repeat"></i> Repeat Question </strong>
-				</td>
-			</table>
-		
-		{%else%}
-			<a href="#" data-bs-toggle="tooltip" style= "float:right;padding-left:10px" data-bs-placement="bottom" data-html="true" 
-						title="Questions Completed: {{(questions_total-fresh_questions-repeat_questions)}}&#013; Let's try Again!: {{repeat_questions}}&#013; Questions Remaining: {{fresh_questions}}">
-							<i class="bi bi-info-circle"></i></a>
-			<div class="progress" style="height: 20px; float:right; width:20%;">
-				<div class="progress-bar bg-success w3-container w3-center" role="progressbar" style="width:{{(questions_total-fresh_questions-repeat_questions)/questions_total*100}}%" aria-valuenow={{fresh_questions/questions_total*100}} aria-valuemin="0" aria-valuemax={{questions_total}}>{{questions_total-fresh_questions-repeat_questions}}</div>
-				<div class="progress-bar bg-warning w3-container w3-center" role="progressbar" style="width:{{repeat_questions/questions_total*100}}%" aria-valuenow={{repeat_questions/questions_total*100}} aria-valuemin="0" aria-valuemax={{questions_total}}>{{repeat_questions}}</div>
-				<div class="progress-bar bg-dark w3-container w3-center" role="progressbar" style="width:{{fresh_questions/questions_total*100}}%" aria-valuenow={{fresh_questions/questions_total*100}} aria-valuemin="0" aria-valuemax={{questions_total}}>{{fresh_questions}}</div>
-			</div>
-		
-		{% endif %}
-		<div class="row" id="prompt">
-			{{ prompt }}
-		</div>
-
-
-        <div class="row" id="response_area">
-			<form method="POST"
-		 		action="{% if not preview_mode %}{{ post_url }}{% endif %}">
-				{{ form.csrf_token }}
-				{{ form.question_id }}
-				{{ forms.checkbox_input(form.response) }}
-				{{ form.no_answer(class_="btn btn-secondary btn-sm") }}
-				{{ form.submit(class_="btn btn-primary btn-sm") }}
-			</form>
-		</div>
-    </div>
-
-	{% if preview_mode %}
-		<script type="text/javascript">
-			window.addEventListener("DOMContentLoaded", () => {
-				submit_button = document.getElementById("submit");
-				submit_button.disabled = true;
-
-				no_answer_button = document.getElementById("no_answer");
-				no_answer_button.disabled = true;
-			});
-		</script>
-	{% endif %}
+{% block response_area %}
+	<div class="row" id="response_area">
+		<form method="POST"
+			action="{% if not preview_mode %}{{ post_url }}{% endif %}">
+			{{ form.csrf_token }}
+			{{ form.question_id }}
+			{{ forms.checkbox_input(form.response) }}
+			{{ form.no_answer(class_="btn btn-secondary btn-sm") }}
+			{{ form.submit(class_="btn btn-primary btn-sm") }}
+		</form>
+	</div>
 {% endblock %}
