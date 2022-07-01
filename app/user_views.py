@@ -768,8 +768,8 @@ def test(course_name, mission_id):
         return render_template("completed.html",
                                page_title="Cadet: Complete",
                                course_name=course_name,
-                               objectives = mission.objectives,
-                               mission = mission,
+                               objectives = mission.objectives.all(),
+                               mission = mission
                                )
 
     question = questions.first()
