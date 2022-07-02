@@ -408,7 +408,9 @@ def test(course_name, mission_id):
             # Training is done (for today) so display a congrats/completed page
             return render_template("completed.html",
                                    page_title="Cadet: Complete",
-                                   course_name=course_name)
+                                   course_name=course_name,
+                                   mission = mission,
+                                   user_id = current_user.id)
         else:
             form = get_form(question, False)
 

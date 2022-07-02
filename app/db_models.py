@@ -690,7 +690,7 @@ class Course(SearchableMixin, db.Model):
 
     def previous_meetings(self):
         """Returns all ClassMeetings that occured before today"""
-        return self.meetings.filter(ClassMeeting.date < date.today())
+        return self.meetings.filter(ClassMeeting.date < date.today() )
 
 
 class CourseSchema(Schema):
@@ -1110,6 +1110,21 @@ class Assessment(db.Model):
                                      .subquery()
 
         return self.questions.join(poor_attempts)
+    
+    def correct_questions_today(self, user, lo):
+        """ Returns all assessment questions whose most recent attempt was
+        correct and not repeated."""
+
+        lo_questions = self.questions.filter_by(objective_id = lo.id)
+        midnight_today = datetime.combine(date.today(), datetime.min.time())
+
+        correct_attempts = Attempt.query.filter(db.and_(Attempt.user_id == user.id,
+                                                    Attempt.question_id.objective_id,
+                                                    Attempt.time >= midnight_today),
+                                                    Attempt.time < midnight_today +timedelta(days=1) )\
+                                            .subquery()
+
+        return lo_questions.join(correct_attempts)
 
 
 class AssessmentSchema(Schema):
