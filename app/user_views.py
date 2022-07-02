@@ -410,7 +410,8 @@ def test(course_name, mission_id):
                                    page_title="Cadet: Complete",
                                    course_name=course_name,
                                    mission = mission,
-                                   user_id = current_user.id)
+                                   user_id = current_user.id,
+                                   mission = mission)
         else:
             form = get_form(question, False)
 
