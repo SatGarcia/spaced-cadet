@@ -389,10 +389,7 @@ def render_question(question, is_fresh, form, mission):
                            post_url="",
                            form=form,
                            prompt=Markup(prompt_html),
-                           **extra_kw_args,
-                           fresh_questions=mission.fresh_questions(current_user).count(),
-                           questions_total = mission.questions.count(),
-                           repeat_questions=mission.repeat_questions(current_user).count())
+                           **extra_kw_args)
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train',
