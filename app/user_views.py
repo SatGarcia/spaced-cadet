@@ -382,14 +382,15 @@ def render_question(question, is_fresh, form, mission):
     else:
         # TODO: log error
         abort(400)
-
+        
     return render_template(template_filename,
                            page_title="Cadet: Mission Training",
                            fresh_question=is_fresh,
                            post_url="",
                            form=form,
                            prompt=Markup(prompt_html),
-                           **extra_kw_args)
+                           **extra_kw_args,
+                           mission = mission)
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train',
