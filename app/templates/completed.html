@@ -18,7 +18,7 @@
         <table>
             {% for lo in mission.objectives.all() %}
                 {% set total = mission.questions.filter_by(objective_id = lo.id).count() %}
-                {% set correct = mission.correct_questions_today(user_id, lo) %}
+                {% set correct = total - (mission.incorrect_questions_today(user_id, lo)).count() %}
                 <tr style="vertical-align: middle">
                     <td style="padding-right:5px; padding-left: 5px; vertical-align: middle">
                         <h4><i class="bi bi-star-fill" style="color: gold"></i></h4>

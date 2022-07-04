@@ -1111,24 +1111,26 @@ class Assessment(db.Model):
 
         return self.questions.join(poor_attempts)
     
-    def correct_questions_today(self, user, lo):
+    def incorrect_questions_today(self, user, lo):
         """ Returns all assessment questions whose most recent attempt was
-        not repeated and correct."""
+        not repeated and incorrect."""
 
         lo_questions = self.questions.filter_by(objective_id = lo.id)
         midnight_today = datetime.combine(date.today(), datetime.min.time())
 
-        correct_questions_today_list = []
+        incorrect_questions_today_id = []
 
-        for lo in lo_questions:
-            first_attempt_today = lo.attempts.filter(Attempt.time >= midnight_today,            
+        for loq in lo_questions:
+            attempts_today = loq.attempts.filter(Attempt.time >= midnight_today,            
                                                      Attempt.time < midnight_today +timedelta(days=1) )\
-                                            .order_by(Attempt.time).first()
+                                            .order_by(Attempt.time)
             
-            if first_attempt_today.correct:
-                correct_questions_today_list.append(lo) 
+            if attempts_today.count() > 0 and not attempts_today.first().correct:
+                incorrect_questions_today_id.append(loq.id) 
+        
+        incorrect_questions_today_list = lo_questions.filter(Question.id.in_([incorrect_questions_today_id]))
 
-        return correct_questions_today_list
+        return incorrect_questions_today_list
 
 
 class AssessmentSchema(Schema):
