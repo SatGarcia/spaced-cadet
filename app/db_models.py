@@ -1121,7 +1121,8 @@ class Assessment(db.Model):
         incorrect_questions_today_id = []
 
         for loq in lo_questions:
-            attempts_today = loq.attempts.filter(Attempt.time >= midnight_today,            
+            attempts_today = loq.attempts.filter(Attempt.user_id == user.id,
+                                                Attempt.time >= midnight_today,            
                                                      Attempt.time < midnight_today +timedelta(days=1) )\
                                             .order_by(Attempt.time)
             
