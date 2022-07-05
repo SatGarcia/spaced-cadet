@@ -8,7 +8,7 @@ from marshmallow import (
 )
 
 from app import db
-from app.search import add_to_index, remove_from_index, query_index
+from app.search import add_to_index, remove_from_index, query_index, clear_index
 
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
@@ -79,8 +79,10 @@ class SearchableMixin(object):
 
 
     @classmethod
-    def reindex(cls):
-        """ Updates all entries in this table. """
+    def reindex(cls, analyzer="english"):
+        """ Updates all entries in this table, clearing out any index
+        documents that aren't current in this table. """
+        clear_index(cls.__tablename__, analyzer)
         for obj in cls.query:
             add_to_index(cls.__tablename__, obj)
 
@@ -169,6 +171,12 @@ topic_sources = db.Table(
     db.Column('source_id', db.Integer, db.ForeignKey('source.id'))
 )
 
+# association table for answer options associated with an attempt
+selected_answers = db.Table(
+    'selected_answers',
+    db.Column('attempt_id', db.Integer, db.ForeignKey('selection_attempt.id')),
+    db.Column('option_id', db.Integer, db.ForeignKey('answer_option.id'))
+)
 
 class Topic(SearchableMixin, db.Model):
     __searchable__ = ['text']
@@ -184,7 +192,7 @@ class Topic(SearchableMixin, db.Model):
                                  secondary=topic_sources,
                                  primaryjoin=('topic_sources.c.topic_id == Topic.id'),
                                  secondaryjoin=('topic_sources.c.source_id == Source.id'),
-                                 backref=db.backref('topics', lazy='dynamic'),
+                                 backref=db.backref('topics', lazy='dynamic', order_by='Topic.text'),
                                  lazy='dynamic')
 
 
@@ -453,10 +461,6 @@ class AnswerOption(db.Model):
     text = db.Column(db.String, nullable=False)
     correct = db.Column(db.Boolean, default=False, nullable=False)
 
-    attempts = db.relationship('SelectionAttempt',
-                                    foreign_keys='SelectionAttempt.option_id',
-                                    backref='response', lazy='dynamic')
-
 
 class AnswerOptionSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -626,11 +630,17 @@ class TextAttempt(Attempt):
 
 class SelectionAttempt(Attempt):
     id = db.Column(db.Integer, db.ForeignKey('attempt.id'), primary_key=True)
-    option_id = db.Column(db.Integer, db.ForeignKey('answer_option.id'))
 
     __mapper_args__ = {
         'polymorphic_identity': ResponseType.SELECTION,
     }
+
+    responses = db.relationship('AnswerOption',
+                                 secondary=selected_answers,
+                                 primaryjoin=('selected_answers.c.attempt_id == SelectionAttempt.id'),
+                                 secondaryjoin=('selected_answers.c.option_id == AnswerOption.id'),
+                                 backref=db.backref('attempts', lazy='dynamic'),
+                                 lazy='dynamic')
 
 
 class Course(SearchableMixin, db.Model):

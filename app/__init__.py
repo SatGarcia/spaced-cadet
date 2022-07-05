@@ -2,6 +2,7 @@ import os
 import logging, logging.handlers
 
 from flask import Flask
+from sqlalchemy import MetaData
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
@@ -9,7 +10,15 @@ from flask_jsglue import JSGlue
 
 from elasticsearch import Elasticsearch
 
-db = SQLAlchemy()
+
+
+db = SQLAlchemy(metadata=MetaData(naming_convention={
+    "ix": 'ix_%(column_0_label)s',
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s"
+}))
 migrate = Migrate()
 mail = Mail()
 jsglue = JSGlue()
@@ -49,8 +58,12 @@ def create_app(config_class='config.DevelopmentConfig'):
     if es_url:
         app.elasticsearch = Elasticsearch(es_url)
 
-        # check that elasticsearch server is actually available
-        if not app.elasticsearch.ping():
+        # check that elasticsearch server is actually available before
+        # initializing it.
+        if app.elasticsearch.ping():
+            from app.search import init_app as init_search
+            init_search(app)
+        else:
             app.logger.warn("Could not connect to Elasticsearch server.")
             app.elasticsearch = None
 
@@ -61,7 +74,7 @@ def create_app(config_class='config.DevelopmentConfig'):
     from app.database import init_app as init_db
     init_db(app)
 
-    migrate.init_app(app, db)
+    migrate.init_app(app, db, render_as_batch=True)
 
     from app.user_views import user_views as uv
     app.register_blueprint(uv)
@@ -80,6 +93,9 @@ def create_app(config_class='config.DevelopmentConfig'):
 
     from app.auth import init_app as init_auth
     init_auth(app)
+
+    from app.search import search_cli
+    app.cli.add_command(search_cli)
 
     if app.config.get('ENABLE_TEST_ROUTES'):
         from app.tests import tests

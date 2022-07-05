@@ -25,7 +25,6 @@
 		<div class="container fs-5">
             <form method="POST" action="{{ post_url }}">
 				{{ form.csrf_token }}
-				{{ form.attempt_id }}
                 Was your answer correct?
 				{{ form.yes(class_="btn btn-primary") }}
 				{{ form.no(class_="btn btn-danger") }}

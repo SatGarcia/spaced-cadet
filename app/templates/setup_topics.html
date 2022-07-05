@@ -46,7 +46,7 @@
 									</div>
 									<div>
 										<button role="button" 
-											@click="addAllTopics(textbook)"
+											@click="addAllTextbookTopics(textbook)"
 											class="btn btn-sm btn-outline-danger">
 											Add All Textbook Topics
 										</button>
@@ -59,7 +59,8 @@
 											[[ section.title ]]
 										</strong>
 										<div v-if="section.topics !== null"
-											class="mt-1">
+											class="mt-1"
+											data-cy="topicList">
 											Topics:
 											<span v-for="topic in section.topics" :key="topic.id"
 				 								role="button"
@@ -71,7 +72,7 @@
 												[[ topic.text ]]
 											</span>
 											<button role="button" 
-				   								@click="section.topics.forEach(t => addTopic(t))"
+				   								@click="addAllSectionTopics(section)"
 												class="btn btn-sm btn-link link-danger text-decoration-none">
 												Add All
 											</button>
@@ -110,13 +111,13 @@
 						<div v-if="search_results !== null" class="ms-2">
 							<strong>Search Results ([[ search_results.length ]]):</strong>
 
-							<div v-if="displayed_search_results.length === 0" class="ms-1">
+							<div v-if="displayed_search_results.length === 0" id="searchResults" class="ms-1">
 								<em>No search results.</em>
 							</div>
 
-							<div v-else class="mt-2">
+							<div v-else id="searchResults" class="mt-2">
 								<ul class="list-unstyled ms-2">
-									<li v-for="topic in search_results" :key="topic.id" class="border-bottom">
+									<li v-for="topic, index in search_results" :key="topic.id" :data-cy="`result${index}`" class="border-bottom">
 										<button role="button" class="btn btn-link link-primary text-decoration-none"
 											 @click="addTopic(topic)"
 											 :class="{ disabled: course_topics.find(t => (t.id === topic.id)) !== undefined}">
@@ -153,9 +154,9 @@
 			</div>
 
 			<div class="col-4">
-				<div class="border p-2">
+				<div id="courseTopics" class="border p-2">
 					<h5>Course Topics</h5>
-					<ol class="mt-3 ms-2" :start="current_topics_page * results_per_page + 1">
+					<ol data-cy="topicsPage" class="mt-3 ms-2" :start="current_topics_page * results_per_page + 1">
 						<li v-for="topic in displayed_course_topics" :key="topic.id">
 							<div class="d-flex">
 								<div class="me-auto">
@@ -278,20 +279,18 @@
 							if (this.course_topics.findIndex(t => (t.id === topic.id)) === -1) {
 								this.course_topics.push(topic);
 							}
-							showSnackbarMessage("Successfully added topic to course.");
+							showSnackbarMessage(`Successfully added ${topic.text} to course topics.`);
 						}
 						else {
 							showSnackbarMessage("Could not add selected topic.");
 						}
 					}
 					else {
-						showSnackbarMessage("Error adding topic. Please try again.");
+						showSnackbarMessage(`Error adding ${topic.text} to course topic. Please try again.`);
 					}
 				},
 
-				async addAllTopics(textbook) {
-					const topic_ids = [];
-					textbook.sections.forEach(s => s.topics.forEach(t => { if (!topic_ids.includes(t.id)) topic_ids.push(t.id) }));
+				async addTopicsById(topic_ids) {
 					const response = await CadetApi.addCourseTopics(this.course_id, topic_ids);
 					if (response.ok) {
 						const r = await response.json();
@@ -310,7 +309,18 @@
 					else {
 						showSnackbarMessage("Error adding topics. Please try again.");
 					}
+				},
 
+				async addAllTextbookTopics(textbook) {
+					const topic_ids = [];
+					textbook.sections.forEach(s => s.topics.forEach(t => { if (!topic_ids.includes(t.id)) topic_ids.push(t.id) }));
+					await this.addTopicsById(topic_ids);
+				},
+
+				async addAllSectionTopics(section) {
+					const topic_ids = [];
+					section.topics.forEach(t => { if (!topic_ids.includes(t.id)) topic_ids.push(t.id) });
+					await this.addTopicsById(topic_ids);
 				},
 
 				async removeTopic(topic) {
