@@ -1,6 +1,6 @@
 import unittest
 from app import create_app, db
-from app.db_models import User, Assessment, ShortAnswerQuestion, TextAttempt
+from app.db_models import Objective, Topic, User, Assessment, ShortAnswerQuestion, TextAttempt
 from datetime import date, timedelta, datetime
 
 class AssessmentModelCase(unittest.TestCase):
@@ -339,6 +339,68 @@ class AssessmentModelCase(unittest.TestCase):
 
         self.assertCountEqual(a.repeat_questions(u1).all(), [q3, q4, q5])
         
+    def test_incorrect_questions_today(self):
+        """ Returns all assessment questions whose most recent attempt was
+        not repeated and incorrect."""
+
+        # adds questions and users to this session 
+        a = Assessment(title="Test assessment")
+
+        lo1 = Objective(description = "lo1")
+        lo2 = Objective(description = "lo2")
+
+        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1", objective_id = lo1.id)
+        q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2", objective_id = lo1.id)
+        q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3", objective_id = lo1.id)
+        q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4", objective_id = lo1.id)
+        q5 = ShortAnswerQuestion(prompt="Question 5", answer="Answer 5", objective_id = lo2.id)
+
+
+        db.session.add_all([a, lo1, lo2])
+        db.session.commit()
+        a.questions.append(q1)
+        a.questions.append(q2)
+        a.questions.append(q3)
+        a.questions.append(q4)
+        a.questions.append(q5)
+
+
+        u1 = User(email="test@test.com", first_name="Test", last_name="User")
+        u1.set_password("test")
+        u2 = User(email="test2@test.com", first_name="Test2", last_name="User")
+        u2.set_password("test")
+        db.session.add_all([u1, u2])
+        db.session.commit()
+
+        # if no questions are attempted yet, they should be fresh
+        self.assertCountEqual(a.incorrect_questions_today(u1, lo1).all(), [])
+
+
+        #ADDING ATTEMPTS
+        # last attempt: yesterday, correct: False
+        q2_attempt = TextAttempt(response="Attempt2", user=u1, question=q2, time = datetime.now()-timedelta(days=1), correct=False)
+
+        # checking with multiple attempts
+        # first_attempt today: true
+        q3_attempt = TextAttempt(response="Attempt3", user=u1, question=q3, time = datetime.now(), correct=True)
+        q3_attempt2 = TextAttempt(response="Attempt3b", user=u1, question=q3, time = datetime.now(), correct=False) 
+                                                                           
+        # first_attempt today: false
+        q4_attempt = TextAttempt(response="Attempt4", user=u1, question=q4, time = datetime.now(), correct = False)
+        q4_attempt2 = TextAttempt(response="Attempt4b", user=u1, question=q4, time = datetime.now() + timedelta(hours=1), correct=True)
+
+        # checking with another lo                                                                    
+        q5_attempt = TextAttempt(response="Attempt5", user=u1, question=q5, time = datetime.now(), correct=False)                                                                            
+
+        # single attempt for u2, with next attempt of today to make sure method differentiates between users
+        q1_attempt = TextAttempt(response="Attempt1", user=u2, question=q1, time = datetime.now(), correct=False)
+
+        db.session.add_all([q2_attempt, q3_attempt, q3_attempt2, q4_attempt, q4_attempt2, q5_attempt, q1_attempt])
+        db.session.commit()
+
+        print(a.incorrect_questions_today(u1, lo1).all())
+        self.assertCountEqual(a.incorrect_questions_today(u1, lo1).all(), [q4])
+
 
 
 if __name__ == '__main__':
