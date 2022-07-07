@@ -1139,9 +1139,9 @@ class Assessment(db.Model):
             if attempts_today.count() > 1 and not attempts_today.first().correct:
                 incorrect_questions_today_id.append(loq.id) 
         
-        incorrect_questions_today_list = lo_questions.filter(Question.id.in_(incorrect_questions_today_id))
+        incorrect_questions_today_query = lo_questions.filter(Question.id.in_(incorrect_questions_today_id))
 
-        return incorrect_questions_today_list
+        return incorrect_questions_today_query
 
 
 class AssessmentSchema(Schema):
