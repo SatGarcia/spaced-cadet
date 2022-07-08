@@ -395,8 +395,7 @@ class AssessmentModelCase(unittest.TestCase):
 
         db.session.add_all([q2_attempt, q3_attempt, q3_attempt2, q4_attempt, q4_attempt2, q5_attempt, q1_attempt])
         db.session.commit()
-
-        print(a.incorrect_questions_today(u1, lo1).all())
+        
         self.assertCountEqual(a.incorrect_questions_today(u1, lo1).all(), [q4])
 
 
