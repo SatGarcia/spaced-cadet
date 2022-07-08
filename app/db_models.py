@@ -1125,18 +1125,18 @@ class Assessment(db.Model):
         """ Returns all assessment questions whose most recent attempt was
         not repeated and incorrect."""
 
-        lo_questions = self.questions.filter_by(objective_id = lo.id)
+        lo_questions = self.questions.filter(Question.objective_id == lo.id)
         midnight_today = datetime.combine(date.today(), datetime.min.time())
 
         incorrect_questions_today_id = []
 
         for loq in lo_questions:
-            attempts_today = loq.attempts.filter(Attempt.user_id == user.id,
+            attempts_today = loq.attempts.filter(db.and_(Attempt.user_id == user.id,
                                                 Attempt.time >= midnight_today,            
-                                                     Attempt.time < midnight_today +timedelta(days=1) )\
+                                                     Attempt.time < midnight_today +timedelta(days=1) ))\
                                             .order_by(Attempt.time)
-            
-            if attempts_today.count() > 1 and not attempts_today.first().correct:
+
+            if (attempts_today.count() > 1) and (attempts_today.first().correct == False):
                 incorrect_questions_today_id.append(loq.id) 
         
         incorrect_questions_today_query = lo_questions.filter(Question.id.in_(incorrect_questions_today_id))

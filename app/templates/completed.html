@@ -15,11 +15,10 @@
     <div class="container pt-3">
         <br>
 
-        <table>
             {% for lo in mission.objectives.all() %}
                 {% set total = mission.questions.filter_by(objective_id = lo.id).count() %}
                 {% set correct = total - (mission.incorrect_questions_today(current_user, lo)).count() %}
-                <tr style="vertical-align: middle">
+                <!-- <tr style="vertical-align: middle">
                     <td style="padding-right:5px; padding-left: 5px; vertical-align: middle">
                         <h4><i class="bi bi-star-fill" style="color: gold"></i></h4>
                     </td>
@@ -31,10 +30,21 @@
                         </div>
                     </td>
                     <td style="padding-right:5px; padding-left: 5px; vertical-align: middle">{{correct}}/{{total}}</td>
-                </tr>
-            {% endfor %}
-        </table>
-        
+                </tr> -->
+                <div class="row no-gutters">
+                    <div class="col">
+                        <h4><i class="bi bi-star-fill" style="color: gold"></i></h4>
+                    </div>
+                    <div class="col"> LO1: </div>
+                    <div class="col">
+                        <div class="progress" style="height: 20px; width: 400px">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{correct/total * 100}}%"
+                                aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    <div>{{correct}}/{{total}}</div>
+                </div>
+            {% endfor %}        
         
     </div>
     
