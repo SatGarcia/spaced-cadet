@@ -1123,7 +1123,7 @@ class Assessment(db.Model):
     
     def incorrect_questions_today(self, user, lo):
         """ Returns all assessment questions whose most recent attempt was
-        not repeated and incorrect."""
+        not repeated and incorrect within a particular learning objective."""
 
         lo_questions = self.questions.filter(Question.objective_id == lo.id)
         midnight_today = datetime.combine(date.today(), datetime.min.time())
