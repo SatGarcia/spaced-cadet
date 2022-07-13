@@ -1,74 +1,62 @@
-{% extends "base.html" %}
+{% extends "question.html" %}
 {% import 'forms.html' as forms %}
 
-{% block body %}
-	<div class="container pt-3">
-		{% if preview_mode %}
-			<div class="text-danger row mb-3">
-				<strong><i class="bi-eye-fill"></i> Question Preview</strong>
-			</div>
-		{% elif not fresh_question %}
-			<div class="row text-end">
-				<strong><i class="bi-arrow-repeat"></i> Repeat Question</strong>
-			</div>
-		{% endif %}
+{% block instructions %}
+    <div class="row">
+        <div class="col">
+            <strong>Instructions:</strong> Drag and drop the code blocks
+            to reorder them, using the arrows next to each block to change
+            its indentation level.. Any unnecessary/incorrect code blocks
+            should be dragged into the "Unused Code" section.
+        </div>
+    </div>
+{% endblock %}
 
-		<div class="row" id="prompt">
-			{{ prompt }}
-		</div>
-
-        <div class="row">
-            <div class="col">
-                <strong>Instructions:</strong> Drag and drop the code blocks
-                to reorder them, using the arrows next to each block to change
-                its indentation level.. Any unnecessary/incorrect code blocks
-                should be dragged into the "Unused Code" section.
-            </div>
-		</div>
-
-        <div class="row pt-4" id="response_area">
-            <div class="col-md-6">
-                <strong>Your Answer:</strong>
-                <ul id="jumbley" class="list-unstyled jumble">
-                    {% for (block_id, block) in code_blocks %}
-                        <li block-id="{{ block_id }}" indent-level="0">
-                            <span class="row align-items-center">
-                                <span class="col-auto">
-                                    <i class="bi-arrow-right" style="font-size: 0.9em" onclick="change_indent({{block_id}}, 1);"></i>
-                                    <br/>
-                                    <i class="bi-arrow-left" style="font-size: 0.9em" onclick="change_indent({{block_id}}, -1)"></i>
-                                </span>
-                                <span class="col-auto jumble-block">
-                                    {{ block }}
-                                </span>
+{% block response_area %}
+    <div class="row pt-4" id="response_area">
+        <div class="col-md-6">
+            <strong>Your Answer:</strong>
+            <ul id="jumbley" class="list-unstyled jumble">
+                {% for (block_id, block) in code_blocks %}
+                    <li block-id="{{ block_id }}" indent-level="0">
+                        <span class="row align-items-center">
+                            <span class="col-auto">
+                                <i class="bi-arrow-right" style="font-size: 0.9em" onclick="change_indent({{block_id}}, 1);"></i>
+                                <br/>
+                                <i class="bi-arrow-left" style="font-size: 0.9em" onclick="change_indent({{block_id}}, -1)"></i>
                             </span>
-                        </li>
-                    {% endfor %}
-                </ul>
-            </div>
-
-            <div class="col-md-6">
-                 <i class="bi-trash"></i>
-
-                 <strong>Unused Code:</strong>
-                 <ul id="jumble-trash" class="list-unstyled jumble">
-                     <li>Drag unnecessary / incorrect code blocks here.</li>
-                 </ul>
-            </div>
+                            <span class="col-auto jumble-block">
+                                {{ block }}
+                            </span>
+                        </span>
+                    </li>
+                {% endfor %}
+            </ul>
         </div>
 
-		<div class="row pt-2">
-			<form method="POST" action="{% if not preview_mode %}{{ post_url }}{% endif %}">
-				
-				{{ form.csrf_token }}
-				{{ form.question_id }}
-				{{ form.response }}
-				{{ form.no_answer(class_="btn btn-secondary btn-sm") }}
-				{{ form.submit(class_="btn btn-primary btn-sm") }}
-			</form>
-		</div>
+        <div class="col-md-6">
+             <i class="bi-trash"></i>
+
+             <strong>Unused Code:</strong>
+             <ul id="jumble-trash" class="list-unstyled jumble">
+                 <li>Drag unnecessary / incorrect code blocks here.</li>
+             </ul>
+        </div>
     </div>
 
+    <div class="row pt-2">
+        <form method="POST" action="{% if not preview_mode %}{{ post_url }}{% endif %}">
+            
+            {{ form.csrf_token }}
+            {{ form.question_id }}
+            {{ form.response }}
+            {{ form.no_answer(class_="btn btn-secondary btn-sm") }}
+            {{ form.submit(class_="btn btn-primary btn-sm") }}
+        </form>
+    </div>
+{% endblock %}
+
+{% block js %}
     <script src="{{ url_for('static', filename='js/code-jumble.js') }}"></script>
     <script>
         window.addEventListener("DOMContentLoaded", () => {
@@ -76,16 +64,4 @@
             update_response();
         });
     </script>
-
-	{% if preview_mode %}
-		<script type="text/javascript">
-			window.addEventListener("DOMContentLoaded", () => {
-				submit_button = document.getElementById("submit");
-				submit_button.disabled = true;
-
-				no_answer_button = document.getElementById("no_answer");
-				no_answer_button.disabled = true;
-			});
-		</script>
-	{% endif %}
 {% endblock %}

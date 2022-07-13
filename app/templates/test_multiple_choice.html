@@ -1,44 +1,15 @@
-{% extends "base.html" %}
+{% extends "question.html" %}
 {% import 'forms.html' as forms %}
 
-{% block body %}
-    <div class="container pt-3">
-		{% if preview_mode %}
-			<div class="text-danger row mb-3">
-				<strong><i class="bi-eye-fill"></i> Question Preview</strong>
-			</div>
-		{% elif not fresh_question %}
-			<div class="row text-end">
-				<strong><i class="bi-arrow-repeat"></i> Repeat Question</strong>
-			</div>
-		{% endif %}
-
-		<div class="row" id="prompt">
-			{{ prompt }}
-		</div>
-
-
-        <div class="row" id="response_area">
-			<form method="POST"
-		 		action="{% if not preview_mode %}{{ post_url }}{% endif %}">
-				{{ form.csrf_token }}
-				{{ form.question_id }}
-				{{ forms.checkbox_input(form.response) }}
-				{{ form.no_answer(class_="btn btn-secondary btn-sm") }}
-				{{ form.submit(class_="btn btn-primary btn-sm") }}
-			</form>
-		</div>
-    </div>
-
-	{% if preview_mode %}
-		<script type="text/javascript">
-			window.addEventListener("DOMContentLoaded", () => {
-				submit_button = document.getElementById("submit");
-				submit_button.disabled = true;
-
-				no_answer_button = document.getElementById("no_answer");
-				no_answer_button.disabled = true;
-			});
-		</script>
-	{% endif %}
+{% block response_area %}
+	<div class="row" id="response_area">
+		<form method="POST"
+			action="{% if not preview_mode %}{{ post_url }}{% endif %}">
+			{{ form.csrf_token }}
+			{{ form.question_id }}
+			{{ forms.checkbox_input(form.response) }}
+			{{ form.no_answer(class_="btn btn-secondary btn-sm") }}
+			{{ form.submit(class_="btn btn-primary btn-sm") }}
+		</form>
+	</div>
 {% endblock %}

@@ -351,7 +351,7 @@ def get_form(question, use_existing):
         abort(400)
 
 
-def render_question(question, is_fresh, form):
+def render_question(question, is_fresh, form, mission):
     prompt_html = markdown_to_html(question.prompt)
 
     extra_kw_args = {}
@@ -382,13 +382,14 @@ def render_question(question, is_fresh, form):
     else:
         # TODO: log error
         abort(400)
-
+        
     return render_template(template_filename,
                            page_title="Cadet: Mission Training",
                            fresh_question=is_fresh,
                            post_url="",
                            form=form,
                            prompt=Markup(prompt_html),
+                           mission = mission,
                            **extra_kw_args)
 
 
@@ -399,10 +400,10 @@ def test(course_name, mission_id):
     """ Presents a random question to the user. """
 
     course = check_course_authorization(course_name)
-    assessment = check_mission_inclusion(mission_id, course)
+    mission = check_mission_inclusion(mission_id, course)
 
     if request.method == 'GET':
-        question, fresh_question = get_next_question(assessment)
+        question, fresh_question = get_next_question(mission)
 
         if question is None:
             # Training is done (for today) so display a congrats/completed page
@@ -492,7 +493,7 @@ def test(course_name, mission_id):
                                         mission_id=mission_id,
                                         attempt=attempt.id))
 
-    return render_question(question, fresh_question, form)
+    return render_question(question, fresh_question, form, mission)
 
 
 class DataRequiredIf(DataRequired):
