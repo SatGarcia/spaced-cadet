@@ -1120,6 +1120,41 @@ class Assessment(db.Model):
                                      .subquery()
 
         return self.questions.join(poor_attempts)
+    
+    def breakdown_today(self, user, lo=None):
+        """ Returns a breakdown of all assessment questions whose latest attempt was 
+        today and not repeated.  
+
+        Will return these questions as a tuple of queries: ([correct: easy to recall],
+                                                           [correct: medium],
+                                                           [correct: difficult],
+                                                           [incorrect]) 
+        """
+
+        midnight_today = datetime.combine(date.today(), datetime.min.time())
+
+        incorrect_id = []
+        correct_easy_id = []
+        correct_mid_id = []
+        correct_hard_id = []
+
+        for q in self.questions:
+            attempts_today = q.attempts.filter(db.and_(Attempt.user_id == user.id,
+                                                Attempt.time >= midnight_today,            
+                                                     Attempt.time < midnight_today +timedelta(days=1) ))\
+                                            .order_by(Attempt.time)
+
+            if (attempts_today.count() > 1) and (attempts_today.first().correct == False):
+                incorrect_id.append(q.id)
+            
+            elif (attempts_today.count() > 1) and (attempts_today.first().correct == True):
+
+                if q.
+        
+        incorrect_questions_today_query = lo_questions.filter(Question.id.in_(incorrect_questions_today_id))
+
+        return incorrect_questions_today_query
+
 
 
 class AssessmentSchema(Schema):
