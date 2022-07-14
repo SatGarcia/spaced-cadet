@@ -12,8 +12,6 @@
             for other missions to train for</a>.
     </div>
 
-    <div id="tester" style="width:600px;height:250px;"></div>
-
     <div class="container pt-3">
         <br>
             {% for lo in mission.objectives.all() %}
@@ -36,22 +34,5 @@
             {% endfor %}        
         
     </div>
-
-    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
-    <script>
-        var data = [{
-        values: [19, 26, 55],
-        labels: ['Residential', 'Non-Residential', 'Utility'],
-        type: 'pie'
-        }];
-
-        var layout = {
-        height: 400,
-        width: 500
-        };
-
-        Plotly.newPlot('tester', data, layout);
-    </script>
-
     
 {% endblock %}
