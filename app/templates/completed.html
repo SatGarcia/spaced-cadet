@@ -12,25 +12,14 @@
             for other missions to train for</a>.
     </div>
 
+    <div id="tester" style="width:600px;height:250px;"></div>
+
     <div class="container pt-3">
         <br>
-
             {% for lo in mission.objectives.all() %}
                 {% set total = mission.questions.filter_by(objective_id = lo.id).count() %}
                 {% set correct = total - (mission.incorrect_questions_today(current_user, lo)).count() %}
-                <!-- <tr style="vertical-align: middle">
-                    <td style="padding-right:5px; padding-left: 5px; vertical-align: middle">
-                        <h4><i class="bi bi-star-fill" style="color: gold"></i></h4>
-                    </td>
-                    <td style="vertical-align: middle">LO1: </td>
-                    <td style="padding-right:5px; padding-left: 5px; vertical-align: middle">
-                        <div class="progress" style="height: 20px; width: 400px">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: {{correct/total * 100}}%"
-                                aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                    </td>
-                    <td style="padding-right:5px; padding-left: 5px; vertical-align: middle">{{correct}}/{{total}}</td>
-                </tr> -->
+
                 <div class="row pt-2; align-middle">
                     <div class="col-md-auto my-auto">
                         <h4><i class="bi bi-star-fill" style="color: gold"></i></h4>
@@ -47,5 +36,22 @@
             {% endfor %}        
         
     </div>
+
+    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+    <script>
+        var data = [{
+        values: [19, 26, 55],
+        labels: ['Residential', 'Non-Residential', 'Utility'],
+        type: 'pie'
+        }];
+
+        var layout = {
+        height: 400,
+        width: 500
+        };
+
+        Plotly.newPlot('tester', data, layout);
+    </script>
+
     
 {% endblock %}
