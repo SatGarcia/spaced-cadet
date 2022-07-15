@@ -1145,7 +1145,7 @@ class Assessment(db.Model):
 
         lo_review_sorted = sorted(lo_review, key=lambda i: i[-1]) # sorts elements by last item(e_factor_average) in increasing order
         
-        if lo_review_sorted > 3: 
+        if lo_review_sorted < 3: 
             return lo_review_sorted
         else: 
             return lo_review_sorted[0,3]
