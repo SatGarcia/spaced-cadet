@@ -28,17 +28,15 @@ class QuestionModelCase(unittest.TestCase):
 
         self.assertIsNone(q1.get_latest_attempt(u1))
 
-        q1_attempt = TextAttempt(response="Attempt1", user=u1, question=q1, time = datetime.now() - timedelta(days=1))
-        q1_attempt2 = TextAttempt(response="Attempt2", user=u1, question=q1, time = datetime.now())
+        q1_attempt = TextAttempt(response="Attempt1", user=u1, question=q1, time = datetime.now() - timedelta(days=2))
+        q1_attempt2 = TextAttempt(response="Attempt2", user=u1, question=q1, time = datetime.now() - timedelta(days=1))
+
+        q2_attempt = TextAttempt(response="Attempt1", user=u1, question=q2, time = datetime.now())
 
         q1_attempt_u2 = TextAttempt(response="Attempt1", user=u2, question=q1, time = datetime.now())
 
-        db.session.add_all([q1_attempt, q1_attempt2, q1_attempt_u2])
+        db.session.add_all([q1_attempt, q1_attempt2, q1_attempt_u2, q2_attempt])
         db.session.commit()
 
-        self.assertEqual(q1.get_latest_attempt(u1), q1_attempt2)
-        self.assertIsNone(q2.get_latest_attempt(u1))
-
-
-        
+        self.assertEqual(q1.get_latest_attempt(u1), q1_attempt2)      
 
