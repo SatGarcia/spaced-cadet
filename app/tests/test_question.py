@@ -23,10 +23,10 @@ class QuestionModelCase(unittest.TestCase):
         u1.set_password("test")
         u2 = User(email="test2@test.com", first_name="Test2", last_name="User")
         u2.set_password("test")
-        db.session.add_all([u1, u2])
+        db.session.add_all([u1, u2, q1, q2])
         db.session.commit()
 
-        self.assertCountEqual(q1.get_latest_attempt(u1).all(), [])
+        self.assertIsNone(q1.get_latest_attempt(u1))
 
         q1_attempt = TextAttempt(response="Attempt1", user=u1, question=q1, time = datetime.now() - timedelta(days=1))
         q1_attempt2 = TextAttempt(response="Attempt2", user=u1, question=q1, time = datetime.now())
@@ -36,8 +36,8 @@ class QuestionModelCase(unittest.TestCase):
         db.session.add_all([q1_attempt, q1_attempt2, q1_attempt_u2])
         db.session.commit()
 
-        self.assertCountEqual(q1.get_latest_attempt(u1).all(), [q1_attempt2])
-        self.assertCountEqual(q2.get_latest_attempt(u1).all(), [])
+        self.assertEqual(q1.get_latest_attempt(u1), q1_attempt2)
+        self.assertIsNone(q2.get_latest_attempt(u1))
 
 
         

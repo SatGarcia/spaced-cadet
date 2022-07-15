@@ -261,12 +261,13 @@ class Question(SearchableMixin, db.Model):
         raise NotImplementedError("Generic questions have no answer.")
 
     def get_latest_attempt(self, user):
-        """ Returns the most recent attempt on a question by a particular user """
+        """ Returns the most recent attempt on a question by a particular user,
+            if there is no attempt, method returns None """
 
-        latest_attempt = (self.attempts.filter(db.and_(Attempt.user_id == user.id))\
-                                        .order_by(Attempt.time)).first()
+        all_attempts = (self.attempts.filter(db.and_(Attempt.user_id == user.id))\
+                                        .order_by(Attempt.time.desc()))
        
-        return latest_attempt
+        return all_attempts.first()
 
 
 class QuestionSchema(Schema):
