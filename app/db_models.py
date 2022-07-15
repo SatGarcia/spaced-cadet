@@ -1144,12 +1144,14 @@ class Assessment(db.Model):
                                                      Attempt.time < midnight_today +timedelta(days=1) ))\
                                             .order_by(Attempt.time)
 
-            if (attempts_today.count() > 1) and (attempts_today.first().correct == False):
-                incorrect_id.append(q.id)
-            
-            elif (attempts_today.count() > 1) and (attempts_today.first().correct == True):
+            if (attempts_today.count() > 1) and (attempts_today.first().correct == True):
 
-                if q.
+                if attempts_today.first().quality == 5:
+                    
+
+            elif (attempts_today.count() > 1) and (attempts_today.first().correct == False):
+                incorrect_id.append(q.id)
+             
         
         incorrect_questions_today_query = lo_questions.filter(Question.id.in_(incorrect_questions_today_id))
 
