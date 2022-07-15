@@ -1121,6 +1121,18 @@ class Assessment(db.Model):
 
         return self.questions.join(poor_attempts)
 
+    def objectives_to_review(self, user):
+        """ Returns the 3 learning objectives with the lowest e_factors """
+
+        #makes list of all learning objectives in this assessment
+        los = self.objectives.filter(~ Objective.any(Attempt.user_id == user.id)) #idk if this is right
+
+        for lo in los: #for each learning objective 
+            for q in lo.questions:
+                 
+
+
+
 
 class AssessmentSchema(Schema):
     id = fields.Int(dump_only=True)
