@@ -1122,13 +1122,33 @@ class Assessment(db.Model):
         return self.questions.join(poor_attempts)
 
     def objectives_to_review(self, user):
-        """ Returns the 3 learning objectives with the lowest e_factors """
+        """ Returns the 3 learning objectives with the lowest average e_factors in the form of: 
+        a list of 3 tuples that contain (learning objective id, e_factor average)"""
 
-        #makes list of all learning objectives in this assessment
-        los = self.objectives.filter(~ Objective.any(Attempt.user_id == user.id)) #idk if this is right
+        for lo in self.objectives.id: 
 
-        for lo in los: #for each learning objective 
-            for q in lo.questions:
+            lo_questions = self.questions.filter(Question.objective_id == lo.id)
+
+            lo_dict = {} # lo_id:e_factor_average
+            e_factor_sum = 0
+
+            for question in lo_questions:
+                e_factor_sum += question.get_latest_attempt(user).e_factor #marissa is writing this method
+
+            lo_dict[lo.id]= e_factor_sum/lo_questions.len()
+
+        lo_review = []
+        
+        for lo_id, average in lo_dict.items():
+            if average < 2.5:
+                lo_review.append((lo_id,average))
+
+        lo_review_sorted = sorted(lo_review, key=lambda i: i[-1]) # sorts elements by last item(e_factor_average) in increasing order
+        
+        if lo_review_sorted > 3: 
+            return lo_review_sorted
+        else: 
+            return lo_review_sorted[0,3]
                  
 
 
