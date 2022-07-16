@@ -1147,13 +1147,19 @@ class Assessment(db.Model):
             if (attempts_today.count() > 1) and (attempts_today.first().correct == True):
 
                 if attempts_today.first().quality == 5:
+                    correct_easy_id.append(q.id)
+                elif attempts_today.first().quality == 4:
+                    correct_mid_id.append(q.id)
+                elif attempts_today.first().quality ==3:
+                    correct_hard_id.append(q.id)
                     
-
             elif (attempts_today.count() > 1) and (attempts_today.first().correct == False):
                 incorrect_id.append(q.id)
-             
+                         
         
-        incorrect_questions_today_query = lo_questions.filter(Question.id.in_(incorrect_questions_today_id))
+        incorrect_questions = self.questions.filter(Question.id.in_(incorrect_id))
+        correct_easy = self.questions.filter(Question.id.in_(correct_easy_id))
+        correct_mid = self.questions.filter(Question.id.in_(correct_mid_id))
 
         return incorrect_questions_today_query
 
