@@ -1150,7 +1150,7 @@ class Assessment(db.Model):
                     correct_easy_id.append(q.id)
                 elif attempts_today.first().quality == 4:
                     correct_mid_id.append(q.id)
-                elif attempts_today.first().quality ==3:
+                elif attempts_today.first().quality == 3:
                     correct_hard_id.append(q.id)
                     
             elif (attempts_today.count() > 1) and (attempts_today.first().correct == False):
@@ -1160,8 +1160,9 @@ class Assessment(db.Model):
         incorrect_questions = self.questions.filter(Question.id.in_(incorrect_id))
         correct_easy = self.questions.filter(Question.id.in_(correct_easy_id))
         correct_mid = self.questions.filter(Question.id.in_(correct_mid_id))
+        correct_hard = self.questions.filter(Question.id.in_(correct_hard_id))
 
-        return incorrect_questions_today_query
+        return (incorrect_questions, correct_easy, correct_mid, correct_hard)
 
 
 
