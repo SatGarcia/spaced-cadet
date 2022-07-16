@@ -1121,7 +1121,7 @@ class Assessment(db.Model):
 
         return self.questions.join(poor_attempts)
     
-    def breakdown_today(self, user, lo=None):
+    def breakdown_today(self, user):
         """ Returns a breakdown of all assessment questions whose latest attempt was 
         today and not repeated.  
 
