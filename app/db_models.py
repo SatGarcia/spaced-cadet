@@ -1121,11 +1121,11 @@ class Assessment(db.Model):
 
         return self.questions.join(poor_attempts)
     
-    def incorrect_questions_today(self, user, lo):
+    def incorrect_questions_today(self, user, learning_objective):
         """ Returns all assessment questions whose most recent attempt was today,
         not repeated, and incorrect within a particular learning objective."""
 
-        lo_questions = self.questions.filter(Question.objective_id == lo.id)
+        lo_questions = self.questions.filter(Question.objective_id == learning_objective.id)
         midnight_today = datetime.combine(date.today(), datetime.min.time())
 
         incorrect_questions_today_id = []
