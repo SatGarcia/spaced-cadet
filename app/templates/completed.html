@@ -18,7 +18,7 @@
                 {% set total = mission.questions.filter_by(objective_id = lo.id).count() %}
                 {% set correct = total - (mission.incorrect_questions_today(current_user, lo)).count() %}
 
-                <div class="row pt-2; align-middle">
+                <div class="row pt-2 align-middle">
                     <div class="col-md-auto my-auto">
                         <h4><i class="bi bi-star-fill" style="color: gold"></i></h4>
                     </div>
