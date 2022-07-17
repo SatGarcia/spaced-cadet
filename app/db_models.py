@@ -1125,23 +1125,25 @@ class Assessment(db.Model):
         """ Returns the 3 learning objectives with the lowest average e_factors in the form of: 
         a list of 3 tuples that contain (learning objective id, e_factor average)"""
 
-        for lo in self.objectives.id: 
+        for lo in self.objectives: 
 
             lo_questions = self.questions.filter(Question.objective_id == lo.id)
 
-            lo_dict = {} # lo_id:e_factor_average
+            lo_dict = {} # lo:e_factor_average
             e_factor_sum = 0
+            question_count = 0
 
             for question in lo_questions:
                 e_factor_sum += question.get_latest_attempt(user).e_factor #marissa is writing this method
+                question_count += 1
 
-            lo_dict[lo.id]= e_factor_sum/lo_questions.len()
+            lo_dict[lo]= e_factor_sum/question_count 
 
         lo_review = []
         
         for lo_id, average in lo_dict.items():
             if average < 2.5:
-                lo_review.append((lo_id,average))
+                lo_review.append((lo,average))
 
         lo_review_sorted = sorted(lo_review, key=lambda i: i[-1]) # sorts elements by last item(e_factor_average) in increasing order
         
