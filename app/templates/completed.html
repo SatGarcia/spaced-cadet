@@ -11,4 +11,28 @@
         <a href="{{ url_for('user_views.missions_overview', course_name=course_name) }}">check
             for other missions to train for</a>.
     </div>
+
+    <div class="container pt-3">
+        <br>
+            {% for lo in mission.objectives.all() %}
+                {% set total = mission.questions.filter_by(objective_id = lo.id).count() %}
+                {% set correct = total - (mission.incorrect_questions_today(current_user, lo)).count() %}
+
+                <div class="row pt-2 align-middle">
+                    <div class="col-md-auto my-auto">
+                        <h4><i class="bi bi-star-fill" style="color: gold"></i></h4>
+                    </div>
+                    <div class="col-md-auto my-auto"> {{lo.description}}: </div>
+                    <div class="col-md-auto my-auto">
+                        <div class="progress" style="height: 20px; width: 400px">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{correct/total * 100}}%"
+                                aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-auto my-auto">{{correct}}/{{total}}</div>
+                </div>
+            {% endfor %}        
+        
+    </div>
+    
 {% endblock %}

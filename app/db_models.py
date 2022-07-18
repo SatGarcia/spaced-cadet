@@ -709,7 +709,7 @@ class Course(SearchableMixin, db.Model):
 
     def previous_meetings(self):
         """Returns all ClassMeetings that occured before today"""
-        return self.meetings.filter(ClassMeeting.date < date.today())
+        return self.meetings.filter(ClassMeeting.date < date.today() )
 
 
 class CourseSchema(Schema):
@@ -1129,6 +1129,29 @@ class Assessment(db.Model):
                                      .subquery()
 
         return self.questions.join(poor_attempts)
+    
+    def incorrect_questions_today(self, user, learning_objective):
+        """ Returns all assessment questions whose most recent attempt was today,
+        not repeated, and incorrect within a particular learning objective."""
+
+        lo_questions = self.questions.filter(Question.objective_id == learning_objective.id)
+        midnight_today = datetime.combine(date.today(), datetime.min.time())
+
+        incorrect_questions_today_id = []
+
+        for loq in lo_questions:
+            attempts_today = loq.attempts.filter(db.and_(Attempt.user_id == user.id,
+                                                Attempt.time >= midnight_today,            
+                                                     Attempt.time < midnight_today +timedelta(days=1) ))\
+                                            .order_by(Attempt.time)
+
+            if (attempts_today.count() > 1) and (attempts_today.first().correct == False):
+                incorrect_questions_today_id.append(loq.id) 
+        
+        incorrect_questions_today_query = lo_questions.filter(Question.id.in_(incorrect_questions_today_id))
+
+        return incorrect_questions_today_query
+    
 
 
 class AssessmentSchema(Schema):
