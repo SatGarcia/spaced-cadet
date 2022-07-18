@@ -1144,7 +1144,7 @@ class Assessment(db.Model):
                                                      Attempt.time < midnight_today +timedelta(days=1) ))\
                                             .order_by(Attempt.time)
 
-            if (attempts_today.count() > 1) and (attempts_today.first().correct == True):
+            if (attempts_today.count() > 0) and (attempts_today.first().correct == True):
 
                 if attempts_today.first().quality == 5:
                     correct_easy_id.append(q.id)
