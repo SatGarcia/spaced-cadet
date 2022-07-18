@@ -424,6 +424,21 @@ class AssessmentModelCase(unittest.TestCase):
         self.assertEqual(a.objectives_to_review(u1).all(), [(lo2,1.5),(lo4,2)])
 
         #add more tests for where more than three objective have an average e_factor < 2.5
+        lo1_attempt = TextAttempt(response="Attempt1", user=u1, question=q1,
+                                 next_attempt=date.today()+timedelta(days=1),e_factor=2)
+
+        lo2_attempt = TextAttempt(response="Attempt2", user=u1, question=q4,
+                                next_attempt=date.today()+timedelta(days=1),e_factor=1.5)
+
+        lo3_attempt = TextAttempt(response="Attempt3", user=u1, question=q6,
+                                next_attempt=date.today()+timedelta(days=1),e_factor=1.3)
+
+        lo4_attempt = TextAttempt(response="Attempt4", user=u1, question=q8,
+                                next_attempt=date.today()+timedelta(days=1),e_factor=1.7)
+
+        db.session.add_all([lo1_attempt,lo2_attempt,lo3_attempt,lo4_attempt])
+
+        self.assertEqual(a.objectives_to_review(u1).all(), [(lo3,1.3),(lo2,1.5),(lo4,1.7)])
 
 
 if __name__ == '__main__':
