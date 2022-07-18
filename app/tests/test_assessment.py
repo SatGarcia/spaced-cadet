@@ -362,6 +362,7 @@ class AssessmentModelCase(unittest.TestCase):
         a.objectives.append(lo2)
         a.objectives.append(lo3)
         a.objectives.append(lo4)
+
         a.questions.append(q1)
         a.questions.append(q2)
         a.questions.append(q3)
@@ -370,9 +371,10 @@ class AssessmentModelCase(unittest.TestCase):
         a.questions.append(q6)
         a.questions.append(q7)
         a.questions.append(q8)
+
+        lo1.questions.append(q1)
         lo1.questions.append(q2)
         lo1.questions.append(q3)
-        lo1.questions.append(q1)
         lo2.questions.append(q4)
         lo2.questions.append(q5)
         lo3.questions.append(q6)
@@ -417,23 +419,58 @@ class AssessmentModelCase(unittest.TestCase):
         q1_attempt = TextAttempt(response="Attempt1", user=u2, question=q1,
                                  next_attempt=date.today()+timedelta(days=1))
 
-
         db.session.add_all([q2_attempt, q3_attempt, q4_attempt, 
                     q5_attempt,  q6_attempt, q7_attempt, q8_attempt, q8_attempt2, q1_attempt])
 
         self.assertEqual(a.objectives_to_review(u1).all(), [(lo2,1.5),(lo4,2)])
 
+    def test_objectives_to_review_over_three(self):
+        a = Assessment(title="Test assessment")
+        lo1 = Objective(description="Learning Objective 1")
+        lo2 = Objective(description="Learning Objective 2")
+        lo3 = Objective(description="Learning Objective 3")
+        lo4 = Objective(description="Learning Objective 4")
+
+        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1")
+        q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2")
+        q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3")
+        q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4")
+
+        db.session.add(a)
+        db.session.commit()
+        a.objectives.append(lo1)
+        a.objectives.append(lo2)
+        a.objectives.append(lo3)
+        a.objectives.append(lo4)
+
+        a.questions.append(q1)
+        a.questions.append(q2)
+        a.questions.append(q3)
+        a.questions.append(q4)
+
+        lo1.questions.append(q1)
+        lo2.questions.append(q2)
+        lo3.questions.append(q3)
+        lo4.questions.append(q4)
+
+        u1 = User(email="test@test.com", first_name="Test", last_name="User")
+        u1.set_password("test")
+        u2 = User(email="test2@test.com", first_name="Test2", last_name="User")
+        u2.set_password("test")
+        db.session.add_all([u1, u2])
+        db.session.commit()
+
         #add more tests for where more than three objective have an average e_factor < 2.5
         lo1_attempt = TextAttempt(response="Attempt1", user=u1, question=q1,
                                  next_attempt=date.today()+timedelta(days=1),e_factor=2)
 
-        lo2_attempt = TextAttempt(response="Attempt2", user=u1, question=q4,
+        lo2_attempt = TextAttempt(response="Attempt2", user=u1, question=q2,
                                 next_attempt=date.today()+timedelta(days=1),e_factor=1.5)
 
-        lo3_attempt = TextAttempt(response="Attempt3", user=u1, question=q6,
+        lo3_attempt = TextAttempt(response="Attempt3", user=u1, question=q3,
                                 next_attempt=date.today()+timedelta(days=1),e_factor=1.3)
 
-        lo4_attempt = TextAttempt(response="Attempt4", user=u1, question=q8,
+        lo4_attempt = TextAttempt(response="Attempt4", user=u1, question=q4,
                                 next_attempt=date.today()+timedelta(days=1),e_factor=1.7)
 
         db.session.add_all([lo1_attempt,lo2_attempt,lo3_attempt,lo4_attempt])
