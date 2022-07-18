@@ -874,26 +874,31 @@ class Objective(SearchableMixin, db.Model):
         return f"<Objective {self.id}: {self.description}>"
 
     def get_e_factor_average(self,user,assessment=None):
-        e_factor_sum = 0
-        question_count = 0
+        e_factor_sum = 0.0
+        question_count = 0.0
 
         if assessment == None:
             for question in self.questions:
-                e_factor_sum += question.get_latest_attempt(user).e_factor
-                question_count += 1
+                if question.get_latest_attempt(user) == None:
+                    pass
+                else:
+                    e_factor_sum += question.get_latest_attempt(user).e_factor
+                    question_count += 1
         else:
             lo_questions = assessment.questions.filter(Question.objective_id == self.id)
             for question in lo_questions:
-                print(lo_questions)
-                print(type(question.get_latest_attempt(user)))
-                e_factor_sum += question.get_latest_attempt(user).e_factor
-                question_count += 1
+                if question.get_latest_attempt(user) == None:
+                    pass
+                else:
+                    e_factor_sum += question.get_latest_attempt(user).e_factor
+                    
+                    question_count += 1
 
         if question_count == 0:
             return 0
         else:
             average = e_factor_sum/question_count
-            return average
+            return float(f"{average:.3f}")
 
 
 class LearningObjectiveSchema(Schema):
