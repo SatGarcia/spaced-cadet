@@ -260,6 +260,15 @@ class Question(SearchableMixin, db.Model):
     def get_answer(self):
         raise NotImplementedError("Generic questions have no answer.")
 
+    def get_latest_attempt(self, user):
+        """ Returns the most recent attempt on a question by a particular user,
+            if there is no attempt, method returns None """
+
+        all_attempts = (self.attempts.filter(db.and_(Attempt.user_id == user.id))\
+                                        .order_by(Attempt.time.desc()))
+       
+        return all_attempts.first()
+
 
 class QuestionSchema(Schema):
     class Meta:
@@ -700,7 +709,7 @@ class Course(SearchableMixin, db.Model):
 
     def previous_meetings(self):
         """Returns all ClassMeetings that occured before today"""
-        return self.meetings.filter(ClassMeeting.date < date.today())
+        return self.meetings.filter(ClassMeeting.date < date.today() )
 
 
 class CourseSchema(Schema):
@@ -1120,6 +1129,51 @@ class Assessment(db.Model):
                                      .subquery()
 
         return self.questions.join(poor_attempts)
+    
+    def breakdown_today(self, user):
+        """ Returns a breakdown of all assessment questions whose latest attempt was 
+        today and not repeated.  
+
+        Will return these questions as a tuple of queries: ([correct: easy to recall],
+                                                           [correct: medium],
+                                                           [correct: difficult],
+                                                           [incorrect]) 
+        """
+
+        midnight_today = datetime.combine(date.today(), datetime.min.time())
+
+        incorrect_id = []
+        correct_easy_id = []
+        correct_mid_id = []
+        correct_hard_id = []
+
+        for q in self.questions:
+            attempts_today = q.attempts.filter(db.and_(Attempt.user_id == user.id,
+
+                                                Attempt.time >= midnight_today,            
+                                                     Attempt.time < midnight_today +timedelta(days=1) ))\
+                                            .order_by(Attempt.time)
+
+            if (attempts_today.count() > 0) and (attempts_today.first().correct == True):
+
+                if attempts_today.first().quality == 5:
+                    correct_easy_id.append(q.id)
+                elif attempts_today.first().quality == 4:
+                    correct_mid_id.append(q.id)
+                elif attempts_today.first().quality == 3:
+                    correct_hard_id.append(q.id)
+                    
+            elif (attempts_today.count() > 1) and (attempts_today.first().correct == False):
+                incorrect_id.append(q.id)
+                         
+        
+        incorrect_questions = self.questions.filter(Question.id.in_(incorrect_id))
+        correct_easy = self.questions.filter(Question.id.in_(correct_easy_id))
+        correct_mid = self.questions.filter(Question.id.in_(correct_mid_id))
+        correct_hard = self.questions.filter(Question.id.in_(correct_hard_id))
+
+        return (incorrect_questions, correct_easy, correct_mid, correct_hard)
+
 
     def objectives_to_review(self, user):
         """ Returns the 3 learning objectives with the lowest average e_factors in the form of: 
