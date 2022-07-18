@@ -288,55 +288,59 @@ class AssessmentModelCase(unittest.TestCase):
 
         self.assertCountEqual(self.a.repeat_questions(self.u1).all(), [q3, q4, q5])
         
-    def test_incorrect_questions_today(self):
+    def test_breakdown_today(self):
 
-        # adds questions and learning objectives to this session 
-        lo1 = Objective(id = 1, description = "lo1")
-        lo2 = Objective(id = 2, description = "lo2")
+        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1")
+        q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2")
+        q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3")
+        q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4")
+        q5 = ShortAnswerQuestion(prompt="Question 5", answer="Answer 5")
+        q6 = ShortAnswerQuestion(prompt="Question 6", answer="Answer 6")
 
-        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1", objective_id = lo1.id)
-        q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2", objective_id = lo1.id)
-        q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3", objective_id = lo1.id)
-        q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4", objective_id = lo1.id)
-        q5 = ShortAnswerQuestion(prompt="Question 5", answer="Answer 5", objective_id = lo2.id)
-
-
-        db.session.add_all([lo1, lo2])
-        db.session.commit()
         self.a.questions.append(q1)
         self.a.questions.append(q2)
         self.a.questions.append(q3)
         self.a.questions.append(q4)
         self.a.questions.append(q5)
+        self.a.questions.append(q6)
 
-        # if no questions are attempted yet, none are incorrect
-        self.assertCountEqual(self.a.incorrect_questions_today(self.u1, lo1).all(), [])
+        db.session.commit()
+
+        # if no questions are attempted yet, there is nothing to breakdown
+        (incorrect, easy, med, hard) = self.a.breakdown_today(self.u1)
+        test1 = (incorrect.all(), easy.all(), med.all(), hard.all())
+        self.assertTupleEqual(test1, ([], [], [], []))
 
 
-        #ADDING ATTEMPTS
-        # last attempt: yesterday, correct: False
-        q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=q2, time = datetime.now()-timedelta(days=1), correct=False)
+        # last attempt: yesterday
+        q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=q2, time = datetime.now()-timedelta(days=1), correct=False, quality = 1)
 
         # checking with multiple attempts
-        # first_attempt today: true
-        q3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=q3, time = datetime.now(), correct=True)
-        q3_attempt2 = TextAttempt(response="Attempt3b", user=self.u1, question=q3, time = datetime.now(), correct=False) 
-                                                                           
-        # first_attempt today: false
-        q4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=q4, time = datetime.now(), correct = False)
-        q4_attempt2 = TextAttempt(response="Attempt4b", user=self.u1, question=q4, time = datetime.now() + timedelta(minutes=1), correct=True)
+        # first attempt today: true, quality=3
+        q3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=q3, time = datetime.now(), correct=True, quality = 3)
+        q3_attempt2 = TextAttempt(response="Attempt3b", user=self.u1, question=q3, time = datetime.now(), correct=False, quality = 1) 
+                                                                        
+        # first attempt today: false, quality=1
+        q4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=q4, time = datetime.now(), correct = False, quality = 1)
+        q4_attempt2 = TextAttempt(response="Attempt4b", user=self.u1, question=q4, time = datetime.now(), correct=True, quality = 3)
 
-        # checking with another lo                                                                    
-        q5_attempt = TextAttempt(response="Attempt5", user=self.u1, question=q5, time = datetime.now(), correct=False)                                                                            
+        # true, quality=4                                                                
+        q5_attempt = TextAttempt(response="Attempt5", user=self.u1, question=q5, time = datetime.now(), correct=True, quality = 4)
+
+        # true, quality=5                                                                
+        q6_attempt = TextAttempt(response="Attempt6", user=self.u1, question=q6, time = datetime.now(), correct=True, quality = 5)                                                                  
 
         # single attempt for u2, with next attempt of today to make sure method differentiates between users
         q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=q1, time = datetime.now(), correct=False)
 
-        db.session.add_all([q2_attempt, q3_attempt, q3_attempt2, q4_attempt, q4_attempt2, q5_attempt, q1_attempt])
+        db.session.add_all([q2_attempt, q3_attempt, q3_attempt2, q4_attempt, q4_attempt2, q5_attempt, q1_attempt, q6_attempt])
         db.session.commit()
         
-        self.assertCountEqual(self.a.incorrect_questions_today(self.u1, lo1).all(), [q4])
-
+        # if no questions are attempted yet, there is nothing to breakdown
+        (incorrect, easy, med, hard) = self.a.breakdown_today(self.u1)
+        test2 = (incorrect.all(), easy.all(), med.all(), hard.all())
+        self.assertTupleEqual(test2, ([q4], [q6], [q5], [q3]))
+        
 
 
 if __name__ == '__main__':

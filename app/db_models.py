@@ -1130,28 +1130,50 @@ class Assessment(db.Model):
 
         return self.questions.join(poor_attempts)
     
-    def incorrect_questions_today(self, user, learning_objective):
-        """ Returns all assessment questions whose most recent attempt was today,
-        not repeated, and incorrect within a particular learning objective."""
+    def breakdown_today(self, user):
+        """ Returns a breakdown of all assessment questions whose latest attempt was 
+        today and not repeated.  
 
-        lo_questions = self.questions.filter(Question.objective_id == learning_objective.id)
+        Will return these questions as a tuple of queries: ([correct: easy to recall],
+                                                           [correct: medium],
+                                                           [correct: difficult],
+                                                           [incorrect]) 
+        """
+
         midnight_today = datetime.combine(date.today(), datetime.min.time())
 
-        incorrect_questions_today_id = []
+        incorrect_id = []
+        correct_easy_id = []
+        correct_mid_id = []
+        correct_hard_id = []
 
-        for loq in lo_questions:
-            attempts_today = loq.attempts.filter(db.and_(Attempt.user_id == user.id,
+        for q in self.questions:
+            attempts_today = q.attempts.filter(db.and_(Attempt.user_id == user.id,
+
                                                 Attempt.time >= midnight_today,            
                                                      Attempt.time < midnight_today +timedelta(days=1) ))\
                                             .order_by(Attempt.time)
 
-            if (attempts_today.count() > 1) and (attempts_today.first().correct == False):
-                incorrect_questions_today_id.append(loq.id) 
-        
-        incorrect_questions_today_query = lo_questions.filter(Question.id.in_(incorrect_questions_today_id))
+            if (attempts_today.count() > 0) and (attempts_today.first().correct == True):
 
-        return incorrect_questions_today_query
-    
+                if attempts_today.first().quality == 5:
+                    correct_easy_id.append(q.id)
+                elif attempts_today.first().quality == 4:
+                    correct_mid_id.append(q.id)
+                elif attempts_today.first().quality == 3:
+                    correct_hard_id.append(q.id)
+                    
+            elif (attempts_today.count() > 1) and (attempts_today.first().correct == False):
+                incorrect_id.append(q.id)
+                         
+        
+        incorrect_questions = self.questions.filter(Question.id.in_(incorrect_id))
+        correct_easy = self.questions.filter(Question.id.in_(correct_easy_id))
+        correct_mid = self.questions.filter(Question.id.in_(correct_mid_id))
+        correct_hard = self.questions.filter(Question.id.in_(correct_hard_id))
+
+        return (incorrect_questions, correct_easy, correct_mid, correct_hard)
+
 
 
 class AssessmentSchema(Schema):
