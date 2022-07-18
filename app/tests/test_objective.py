@@ -49,7 +49,7 @@ class AssessmentModelCase(unittest.TestCase):
 
 
         # before any attempts, there shouldn't be an average
-        self.assertEqual(self.lo1.get_e_factor_average(self.u1,self.a), 0)
+        self.assertEqual(self.lo1.get_e_factor_average(self.u1,self.a), -1)
 
         q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
                                  next_attempt=date.today(),e_factor = 3.5)
@@ -70,12 +70,42 @@ class AssessmentModelCase(unittest.TestCase):
         q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=self.q1,
                                  next_attempt=date.today(), e_factor = 4)
 
-        print("made it")
 
         db.session.add_all([q2_attempt, q3_attempt, q4_attempt, q4_attempt2, q1_attempt, q5_attempt])
 
-        print("made it2")
 
-        self.assertEqual(self.lo1.get_e_factor_average(self.u1,self.a), 2.3)
+        self.assertEqual(self.lo1.get_e_factor_average(self.u1,self.a), 2.300)
+
+    def test_get_e_factor_average_without_assessment(self):
+        db.session.add_all([ self.u1, self.u2,self.lo1,self.lo2,self.q1,self.q2,self.q3,self.q4,self.q5])
+        db.session.commit()
+
+        # before any attempts, there shouldn't be an average
+        self.assertEqual(self.lo1.get_e_factor_average(self.u1), -1)
+
+        q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
+                                 next_attempt=date.today(),e_factor = 3.5)
+        q3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=self.q3,
+                                 next_attempt=date.today(), e_factor = 1.4)
+
+        # multiple attempts for the same question, only the last one should be included in the average
+        q4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=self.q4,
+                                 next_attempt=date.today(), e_factor = 1)
+        q4_attempt2 = TextAttempt(response="Attempt4b", user=self.u1, question=self.q4,
+                                 next_attempt=date.today(), e_factor = 3)
+
+        # ensure differentiation between lo1 and lo2
+        q5_attempt = TextAttempt(response="Attempt5", user=self.u1, question=self.q5,
+                                 next_attempt=date.today(), e_factor = 4)
+
+        # lo1: single attempt for u2, to make sure method differentiates between users
+        q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=self.q1,
+                                 next_attempt=date.today(), e_factor = 4)
+
+
+        db.session.add_all([q2_attempt, q3_attempt, q4_attempt, q4_attempt2, q1_attempt, q5_attempt])
+
+
+        self.assertEqual(self.lo1.get_e_factor_average(self.u1), 2.633)
 
         

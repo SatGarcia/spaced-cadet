@@ -874,6 +874,7 @@ class Objective(SearchableMixin, db.Model):
         return f"<Objective {self.id}: {self.description}>"
 
     def get_e_factor_average(self,user,assessment=None):
+        """ Returns the average e_factor given an objective, assessment, and user... will return -1 if no questions in objective"""
         e_factor_sum = 0.0
         question_count = 0.0
 
@@ -895,7 +896,7 @@ class Objective(SearchableMixin, db.Model):
                     question_count += 1
 
         if question_count == 0:
-            return 0
+            return -1
         else:
             average = e_factor_sum/question_count
             return float(f"{average:.3f}")
@@ -1206,33 +1207,19 @@ class Assessment(db.Model):
         """ Returns the 3 learning objectives with the lowest average e_factors in the form of: 
         a list of 3 tuples that contain (learning objective, e_factor average)"""
 
+        lo_review = [] # (lo,e_factor_average)
         for lo in self.objectives: 
-
-            lo_questions = self.questions.filter(Question.objective_id == lo.id)
-
-            lo_review = [] # (lo,e_factor_average)
-            e_factor_sum = 0
-            question_count = 0
-
-            for question in lo_questions:
-                e_factor_sum += question.get_latest_attempt(user).e_factor #marissa is writing this method
-                question_count += 1
-
-            average = e_factor_sum/question_count
-            if average < 2.5:
+            average = lo.get_e_factor_average(user, self)
+            if average < 2.5 and average > 0:
                 lo_review.append((lo,average))
-
 
         lo_review_sorted = sorted(lo_review, key=lambda i: i[-1]) # sorts elements by last item(e_factor_average) in increasing order
         
         if len(lo_review_sorted) < 3: 
             return lo_review_sorted
         else: 
-            return lo_review_sorted[0,3]
+            return lo_review_sorted[0:3]
                  
-
-
-
 
 class AssessmentSchema(Schema):
     id = fields.Int(dump_only=True)
