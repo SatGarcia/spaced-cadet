@@ -260,6 +260,15 @@ class Question(SearchableMixin, db.Model):
     def get_answer(self):
         raise NotImplementedError("Generic questions have no answer.")
 
+    def get_latest_attempt(self, user):
+        """ Returns the most recent attempt on a question by a particular user,
+            if there is no attempt, method returns None """
+
+        all_attempts = (self.attempts.filter(db.and_(Attempt.user_id == user.id))\
+                                        .order_by(Attempt.time.desc()))
+       
+        return all_attempts.first()
+
 
 class QuestionSchema(Schema):
     class Meta:
@@ -700,7 +709,7 @@ class Course(SearchableMixin, db.Model):
 
     def previous_meetings(self):
         """Returns all ClassMeetings that occured before today"""
-        return self.meetings.filter(ClassMeeting.date < date.today())
+        return self.meetings.filter(ClassMeeting.date < date.today() )
 
 
 class CourseSchema(Schema):
@@ -1140,6 +1149,7 @@ class Assessment(db.Model):
 
         for q in self.questions:
             attempts_today = q.attempts.filter(db.and_(Attempt.user_id == user.id,
+
                                                 Attempt.time >= midnight_today,            
                                                      Attempt.time < midnight_today +timedelta(days=1) ))\
                                             .order_by(Attempt.time)
