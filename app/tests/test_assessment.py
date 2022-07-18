@@ -421,7 +421,7 @@ class AssessmentModelCase(unittest.TestCase):
         db.session.add_all([q2_attempt, q3_attempt, q4_attempt, 
                     q5_attempt,  q6_attempt, q7_attempt, q8_attempt, q8_attempt2, q1_attempt])
 
-        self.assertCountEqual(a.objectives_to_review(u1).all(), [(lo2,1.5),(lo4,2)])
+        self.assertEqual(a.objectives_to_review(u1).all(), [(lo2,1.5),(lo4,2)])
 
         #add more tests for where more than three objective have an average e_factor < 2.5
 
