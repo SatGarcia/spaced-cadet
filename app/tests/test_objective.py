@@ -49,7 +49,7 @@ class AssessmentModelCase(unittest.TestCase):
 
 
         # before any attempts, there shouldn't be an average
-        self.assertEqual(self.a.get_e_factor_average(self.u1,self.lo1,self.a).all(), 0)
+        self.assertEqual(self.lo1.get_e_factor_average(self.u1,self.a), 0)
 
         q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
                                  next_attempt=date.today(),e_factor = 3.5)
@@ -68,10 +68,14 @@ class AssessmentModelCase(unittest.TestCase):
 
         # lo1: single attempt for u2, to make sure method differentiates between users
         q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=self.q1,
-                                 next_attempt=date.today())
+                                 next_attempt=date.today(), e_factor = 4)
+
+        print("made it")
 
         db.session.add_all([q2_attempt, q3_attempt, q4_attempt, q4_attempt2, q1_attempt, q5_attempt])
 
-        self.assertEqual(self.a.get_e_factor_average(self.u1,self.lo1,self.a).all(), 2.3)
+        print("made it2")
+
+        self.assertEqual(self.lo1.get_e_factor_average(self.u1,self.a), 2.3)
 
         
