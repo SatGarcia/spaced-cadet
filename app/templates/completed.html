@@ -19,14 +19,13 @@
 
             <div class="col">
                 <br>
-                Objectives to Work On:
-                {% for lo in topics_to_review %}
-                    {% set learning_objective = lo[0] %}
-                    <div class="col-md-auto my-auto">
-                        <h4><i class="bi bi-star-fill" style="color: gold"></i></h4>
-                    </div>
-                    <div class="col-md-auto my-auto"> {{learning_objective}}: </div>
+                <h4 class="text-center">Objectives to Work On</h4> 
                 
+                {% for lo in topics_to_review %}
+                    {% set learning_objective = lo %}
+                    <h6 class="text-center" ><i class="bi bi-star-fill"  style="color: black">   {{learning_objective.description}}</i></h6>
+                {% endfor %}  
+                </br> 
             </div>
 
         </div>
