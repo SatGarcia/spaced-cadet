@@ -410,7 +410,8 @@ def test(course_name, mission_id):
             return render_template("completed.html",
                                    page_title="Cadet: Complete",
                                    course_name=course_name,
-                                   mission = mission)
+                                   mission = mission,
+                                   topics_to_review=mission.objectives_to_review(current_user))
         else:
             form = get_form(question, False)
 
