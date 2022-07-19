@@ -260,6 +260,15 @@ class Question(SearchableMixin, db.Model):
     def get_answer(self):
         raise NotImplementedError("Generic questions have no answer.")
 
+    def get_latest_attempt(self, user):
+        """ Returns the most recent attempt on a question by a particular user,
+            if there is no attempt, method returns None """
+
+        all_attempts = (self.attempts.filter(db.and_(Attempt.user_id == user.id))\
+                                        .order_by(Attempt.time.desc()))
+       
+        return all_attempts.first()
+
 
 class QuestionSchema(Schema):
     class Meta:
@@ -700,7 +709,7 @@ class Course(SearchableMixin, db.Model):
 
     def previous_meetings(self):
         """Returns all ClassMeetings that occured before today"""
-        return self.meetings.filter(ClassMeeting.date < date.today())
+        return self.meetings.filter(ClassMeeting.date < date.today() )
 
 
 class CourseSchema(Schema):
@@ -863,6 +872,27 @@ class Objective(SearchableMixin, db.Model):
 
     def __repr__(self):
         return f"<Objective {self.id}: {self.description}>"
+
+    def get_e_factor_average(self,user,assessment=None):
+        """ Returns the average e_factor given an objective, assessment, and user... will return 0 if no questions in objective"""
+        e_factor_sum = 0.0
+        question_count = 0
+
+        if assessment == None:
+            questions = self.questions
+        else:
+            questions = assessment.questions.filter(Question.objective_id == self.id)
+
+        for question in questions:
+            if question.get_latest_attempt(user) != None:
+                e_factor_sum += question.get_latest_attempt(user).e_factor
+                question_count += 1
+               
+        if question_count == 0:
+            return 0
+        else:
+            average = e_factor_sum/question_count
+            return float(f"{average:.3f}")
 
 
 class LearningObjectiveSchema(Schema):
@@ -1120,7 +1150,69 @@ class Assessment(db.Model):
                                      .subquery()
 
         return self.questions.join(poor_attempts)
+    
+    def breakdown_today(self, user):
+        """ Returns a breakdown of all assessment questions whose latest attempt was 
+        today and not repeated.  
 
+        Will return these questions as a tuple of queries: ([correct: easy to recall],
+                                                           [correct: medium],
+                                                           [correct: difficult],
+                                                           [incorrect]) 
+        """
+
+        midnight_today = datetime.combine(date.today(), datetime.min.time())
+
+        incorrect_id = []
+        correct_easy_id = []
+        correct_mid_id = []
+        correct_hard_id = []
+
+        for q in self.questions:
+            attempts_today = q.attempts.filter(db.and_(Attempt.user_id == user.id,
+
+                                                Attempt.time >= midnight_today,            
+                                                     Attempt.time < midnight_today +timedelta(days=1) ))\
+                                            .order_by(Attempt.time)
+
+            if (attempts_today.count() > 0) and (attempts_today.first().correct == True):
+
+                if attempts_today.first().quality == 5:
+                    correct_easy_id.append(q.id)
+                elif attempts_today.first().quality == 4:
+                    correct_mid_id.append(q.id)
+                elif attempts_today.first().quality == 3:
+                    correct_hard_id.append(q.id)
+                    
+            elif (attempts_today.count() > 1) and (attempts_today.first().correct == False):
+                incorrect_id.append(q.id)
+                         
+        
+        incorrect_questions = self.questions.filter(Question.id.in_(incorrect_id))
+        correct_easy = self.questions.filter(Question.id.in_(correct_easy_id))
+        correct_mid = self.questions.filter(Question.id.in_(correct_mid_id))
+        correct_hard = self.questions.filter(Question.id.in_(correct_hard_id))
+
+        return (incorrect_questions, correct_easy, correct_mid, correct_hard)
+
+
+    def objectives_to_review(self, user, max_num_objectives=3, average_threshold=2.5):
+        """ Returns the 3 learning objectives with the lowest average e_factors in the form of: 
+        a list of 3 tuples that contain (learning objective, e_factor average)"""
+
+        lo_review = [] # (lo,e_factor_average)
+        for lo in self.objectives: 
+            average = lo.get_e_factor_average(user, self)
+            if average < average_threshold and average > 0.1:
+                lo_review.append((lo,average))
+
+        lo_review_sorted = sorted(lo_review, key=lambda i: i[-1]) # sorts elements by last item(e_factor_average) in increasing order
+        
+        if len(lo_review_sorted) <= max_num_objectives: 
+            return lo_review_sorted
+        else: 
+            return lo_review_sorted[0:max_num_objectives]
+                 
 
 class AssessmentSchema(Schema):
     id = fields.Int(dump_only=True)
