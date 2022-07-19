@@ -19,9 +19,9 @@
 
             <div class="col">
                 <br>
-                blah blah blahJLASDKFNALSDKJFLASDKJFLASDKFLSKDMCL;SKD
-                
-                {% set total = mission.questions.filter_by(objective_id = lo.id).count() %}
+                Objectives to Work On:
+                {% for lo in topics_to_review %}
+                    {% set learning_objective = lo %}
                 
             </div>
 
