@@ -340,98 +340,98 @@ class AssessmentModelCase(unittest.TestCase):
         (incorrect, easy, med, hard) = self.a.breakdown_today(self.u1)
         test2 = (incorrect.all(), easy.all(), med.all(), hard.all())
         self.assertTupleEqual(test2, ([q4], [q6], [q5], [q3]))
-        
-    def test_objectives_to_review_under_three(self):
-        lo1 = Objective(description="Learning Objective 1")
-        lo2 = Objective(description="Learning Objective 2")
-        lo3 = Objective(description="Learning Objective 3")
-        lo4 = Objective(description="Learning Objective 4")
 
-        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1", objective = lo1)
-        q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2", objective = lo2)
-        q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3", objective = lo3)
-        q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4", objective = lo4)
+    def setup_objectives(self):
+        self.lo1 = Objective(description="Learning Objective 1")
+        self.lo2 = Objective(description="Learning Objective 2")
+        self.lo3 = Objective(description="Learning Objective 3")
+        self.lo4 = Objective(description="Learning Objective 4")
+
+        self.q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1", objective = self.lo1)
+        self.q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2", objective = self.lo2)
+        self.q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3", objective = self.lo3)
+        self.q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4", objective = self.lo4)
 
         db.session.add(self.a)
         db.session.commit()
-        self.a.objectives.append(lo1)
-        self.a.objectives.append(lo2)
-        self.a.objectives.append(lo3)
-        self.a.objectives.append(lo4)
+        self.a.objectives.append(self.lo1)
+        self.a.objectives.append(self.lo2)
+        self.a.objectives.append(self.lo3)
+        self.a.objectives.append(self.lo4)
 
-        self.a.questions.append(q1)
-        self.a.questions.append(q2)
-        self.a.questions.append(q3)
-        self.a.questions.append(q4)
+        self.a.questions.append(self.q1)
+        self.a.questions.append(self.q2)
+        self.a.questions.append(self.q3)
+        self.a.questions.append(self.q4)
 
         db.session.add_all([self.u1, self.u2])
         db.session.commit()
+
+    def test_objectives_to_review_under_three(self):
+        self.setup_objectives()
 
         # before any attempts, there shouldn't be any objectives to review
         self.assertEqual(self.a.objectives_to_review(self.u1), [])
 
         # lo2: attempt where average e_factor is above 2.5, shouldn't be returned
-        q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=q2,
+        q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
                                  next_attempt=date.today(),e_factor = 3)
 
         # lo3: attempt where average e_factor is below 2.5, will be returned
-        q3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=q3,
+        q3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=self.q3,
                                  next_attempt=date.today(), e_factor = 1.4)
 
         # lo4: attempt where average e_factor is same as 2.5, shouldn't be returned
-        q4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=q4,
+        q4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=self.q4,
                                  next_attempt=date.today(), e_factor = 2.5)
 
         # lo1: single attempt for u2, to make sure method differentiates between users
-        q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=q1,
+        q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=self.q1,
                                  next_attempt=date.today()+timedelta(days=1))
 
         db.session.add_all([q2_attempt, q3_attempt, q4_attempt, q1_attempt])
 
-        self.assertEqual(self.a.objectives_to_review(self.u1), [(lo3,1.4)])
+        self.assertEqual(self.a.objectives_to_review(self.u1), [(self.lo3,1.4)])
 
     def test_objectives_to_review_over_three(self):
-        lo1 = Objective(description="Learning Objective 1")
-        lo2 = Objective(description="Learning Objective 2")
-        lo3 = Objective(description="Learning Objective 3")
-        lo4 = Objective(description="Learning Objective 4")
-
-        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1", objective = lo1)
-        q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2", objective = lo2)
-        q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3", objective = lo3)
-        q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4", objective = lo4)
-
-        db.session.add(self.a)
-        db.session.commit()
-        self.a.objectives.append(lo1)
-        self.a.objectives.append(lo2)
-        self.a.objectives.append(lo3)
-        self.a.objectives.append(lo4)
-
-        self.a.questions.append(q1)
-        self.a.questions.append(q2)
-        self.a.questions.append(q3)
-        self.a.questions.append(q4)
-
-        db.session.add_all([self.u1, self.u2])
-        db.session.commit()
+        self.setup_objectives()
 
         #add more tests for where more than three objective have an average e_factor < 2.5
-        lo1_attempt = TextAttempt(response="Attempt1", user=self.u1, question=q1,
+        lo1_attempt = TextAttempt(response="Attempt1", user=self.u1, question=self.q1,
                                  next_attempt=date.today()+timedelta(days=1),e_factor=2)
 
-        lo2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=q2,
+        lo2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
                                 next_attempt=date.today()+timedelta(days=1),e_factor=1.5)
 
-        lo3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=q3,
+        lo3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=self.q3,
                                 next_attempt=date.today()+timedelta(days=1),e_factor=1.3)
 
-        lo4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=q4,
+        lo4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=self.q4,
                                 next_attempt=date.today()+timedelta(days=1),e_factor=1.7)
 
         db.session.add_all([lo1_attempt,lo2_attempt,lo3_attempt,lo4_attempt])
 
-        self.assertEqual(self.a.objectives_to_review(self.u1), [(lo3,1.3),(lo2,1.5),(lo4,1.7)])
+        self.assertEqual(self.a.objectives_to_review(self.u1), [(self.lo3,1.3),(self.lo2,1.5),(self.lo4,1.7)])
+
+    def test_objectives_to_review_default_parameters(self):
+        self.setup_objectives()
+
+        lo1_attempt = TextAttempt(response="Attempt1", user=self.u1, question=self.q1,
+                                 next_attempt=date.today()+timedelta(days=1),e_factor=3.5)
+
+        lo2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
+                                next_attempt=date.today()+timedelta(days=1),e_factor=1.5)
+
+        lo3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=self.q3,
+                                next_attempt=date.today()+timedelta(days=1),e_factor=1.3)
+
+        lo4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=self.q4,
+                                next_attempt=date.today()+timedelta(days=1),e_factor=3)
+
+        db.session.add_all([lo1_attempt,lo2_attempt,lo3_attempt,lo4_attempt])
+
+        self.assertEqual(self.a.objectives_to_review(self.u1,2), [(self.lo3,1.3),(self.lo2,1.5)])
+        self.assertEqual(self.a.objectives_to_review(self.u1,4,4), [(self.lo3,1.3),(self.lo2,1.5),(self.lo4,3),(self.lo1,3.5)])
 
 
 if __name__ == '__main__':

@@ -29,15 +29,15 @@ class AssessmentModelCase(unittest.TestCase):
         #single question for lo2 to ensure differentiation
         self.q5 = ShortAnswerQuestion(prompt="Question 5", answer="Answer 5",objective = self.lo2)
 
+        db.session.add_all([self.a, self.u1, self.u2, self.lo1, self.lo2, self.q1, self.q2, self.q3, self.q4, self.q5])
+        db.session.commit()
+
     def tearDown(self):
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
 
     def test_get_e_factor_average_with_assessment(self):
-        db.session.add_all([self.a, self.u1, self.u2])
-        db.session.commit()
-
         self.a.objectives.append(self.lo1)
         self.a.objectives.append(self.lo2)
 
@@ -47,9 +47,8 @@ class AssessmentModelCase(unittest.TestCase):
         self.a.questions.append(self.q4)
         self.a.questions.append(self.q5)
 
-
         # before any attempts, there shouldn't be an average
-        self.assertEqual(self.lo1.get_e_factor_average(self.u1,self.a), -1)
+        self.assertEqual(self.lo1.get_e_factor_average(self.u1,self.a), 0)
 
         q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
                                  next_attempt=date.today(),e_factor = 3.5)
@@ -77,11 +76,8 @@ class AssessmentModelCase(unittest.TestCase):
         self.assertEqual(self.lo1.get_e_factor_average(self.u1,self.a), 2.300)
 
     def test_get_e_factor_average_without_assessment(self):
-        db.session.add_all([ self.u1, self.u2,self.lo1,self.lo2,self.q1,self.q2,self.q3,self.q4,self.q5])
-        db.session.commit()
-
         # before any attempts, there shouldn't be an average
-        self.assertEqual(self.lo1.get_e_factor_average(self.u1), -1)
+        self.assertEqual(self.lo1.get_e_factor_average(self.u1), 0)
 
         q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
                                  next_attempt=date.today(),e_factor = 3.5)
