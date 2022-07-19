@@ -10,5 +10,39 @@
         questions or
         <a href="{{ url_for('user_views.missions_overview', course_name=course_name) }}">check
             for other missions to train for</a>.
+
+        <div class="row">
+            <div class="col">
+                <div id="test" style="width:600px;height:250px;"></div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+            </div>
+        </div>
+
     </div>
+
+    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+    <script>
+        var data = [{
+            type: "pie",
+            values: [2, 3, 4, 4],
+            labels: ["Wages", "Operating expenses", "Cost of sales", "Insurance"],
+            textinfo: "label+percent",
+            textposition: "outside",
+            automargin: true
+        }]
+        
+        var layout = {
+            height: 400,
+            width: 400,
+            margin: {"t": 0, "b": 0, "l": 0, "r": 0},
+            showlegend: false
+            }
+        
+        Plotly.newPlot('test', data, layout)
+    </script>
+
 {% endblock %}
