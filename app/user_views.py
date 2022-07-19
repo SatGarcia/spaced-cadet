@@ -413,6 +413,7 @@ def test(course_name, mission_id):
                                    page_title="Cadet: Complete",
                                    course_name=course_name,
                                    mission = mission,
+                                   breakdown_today=mission.breakdown_today(current_user),
                                    topics_to_review=new_list_of_topics)
         else:
             form = get_form(question, False)
