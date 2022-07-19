@@ -873,6 +873,27 @@ class Objective(SearchableMixin, db.Model):
     def __repr__(self):
         return f"<Objective {self.id}: {self.description}>"
 
+    def get_e_factor_average(self,user,assessment=None):
+        """ Returns the average e_factor given an objective, assessment, and user... will return 0 if no questions in objective"""
+        e_factor_sum = 0.0
+        question_count = 0
+
+        if assessment == None:
+            questions = self.questions
+        else:
+            questions = assessment.questions.filter(Question.objective_id == self.id)
+
+        for question in questions:
+            if question.get_latest_attempt(user) != None:
+                e_factor_sum += question.get_latest_attempt(user).e_factor
+                question_count += 1
+               
+        if question_count == 0:
+            return 0
+        else:
+            average = e_factor_sum/question_count
+            return float(f"{average:.3f}")
+
 
 class LearningObjectiveSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -1175,6 +1196,23 @@ class Assessment(db.Model):
         return (incorrect_questions, correct_easy, correct_mid, correct_hard)
 
 
+    def objectives_to_review(self, user, max_num_objectives=3, average_threshold=2.5):
+        """ Returns the 3 learning objectives with the lowest average e_factors in the form of: 
+        a list of 3 tuples that contain (learning objective, e_factor average)"""
+
+        lo_review = [] # (lo,e_factor_average)
+        for lo in self.objectives: 
+            average = lo.get_e_factor_average(user, self)
+            if average < average_threshold and average > 0.1:
+                lo_review.append((lo,average))
+
+        lo_review_sorted = sorted(lo_review, key=lambda i: i[-1]) # sorts elements by last item(e_factor_average) in increasing order
+        
+        if len(lo_review_sorted) <= max_num_objectives: 
+            return lo_review_sorted
+        else: 
+            return lo_review_sorted[0:max_num_objectives]
+                 
 
 class AssessmentSchema(Schema):
     id = fields.Int(dump_only=True)
