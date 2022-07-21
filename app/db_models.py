@@ -905,10 +905,8 @@ class Objective(SearchableMixin, db.Model):
 
         for question in questions:
             latest_attempt = question.get_latest_attempt(user)
-            if latest_attempt != None:
-                if latest_attempt.e_factor < e_factor_threshold:
-                    if latest_attempt.next_attempt >= date.today():
-                        review_list.append(question)
+            if (latest_attempt != None) and (latest_attempt.e_factor < e_factor_threshold) and (latest_attempt.next_attempt >= date.today()):
+                review_list.append(question)
 
         return review_list
 
