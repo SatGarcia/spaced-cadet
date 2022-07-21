@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block body %}
-    <div class="container pt-3">
+    <div class="container pt-3" >
         <h2>
             <i class="bi-flag" style="color: mediumseagreen"></i>
             Congratulations!
@@ -11,23 +11,24 @@
         <a href="{{ url_for('user_views.missions_overview', course_name=course_name) }}">check
             for other missions to train for</a>.
 
-        <div class="row row-cols-2">
-            <div class="col">
-                <br>
+        <br>
+        <br>
+        <div class="row m-3">
+            <div class="col col-md-auto m-3">
                 {% set incorrect = breakdown_today[0].count() %}
                 {% set easy = breakdown_today[1].count() %}
                 {% set mid = breakdown_today[2].count() %}
                 {% set hard = breakdown_today[3].count() %}
-                <div id="test" style="width:600px;height:250px;"></div>
+                <h5 class="text-left">Today's Progress</h5>
+                <div id="test"></div>
             </div>
 
-            <div class="col">
-                <br>
-                <h4 class="text-center">Objectives to Work On</h4> 
+            <div class="col mx-auto border">
+                <h5 class="text-left m-3">Learning Objective Review Center</h5>
                 
                 {% for lo in topics_to_review %}
                     {% set learning_objective = lo %}
-                    <h6 class="text-left" ><i class="bi bi-star-fill"  style="color: black">   {{learning_objective.description}}</i></h6>
+                    <h6 class="text-left m-3" ><i class="bi bi-star-fill"  style="color: black">   {{learning_objective.description}}</i></h6>
                 {% endfor %}  
                 </br> 
             </div>
@@ -40,21 +41,25 @@
     <script>
         var data = [{
             type: "pie",
-            values: [{{incorrect}}, {{easy}}, {{mid}}, {{hard}}],
-            labels: ["Incorrect Questions", "Correct and Easy", "Correct and Medium Difficulty", "Correct and Difficult"],
-            //marker: {
-                //colors: ["rgb(215,25,28)","rgb(26,150,65)","rgb(166,217,106)","rgb(255,255,191)"]
-            //}
-            textinfo: "label+percent",
-            textposition: "outside",
-            automargin: true
+            values: [{{easy}}, {{mid}}, {{hard}}, {{incorrect}}],
+            labels: ["Easy", "Medium", "Difficult", "Incorrect"],
+            marker: {
+                colors: ["rgb(26,150,65)","rgb(166,217,106)","rgb(255,255,191)", "rgb(220,220,220)"]
+            },
+            //automargin: true,
+            hole: 0.6,
+            textinfo: 'none'
         }]
         
         var layout = {
-            height: 400,
-            width: 400,
+            height: 300,
+            width: 300,
             margin: {"t": 0, "b": 0, "l": 0, "r": 0},
-            showlegend: false
+            showlegend: true,
+            legend: {
+                x: 1,
+                y: 1}
+                        
             }
         
         Plotly.newPlot('test', data, layout)
