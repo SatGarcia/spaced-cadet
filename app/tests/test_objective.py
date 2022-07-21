@@ -122,7 +122,7 @@ class ObjectiveModelCase(unittest.TestCase):
 
         db.session.add(q2_attempt)
 
-        self.assertEqual(self.lo1.review_questions(self.u1, self.a), [self.q2])
+        self.assertEqual(self.lo1.review_questions(self.u1, self.a), [])
 
         # another attempt to ensure the e_factor will not be added if it is above the threshold
         q2_attempt2 = TextAttempt(response="Attempt2b", user=self.u1, question=self.q2,
@@ -163,12 +163,12 @@ class ObjectiveModelCase(unittest.TestCase):
 
         db.session.add(q2_attempt)
 
-        self.assertEqual(self.lo1.review_questions(self.u1), [self.q2])
+        self.assertEqual(self.lo1.review_questions(self.u1), [])
 
         # another attempt to ensure the e_factor will not be added if it is above the threshold
         q2_attempt2 = TextAttempt(response="Attempt2b", user=self.u1, question=self.q2,
                                 next_attempt=date.today()+timedelta(days=1),e_factor = 3.5)
-                                
+
         q3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=self.q3,
                                  next_attempt=date.today()+timedelta(days=1), e_factor = 1.4)
 
