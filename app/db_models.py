@@ -1155,10 +1155,10 @@ class Assessment(db.Model):
         """ Returns a breakdown of all assessment questions whose latest attempt was 
         today and not repeated.  
 
-        Will return these questions as a tuple of queries: ([correct: easy to recall],
+        Will return these questions as a tuple of queries: ([incorrect],
+                                                           [correct: easy to recall],
                                                            [correct: medium],
-                                                           [correct: difficult],
-                                                           [incorrect]) 
+                                                           [correct: difficult]) 
         """
 
         midnight_today = datetime.combine(date.today(), datetime.min.time())
