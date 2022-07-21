@@ -118,26 +118,33 @@ class ObjectiveModelCase(unittest.TestCase):
         self.assertEqual(self.lo1.review_questions(self.u1, self.a), [])
 
         q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
-                                 next_attempt=date.today(),e_factor = 3.5)
+                                 next_attempt=date.today(),e_factor = 2)
+
+        db.session.add(q2_attempt)
+
+        self.assertEqual(self.lo1.review_questions(self.u1, self.a), [self.q2])
+
+        q2_attempt2 = TextAttempt(response="Attempt2b", user=self.u1, question=self.q2,
+                                 next_attempt=date.today()+timedelta(days=1),e_factor = 3.5)
         q3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=self.q3,
-                                 next_attempt=date.today(), e_factor = 1.4)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 1.4)
 
         # multiple attempts for the same question, only the last one should be considered in the list
         q4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=self.q4,
-                                 next_attempt=date.today(), e_factor = 3)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 3)
         q4_attempt2 = TextAttempt(response="Attempt4b", user=self.u1, question=self.q4,
-                                 next_attempt=date.today()+timedelta(hours=1), e_factor = 2)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 2)
 
         # ensure differentiation between lo1 and lo2
         q5_attempt = TextAttempt(response="Attempt5", user=self.u1, question=self.q5,
-                                 next_attempt=date.today(), e_factor = 2)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 2)
 
         # lo1: single attempt for u2, to make sure method differentiates between users
         q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=self.q1,
-                                 next_attempt=date.today(), e_factor = 2)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 2)
 
 
-        db.session.add_all([q2_attempt, q3_attempt, q4_attempt, q4_attempt2, q1_attempt, q5_attempt])
+        db.session.add_all([q2_attempt2, q3_attempt, q4_attempt, q4_attempt2, q1_attempt, q5_attempt])
 
 
         self.assertEqual(self.lo1.review_questions(self.u1, self.a), [self.q3, self.q4])
@@ -150,26 +157,34 @@ class ObjectiveModelCase(unittest.TestCase):
         self.assertEqual(self.lo1.review_questions(self.u1), [])
 
         q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
-                                 next_attempt=date.today(),e_factor = 3.5)
+                                 next_attempt=date.today(),e_factor = 2)
+
+        db.session.add(q2_attempt)
+
+        self.assertEqual(self.lo1.review_questions(self.u1), [self.q2])
+
+
+        q2_attempt2 = TextAttempt(response="Attempt2b", user=self.u1, question=self.q2,
+                                next_attempt=date.today()+timedelta(days=1),e_factor = 3.5)
         q3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=self.q3,
-                                 next_attempt=date.today(), e_factor = 1.4)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 1.4)
 
         # multiple attempts for the same question, only the last one should be included in the average
         q4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=self.q4,
-                                 next_attempt=date.today(), e_factor = 3)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 3)
         q4_attempt2 = TextAttempt(response="Attempt4b", user=self.u1, question=self.q4,
-                                 next_attempt=date.today(), e_factor = 2)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 2)
 
         # ensure differentiation between lo1 and lo2
         q5_attempt = TextAttempt(response="Attempt5", user=self.u1, question=self.q5,
-                                 next_attempt=date.today(), e_factor = 4)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 4)
 
         # lo1: single attempt for u2, to make sure method differentiates between users
         q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=self.q1,
-                                 next_attempt=date.today(), e_factor = 4)
+                                 next_attempt=date.today()+timedelta(days=1), e_factor = 4)
 
 
-        db.session.add_all([q2_attempt, q3_attempt, q4_attempt, q4_attempt2, q1_attempt, q5_attempt])
+        db.session.add_all([q2_attempt2, q3_attempt, q4_attempt, q4_attempt2, q1_attempt, q5_attempt])
 
 
         self.assertEqual(self.lo1.review_questions(self.u1), [self.q3, self.q4])
