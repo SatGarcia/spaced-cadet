@@ -236,6 +236,25 @@ def review_answer(course_name, mission_id):
                             prompt=Markup(prompt_html),
                             response = Markup(response_html),
                             answer=Markup(answer_html))
+
+    multiple selection
+                correct_options = original_question.options.filter_by(correct=True).all()
+            answer_html = ''
+            for option in correct_options:
+                answer_html += markdown_to_html(option.text) + "\n"
+     
+            response_html = ''
+            for option in selected_answers:
+                response_html += markdown_to_html(option.text) + "\n"
+ 
+            return render_template("review_correct_answer.html",
+                                   page_title="Cadet Test: Review",
+                                   continue_url=url_for('.test',
+                                                        course_name=course_name,
+                                                        mission_id=mission_id),
+                                   prompt=Markup(prompt_html),
+                                   response = Markup(response_html),
+                                   answer=Markup(answer_html))
     '''
     return render_template("review_correct_answer.html",
                            page_title="Cadet Test: Review Correct Answer",
