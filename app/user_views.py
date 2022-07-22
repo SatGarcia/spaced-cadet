@@ -1,4 +1,3 @@
-from http.client import MULTIPLE_CHOICES
 from flask import (
     Blueprint, render_template, url_for, redirect, flash, request, Markup,
     abort
