@@ -220,6 +220,23 @@ def review_answer(course_name, mission_id):
     prompt_html = markdown_to_html(question.prompt)
     answer_html = question.get_answer()
 
+    '''
+    multiple choice
+    prompt_html = markdown_to_html(original_question.prompt)
+    response_html = markdown_to_html(attempt.response.text)
+
+    correct_option = original_question.options.filter_by(correct=True).first()
+    answer_html = markdown_to_html(correct_option.text)
+
+    return render_template("review_correct_answer.html",
+                            page_title="Cadet Test: Review",
+                            continue_url=url_for('.test',
+                                                course_name=course_name,
+                                                mission_id=mission_id),
+                            prompt=Markup(prompt_html),
+                            response = Markup(response_html),
+                            answer=Markup(answer_html))
+    '''
     return render_template("review_correct_answer.html",
                            page_title="Cadet Test: Review Correct Answer",
                            continue_url=url_for('.test',
