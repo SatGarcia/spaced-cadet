@@ -522,7 +522,6 @@ def test(course_name, mission_id):
                 return redirect(url_for('.review_answer',
                                         course_name=course_name,
                                         mission_id=mission_id,
-                                        selected_answer=user_response,
                                         attempt=attempt.id))
 
     return render_question(question, fresh_question, form, mission)
