@@ -12,20 +12,15 @@
             <p class="pt-3"><strong>Question:</strong>
                     <div class="px-3">{{ prompt }}</div></p>
 
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th scope="col">Your Answer</th>
-                        <th scope="col">Correct Answer</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>{{ response }}</td>
-                        <td>{{ answer }}</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="row border-bottom">
+                <div class="col"><strong>Your Answer</strong></div>
+                <div class="col"><strong>Correct Answer</strong></div>
+                <br>
+            </div>
+            <div class="row">
+                <div class="col">{{ response }}</div>
+                <div class="col">{{ answer }}</div>
+            </div>
             
 
             <p>
