@@ -223,48 +223,26 @@ def review_answer(course_name, mission_id):
 
     response_html = ""
 
-    if question.type == QuestionType.MULTIPLE_CHOICE:
-        response_html = markdown_to_html(attempt.response.text)
-    elif question.type == QuestionType.MULTIPLE_SELECTION:
-        for option in selected_answers:
+    selected_answer = attempt.response.strip()
+
+    if question.type == QuestionType.MULTIPLE_SELECTION:
+        for option in selected_answer:
             response_html += markdown_to_html(option.text) + "\n"
+    elif question.type == QuestionType.CODE_JUMBLE:
+        response_html = "<ul class=\"list-unstyled jumble\">"
+        user_response = ast.literal_eval(attempt.response)
+        for block in user_response:
+            jumble_block = JumbleBlock.query.filter(JumbleBlock.id == int(block[0]),
+                                                    JumbleBlock.question_id == int(question.id)).first()
+            language_str = "" if not question.language else question.language
+            code_str = f"```{language_str}\n{jumble_block.code}\n```\n"
+            block_html = markdown_to_html(code_str, code_linenums=False)
+            indent_amount = (block[1]* 20) + 15
+            response_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
+        response_html += "</ul>"
+    else: # question.type = multiple_choice or auto_check 
+        response_html = markdown_to_html(selected_answer)
 
-    '''
-
-    multiple selection
-                correct_options = original_question.options.filter_by(correct=True).all()
-            answer_html = ''
-            for option in correct_options:
-                answer_html += markdown_to_html(option.text) + "\n"
-     
-            response_html = ''
-            for option in selected_answers:
-                response_html += markdown_to_html(option.text) + "\n"
- 
-            return render_template("review_correct_answer.html",
-                                   page_title="Cadet Test: Review",
-                                   continue_url=url_for('.test',
-                                                        course_name=course_name,
-                                                        mission_id=mission_id),
-                                   prompt=Markup(prompt_html),
-                                   response = Markup(response_html),
-                                   answer=Markup(answer_html))
-
-    # show the user a page where they can view the correct answer
-            prompt_html = markdown_to_html(question.prompt)
-            answer_html = question.get_answer()
-
-            response_html = "<ul class=\"list-unstyled jumble\">"
-            for block in user_response:
-                jumble_block = JumbleBlock.query.filter(JumbleBlock.id == int(block[0]),
-                                                        JumbleBlock.question_id == int(question_id)).first()
-                language_str = "" if not question.language else question.language
-                code_str = f"```{language_str}\n{jumble_block.code}\n```\n"
-                block_html = markdown_to_html(code_str, code_linenums=False)
-                indent_amount = (block[1]* 20) + 15
-                response_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
-            response_html += "</ul>"
-    '''
     return render_template("review_correct_answer.html",
                            page_title="Cadet Test: Review Correct Answer",
                            continue_url=url_for('.test',
@@ -492,6 +470,7 @@ def test(course_name, mission_id):
                 return redirect(url_for('.review_answer',
                                         course_name=course_name,
                                         mission_id=mission_id,
+                                        selected_answer="",
                                         attempt=attempt.id))
 
             # if this is a self-graded question, send them to the review page
@@ -508,11 +487,12 @@ def test(course_name, mission_id):
             elif question.type == QuestionType.MULTIPLE_CHOICE:
                 attempt.correct = attempt.responses.filter_by(correct=True).count() == 1
                 #AnswerOption.query.filter_by(id=form.response.data).first().correct
+                user_response = attempt.responses
 
             elif question.type == QuestionType.MULTIPLE_SELECTION:
                 correct_answers = question.options.filter_by(correct=True).order_by(AnswerOption.id).all()
-                user_answers = attempt.responses.order_by(AnswerOption.id).all()
-                attempt.correct = user_answers == correct_answers
+                user_response = attempt.responses.order_by(AnswerOption.id).all()
+                attempt.correct = user_response == correct_answers
 
             elif question.type == QuestionType.CODE_JUMBLE:
                 try:
@@ -542,6 +522,7 @@ def test(course_name, mission_id):
                 return redirect(url_for('.review_answer',
                                         course_name=course_name,
                                         mission_id=mission_id,
+                                        selected_answer=user_response,
                                         attempt=attempt.id))
 
     return render_question(question, fresh_question, form, mission)
