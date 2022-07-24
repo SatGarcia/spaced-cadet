@@ -222,9 +222,8 @@ def review_answer(course_name, mission_id):
 
     response_html = ""
 
-    selected_answer = attempt.response.strip()
-
     if question.type == QuestionType.MULTIPLE_SELECTION:
+        selected_answer = attempt.responses.strip()
         for option in selected_answer:
             response_html += markdown_to_html(option.text) + "\n"
     elif question.type == QuestionType.CODE_JUMBLE:
@@ -239,7 +238,11 @@ def review_answer(course_name, mission_id):
             indent_amount = (block[1]* 20) + 15
             response_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
         response_html += "</ul>"
-    else: # question.type = multiple_choice or auto_check 
+    elif question.type == QuestionType.MULTIPLE_CHOICE:
+        selected_answer = attempt.responses.strip()
+        response_html = markdown_to_html(selected_answer)
+    else: #question.type = auto-check
+        selected_answer = attempt.response.strip()
         response_html = markdown_to_html(selected_answer)
 
     return render_template("review_correct_answer.html",
