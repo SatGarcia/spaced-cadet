@@ -223,8 +223,7 @@ def review_answer(course_name, mission_id):
     response_html = ""
 
     if question.type == QuestionType.MULTIPLE_SELECTION:
-        selected_answer = attempt.responses.strip()
-        for option in selected_answer:
+        for option in attempt.responses:
             response_html += markdown_to_html(option.text) + "\n"
     elif question.type == QuestionType.CODE_JUMBLE:
         response_html = "<ul class=\"list-unstyled jumble\">"
@@ -239,7 +238,7 @@ def review_answer(course_name, mission_id):
             response_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
         response_html += "</ul>"
     elif question.type == QuestionType.MULTIPLE_CHOICE:
-        selected_answer = attempt.responses.strip()
+        selected_answer = attempt.responses.first()
         response_html = markdown_to_html(selected_answer)
     else: #question.type = auto-check
         selected_answer = attempt.response.strip()
@@ -472,7 +471,7 @@ def test(course_name, mission_id):
                 return redirect(url_for('.review_answer',
                                         course_name=course_name,
                                         mission_id=mission_id,
-                                        selected_answer="",
+                                        selected_answer="No answer given",
                                         attempt=attempt.id))
 
             # if this is a self-graded question, send them to the review page
