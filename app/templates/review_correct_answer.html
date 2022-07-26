@@ -33,8 +33,12 @@
                    href="{{ continue_url }}">Continue Training...</a>
             </p>
             {% else %}
-
-
+                <div class="container">
+                    <div class ="row">
+                        <div class="col"><a class="btn" href="" role="button"><i class="bi bi-arrow-left-short"></i></a></div>
+                        <div class="col"><a class="btn" href="" role="button"><i class="bi bi-arrow-right-short"></i></a></div>
+                    </div>
+                </div>
             {% endif %}
     </div>
 {% endblock %}
