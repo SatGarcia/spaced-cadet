@@ -217,7 +217,7 @@ def review_questions(course_name, mission_id, lo_id, sequence_num, user):
                                                 mission_id=mission_id),
                            prompt=Markup(prompt_html),
                            answer=Markup(answer_html),
-                           review = True)
+                           review_answer = False)
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review')
@@ -274,8 +274,7 @@ def review_answer(course_name, mission_id):
                            prompt=Markup(prompt_html),
                            response = Markup(response_html),
                            answer=Markup(answer_html),
-                           review = False)
-
+                           review_answer = True)
 
 
 def create_new_text_attempt(question, user, response, previous_attempt):
