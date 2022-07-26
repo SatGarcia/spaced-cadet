@@ -12,11 +12,18 @@
             <p class="pt-3"><strong>Question:</strong>
                     <div class="px-3">{{ prompt }}</div></p>
 
-            <p><strong>Answer:</strong>
-                    <div class="px-3">{{ answer }}</div></p>
+            <div class="row border-bottom mb-2">
+                <div class="col"><strong>Your Answer</strong></div>
+                <div class="col"><strong>Correct Answer</strong></div>
+            </div>
+            <div class="row">
+                <div class="col">{{ response }}</div>
+                <div class="col">{{ answer }}</div>
+            </div>
+            
 
             <p>
-                <a class="btn btn-primary link-decoration-none"
+                <a class="btn btn-primary"
                    href="{{ continue_url }}">Continue Training...</a>
             </p>
     </div>
