@@ -471,7 +471,7 @@ def test(course_name, mission_id):
                 return redirect(url_for('.review_answer',
                                         course_name=course_name,
                                         mission_id=mission_id,
-                                        selected_answer="No answer given",
+                                        selected_answer=Markup("<i>No answer given</i>"),
                                         attempt=attempt.id))
 
             # if this is a self-graded question, send them to the review page
