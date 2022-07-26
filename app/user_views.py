@@ -199,11 +199,11 @@ def check_mission_inclusion(mission_id, course):
         
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/lo/<int:lo_id>/3?') #3?n=2
 @login_required
-def review_questions(course_name, mission_id, lo_id, sequence_num, user):
+def review_questions(course_name, mission_id, lo, sequence_num, user):
     course = check_course_authorization(course_name)
     mission = check_mission_inclusion(mission_id, course)
 
-    review_questions = review_questions(user.id, mission, 2.5) #remember to pass through the user in template
+    review_questions = lo.review_questions(user.id, mission, 2.5) #remember to pass through the user in template
 
     question = review_questions[sequence_num]
     prompt_html = markdown_to_html(question.prompt)
