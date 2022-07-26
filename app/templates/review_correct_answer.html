@@ -6,19 +6,25 @@
             <span class="px-2">Incorrect Answer</span>
         </h4>
         <div class="container">
+            {{% if not review %}}
             Failure is normal, cadet! You'll be tested on this question again
             tomorrow so review the answer below.
+            {{% endif %}}
 
             <p class="pt-3"><strong>Question:</strong>
                     <div class="px-3">{{ prompt }}</div></p>
 
             <div class="row border-bottom mb-2">
                 <div class="col"><strong>Correct Answer</strong></div>
+                {{% if not review %}}
                 <div class="col"><strong>Your Answer</strong></div>
+                {{% endif %}}
             </div>
             <div class="row">
                 <div class="col">{{ answer }}</div>
+                {{% if not review %}}
                 <div class="col">{{ response }}</div>
+                {{% endif %}}
             </div>
             
 
