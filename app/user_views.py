@@ -197,7 +197,7 @@ def check_mission_inclusion(mission_id, course):
     else:
         return mission
         
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/lo/<int:lo_id>/3?') #3?n=2
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/lo/3?') #3?n=2
 @login_required
 def review_questions(course_name, mission_id, lo, sequence_num):
     course = check_course_authorization(course_name)
