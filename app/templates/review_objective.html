@@ -1,42 +1,62 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
+        Reviewing Questions in Learning Objective: {{objective.description}}
+        <a href="#" data-bs-toggle="tooltip" data-bs-placement="bottom" data-html="true" 
+        title="Press the arrows below the question to cycle through the questions in this learning objective">
+        <i class="bi bi-info-circle"></i></a>
+        <br>
+    </br>
+        <a  href="#gamespandp" data-slide="prev" class="btn btn-outline-secondary btn-sm">Previous &#10094;</a>
+        <a  href="#gamespandp" data-slide="next" class="btn btn-outline-secondary btn-sm">&#10095; Next</a>
         <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
             <ol class="carousel-indicators">
                 {% for i in range(num_questions) %}
                     <li data-target="#carouselExampleIndicators" data-slide-to={{i}} class="active"></li>
                 {% endfor %}
             </ol>
-            <div class="carousel-inner">
-                {% for q in review_questions %}
-                    {% set question = q %}
+            
+            {% for i in range(num_questions) %}
+                <div class="carousel-inner"></div>
+                    {% set question = review_questions[i] %}
+                    {% set answer = review_answers[i] %}
                     <div class="carousel-item active">
                         <p class="pt-3"><strong>Question:</strong>
                             <div class="px-3">{{ question.prompt }}</div></p>
             
                         <div class="row border-bottom mb-2">
-                            <div class="col"><strong>Correct Answer</strong></div>
+                            <div class="col"><strong>Correct Answer:</strong></div>
                         </div>
                         <div class="row">
-                            <div class="col">{{ question.get_answer() }}</div>
+                            <div class="col">{{ answer }}</div>
                         </div>
                     </div>
-                {% endfor %}
-            </div>
+                </div>
+            {% endfor %}
+            
+            <br>
+            </br>
             <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
-              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-              <span class="sr-only">Previous</span>
+                <span><i class="fa fa-angle-left" aria-hidden="true"></i></span>
+                <span class="sr-only">Previous</span>
             </a>
             <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
-              <span class="carousel-control-next-icon" aria-hidden="true"></span>
-              <span class="sr-only">Next</span>
+                <span><i class="fa fa-angle-left" aria-hidden="true"></i></span>
+                <span class="sr-only">Next</span>
             </a>
-          </div>
 
-            
+            </div>
+            <br>
+            </br>
+
             <p>
-            <a class="btn btn-primary"
-                href="{{ continue_url }}">Continue Training...</a>
+                <div class="col">
+                <a class="btn btn-primary"
+                    href="{{ continue_url }}">Review Mission</a>
+                <a class="btn btn-primary"
+                    href="{{ url_for('user_views.missions_overview', course_name=course_name) }}">Main Dashboard</a></div>
             </p>
+
+        </p>
     </div>
 {% endblock %}
