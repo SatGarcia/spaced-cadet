@@ -197,28 +197,21 @@ def check_mission_inclusion(mission_id, course):
     else:
         return mission
         
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/objective/<int:objective_id>/3?') #3?n=2
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/objective/<int:objective_id>/3?')
 @login_required
-def review_questions(course_name, mission_id, objective_id, sequence_num):
+def review_questions(course_name, mission_id, objective_id):
     course = check_course_authorization(course_name)
     mission = check_mission_inclusion(mission_id, course)
     objective = mission.objectives.filter(Objective.id == objective_id).first()
 
     review_questions = objective.review_questions(current_user.id, mission, 2.5)
 
-    question = review_questions[sequence_num]
-    prompt_html = markdown_to_html(question.prompt)
-    answer_html = question.get_answer()
-
-
-    return render_template("review_correct_answer.html",
+    return render_template("review_questions.html",
                            page_title="Cadet Review Center: Review Questions",
                            continue_url=url_for('.test',
                                                 course_name=course_name,
                                                 mission_id=mission_id),
-                           prompt=Markup(prompt_html),
-                           answer=Markup(answer_html),
-                           review_answer = False)
+                           review_questions=review_questions)
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review')
@@ -274,8 +267,7 @@ def review_answer(course_name, mission_id):
                                                 mission_id=mission_id),
                            prompt=Markup(prompt_html),
                            response = Markup(response_html),
-                           answer=Markup(answer_html),
-                           review_answer = True)
+                           answer=Markup(answer_html))
 
 
 def create_new_text_attempt(question, user, response, previous_attempt):
