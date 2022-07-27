@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block body %}
+    <div class="container pt-3">
+        <h4>
+            <i class="bi-clipboard-x"  style="color: red"></i>
+            <span class="px-2">Incorrect Answer</span>
+        </h4>
+        <div class="container">
+            Failure is normal, cadet! You'll be tested on this question again
+            tomorrow so review the answer below.
+
+            <p class="pt-3"><strong>Question:</strong>
+                <div class="px-3">{{ prompt }}</div></p>
+
+            <div class="row border-bottom mb-2">
+                <div class="col"><strong>Correct Answer</strong></div>
+                <div class="col"><strong>Your Answer</strong></div>
+            </div>
+            <div class="row">
+                <div class="col">{{ answer }}</div>
+                <div class="col">{{ response }}</div>
+            </div>
+            
+            <p>
+            <a class="btn btn-primary"
+                href="{{ continue_url }}">Continue Training...</a>
+            </p>
+    </div>
+{% endblock %}
