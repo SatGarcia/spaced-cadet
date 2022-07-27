@@ -205,12 +205,6 @@ def review_objective(course_name, mission_id, objective_id):
     objective = mission.objectives.filter(Objective.id == objective_id).first()
 
     review_questions = objective.review_questions(current_user, mission, 2.5)
-    review_answers = []
-    review_prompts = []
-    for q in review_questions:
-        answer_html = q.get_answer()
-        answer = Markup(answer_html)
-        review_answers.append(answer)
 
     return render_template("review_objective.html",
                            page_title="Cadet Review Center: Review Questions",
@@ -219,8 +213,6 @@ def review_objective(course_name, mission_id, objective_id):
                                                 mission_id=mission_id),
                            review_questions=review_questions,
                            course_name=course_name,
-                           review_answers=review_answers,
-                           num_questions=len(review_questions),
                            objective=objective)
 
 
