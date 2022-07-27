@@ -202,7 +202,7 @@ def check_mission_inclusion(mission_id, course):
 def review_questions(course_name, mission_id, objective_id, sequence_num):
     course = check_course_authorization(course_name)
     mission = check_mission_inclusion(mission_id, course)
-    objective = mission.objectives.filter(Objective.id == objective_id)
+    objective = mission.objectives.filter(Objective.id == objective_id).first()
 
     review_questions = objective.review_questions(current_user.id, mission, 2.5)
 
