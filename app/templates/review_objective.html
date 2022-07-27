@@ -1,25 +1,38 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
-        <h4>
-            <i class="bi-clipboard-x"  style="color: red"></i>
-            <span class="px-2">Incorrect Answer</span>
-        </h4>
-        <div class="container">
-            Failure is normal, cadet! You'll be tested on this question again
-            tomorrow so review the answer below.
-
-            <p class="pt-3"><strong>Question:</strong>
-                <div class="px-3">{{ prompt }}</div></p>
-
-            <div class="row border-bottom mb-2">
-                <div class="col"><strong>Correct Answer</strong></div>
-                <div class="col"><strong>Your Answer</strong></div>
+        <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
+            <ol class="carousel-indicators">
+                {% for i in range(num_questions) %}
+                    <li data-target="#carouselExampleIndicators" data-slide-to={{i}} class="active"></li>
+                {% endfor %}
+            </ol>
+            <div class="carousel-inner">
+                {% for q in review_questions %}
+                    {% set question = q %}
+                    <div class="carousel-item active">
+                        <p class="pt-3"><strong>Question:</strong>
+                            <div class="px-3">{{ question.prompt }}</div></p>
+            
+                        <div class="row border-bottom mb-2">
+                            <div class="col"><strong>Correct Answer</strong></div>
+                        </div>
+                        <div class="row">
+                            <div class="col">{{ question.get_answer() }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
             </div>
-            <div class="row">
-                <div class="col">{{ answer }}</div>
-                <div class="col">{{ response }}</div>
-            </div>
+            <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="sr-only">Previous</span>
+            </a>
+            <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="sr-only">Next</span>
+            </a>
+          </div>
+
             
             <p>
             <a class="btn btn-primary"

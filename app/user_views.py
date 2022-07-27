@@ -199,19 +199,20 @@ def check_mission_inclusion(mission_id, course):
         
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/objective/<int:objective_id>/3?')
 @login_required
-def review_questions(course_name, mission_id, objective_id):
+def review_objective(course_name, mission_id, objective_id):
     course = check_course_authorization(course_name)
     mission = check_mission_inclusion(mission_id, course)
     objective = mission.objectives.filter(Objective.id == objective_id).first()
 
     review_questions = objective.review_questions(current_user.id, mission, 2.5)
 
-    return render_template("review_questions.html",
+    return render_template("review_objective.html",
                            page_title="Cadet Review Center: Review Questions",
                            continue_url=url_for('.test',
                                                 course_name=course_name,
                                                 mission_id=mission_id),
-                           review_questions=review_questions)
+                           review_questions=review_questions,
+                           num_questions=len(review_questions))
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review')
