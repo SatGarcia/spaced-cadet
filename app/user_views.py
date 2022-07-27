@@ -202,7 +202,8 @@ def check_mission_inclusion(mission_id, course):
 def review_questions(course_name, mission_id, objective_id, sequence_num):
     course = check_course_authorization(course_name)
     mission = check_mission_inclusion(mission_id, course)
-    # get objective
+
+    lo = mission.filter_by(objective_id=objective_id).first()
 
     review_questions = lo.review_questions(current_user.id, mission, 2.5) #remember to pass through the user in template
 
