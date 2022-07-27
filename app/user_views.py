@@ -197,11 +197,12 @@ def check_mission_inclusion(mission_id, course):
     else:
         return mission
         
-@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/3?') #3?n=2
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/objective/<int:objective_id>/3?') #3?n=2
 @login_required
-def review_questions(course_name, mission_id, lo, sequence_num):
+def review_questions(course_name, mission_id, objective_id, sequence_num):
     course = check_course_authorization(course_name)
     mission = check_mission_inclusion(mission_id, course)
+    # get objective
 
     review_questions = lo.review_questions(current_user.id, mission, 2.5) #remember to pass through the user in template
 
