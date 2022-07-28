@@ -45,7 +45,7 @@ function remove_mc_option() {
     let options_list = document.getElementById('mc-options');
     let last_option = options_list.lastElementChild;
     //console.log(last_option);
-    if (last_option !== options_list.firstElementChild) {
+    if (last_option.previousElementSibling !== options_list.firstElementChild) {
         options_list.removeChild(last_option);
     }
 }
