@@ -7,15 +7,15 @@
             </div>
         </div>
 
-        
-        <div id="carouselExampleIndicators" class="carousel slide row mb-5" data-ride="carousel">
+
+        <div id="carouselExampleIndicators" class="carousel slide row mb-5" data-bs-ride="carousel">
             <div class="col">
                 <ol class="carousel-indicators">
                     {% for i in range((review_questions|length)) %}
                         {% if i == 0 %}
-                            <li data-target="#carouselExampleIndicators" data-slide-to={{i}} class="active"></li>
+                            <li data-bs-target="#carouselExampleIndicators" data-bs-slide-to="{{i}}" class="active"></li>
                         {% else %}
-                            <li data-target="#carouselExampleIndicators" data-slide-to={{i}}></li>
+                            <li data-bs-target="#carouselExampleIndicators" data-bs-slide-to="{{i}}"></li>
                         {% endif %}
                     {% endfor %}
                 </ol>
@@ -25,13 +25,11 @@
                     {% for q in review_questions %}
                         {% if q == review_questions[0] %}
                             <div class="carousel-item active">
-                                <p class="pt-3"><strong>Question:</strong>
-                                    <div class="px-3">{{ q.prompt }}</div></p>
                         {% else %}                        
-                            <div class="carousel-item">
+                            <div class="carousel-item">    
+                        {% endif %}
                                 <p class="pt-3"><strong>Question:</strong>
                                     <div class="px-3">{{ q.prompt }}</div></p>
-                        {% endif %}
                                 <div class="row border-bottom mb-2">
                                     <div class="col"><strong>Correct Answer:</strong></div>
                                 </div>
@@ -42,19 +40,19 @@
                         
                     {% endfor %} 
                 </div>
-                 
-            </div>        
-        </div>
-
-            <div class="row mb-2">
-                <div class="col text-center ">
-                    <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
-                    <a class="btn btn-outline-secondary btn-sm" aria-hidden="true">&#10094;</a></a>
-                    <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
-                    <a class="btn btn-outline-secondary btn-sm" aria-hidden="true">&#10095;</a></a>
+                <div class="row mb-2">
+                    <div class="col text-center ">
+                        <button class="carousel-control-prev" data-bs-target="#carouselExampleIndicators" role="button" data-bs-slide="prev">
+                        <a class="btn btn-outline-secondary btn-sm" aria-hidden="true">&#10094;</a></button>
+                        <button class="carousel-control-next" data-bs-target="#carouselExampleIndicators" role="button" data-bs-slide="next">
+                        <a class="btn btn-outline-secondary btn-sm" aria-hidden="true">&#10095;</a></button>
+                    </div>
                 </div>
-            </div>
-        
+            </div> 
+       
+        </div> 
+
+
 
         <div class="row mb-2">
             <div class="col text-center ">
