@@ -12,12 +12,18 @@
             <div class="col">
                 <ol class="carousel-indicators">
                     {% for i in range((review_questions|length)) %}
+                    {% if i == 0 %}
                         <li data-target="#carouselExampleIndicators" data-slide-to={{i}} class="active"></li>
-                    {% endfor %}
+                    {% else %}
+                        <li data-target="#carouselExampleIndicators" data-slide-to={{i}}></li>
+                        {% endif %}
+                        {% endfor %}
                 </ol>
                 
-                {% for q in review_questions %}
+                
                     <div class="carousel-inner">
+                        {% for q in review_questions %}
+                        {% if q == review_questions[0] %}
                         <div class="carousel-item active">
                             <p class="pt-3"><strong>Question:</strong>
                                 <div class="px-3">{{ q.prompt }}</div></p>
@@ -29,15 +35,29 @@
                                 <div class="col">{{ q.get_answer()|safe }}</div>
                             </div>
                         </div>
+                        {% else %}                        
+                        <div class="carousel-item">
+                            <p class="pt-3"><strong>Question:</strong>
+                                <div class="px-3">{{ q.prompt }}</div></p>
+                
+                            <div class="row border-bottom mb-2">
+                                <div class="col"><strong>Correct Answer:</strong></div>
+                            </div>
+                            <div class="row">
+                                <div class="col">{{ q.get_answer()|safe }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endfor %} 
                     </div>
-                {% endfor %}  
+                 
             </div>        
         </div>
 
         <div class="row mb-2">
             <div class="col text-center ">
-                <a  href="#gamespandp" data-slide="prev" class="btn btn-outline-secondary btn-sm">&#10094;</a>
-                <a  href="#gamespandp" data-slide="next" class="btn btn-outline-secondary btn-sm">&#10095;</a>
+                <a  href="#carouselExampleIndicators" role="button" data-slide="prev" class="btn btn-outline-secondary btn-sm">&#10094;</a>
+                <a  href="#carouselExampleIndicators" role="button" data-slide="next" class="btn btn-outline-secondary btn-sm">&#10095;</a>
             </div>
         </div>
 

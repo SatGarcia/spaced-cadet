@@ -205,6 +205,7 @@ def review_objective(course_name, mission_id, objective_id):
     objective = mission.objectives.filter(Objective.id == objective_id).first()
 
     review_questions = objective.review_questions(current_user, mission)
+    print(review_questions)
 
     return render_template("review_objective.html",
                            page_title="Cadet Review Center: Review Questions",
