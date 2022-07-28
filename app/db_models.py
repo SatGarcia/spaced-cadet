@@ -894,7 +894,7 @@ class Objective(SearchableMixin, db.Model):
             average = e_factor_sum/question_count
             return float(f"{average:.3f}")
     
-    def review_questions(self, user, assessment=None, e_factor_threshold=2.5):
+    def review_questions(self, user, assessment=None, e_factor_threshold=2.6):
         """ Returns a list of all of the questions in an objective that have an e_factor of below 2.5 """
         review_list = []
 
