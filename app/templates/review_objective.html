@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
+        
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.missions_overview', course_name=course_name) }}">Mission Center</a></li>
+				<li class="breadcrumb-item"><a href="{{ continue_url }}">Completed Mission</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Learning Objective Review</li>
+            </ol>
+        </nav>
+
         <div class="row mb-2">
             <div class="col">
                 <h4>Reviewing Questions in Learning Objective: {{objective.description}}</h4>
@@ -10,16 +19,6 @@
         <div id="carouselExampleIndicators" class="carousel carousel-dark slide row mb-5" data-bs-ride="carousel" data-bs-interval="false">
             <div class="col">
 
-                <ol class="carousel-indicators">
-                    {% for i in range((review_questions|length)) %}
-                        {% if i == 0 %}
-                            <li data-bs-target="#carouselExampleIndicators" data-bs-slide-to="{{i}}" class="active"></li>
-                        {% else %}
-                            <li data-bs-target="#carouselExampleIndicators" data-bs-slide-to="{{i}}"></li>
-                        {% endif %}
-                    {% endfor %}
-                </ol>
-                
                 <div class="carousel-inner">
                     {% for q in review_questions %}
                         {% if q == review_questions[0] %}
@@ -49,12 +48,6 @@
                 <button class="btn btn-outline-secondary btn-sm" data-bs-target="#carouselExampleIndicators" role="button" data-bs-slide="next">&#10095;</button>
             </div>
         </div>
-   
-        <div class="row mb-2">
-            <div class="col text-center ">
-                <a href="{{ continue_url }}">Back to Mission Overview</a>
-            </div>
-        </div>
 
-    </div></div> </div>
+    </div>
 {% endblock %}
