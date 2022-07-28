@@ -1212,7 +1212,7 @@ class Assessment(db.Model):
         return (incorrect_questions, correct_easy, correct_mid, correct_hard)
 
 
-    def objectives_to_review(self, user, max_num_objectives=3, average_threshold=2.5):
+    def objectives_to_review(self, user, max_num_objectives=3, average_threshold=2.6):
         """ Returns the 3 learning objectives with the lowest average e_factors in the form of: 
         a list of 3 tuples that contain (learning objective, e_factor average)"""
 
