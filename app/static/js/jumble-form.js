@@ -49,8 +49,9 @@ function remove_jumble_block() {
     
     let last_block = blocks_list.lastElementChild;
     //console.log(last_block);
-    if (last_block !== blocks_list.firstElementChild) {
-        blocks_list.removeChild(last_block);
+    if (last_block.previousElementSibling !== blocks_list.firstElementChild){
+
+            blocks_list.removeChild(last_block);
     }
 
 }
