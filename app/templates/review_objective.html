@@ -7,9 +7,9 @@
             </div>
         </div>
 
-
-        <div id="carouselExampleIndicators" class="carousel slide row mb-5" data-bs-ride="carousel">
+        <div id="carouselExampleIndicators" class="carousel carousel-dark slide row mb-5" data-bs-ride="carousel" data-bs-interval="false">
             <div class="col">
+
                 <ol class="carousel-indicators">
                     {% for i in range((review_questions|length)) %}
                         {% if i == 0 %}
@@ -19,7 +19,6 @@
                         {% endif %}
                     {% endfor %}
                 </ol>
-                
                 
                 <div class="carousel-inner">
                     {% for q in review_questions %}
@@ -40,25 +39,22 @@
                         
                     {% endfor %} 
                 </div>
-                <div class="row mb-2">
-                    <div class="col text-center ">
-                        <button class="carousel-control-prev" data-bs-target="#carouselExampleIndicators" role="button" data-bs-slide="prev">
-                        <a class="btn btn-outline-secondary btn-sm" aria-hidden="true">&#10094;</a></button>
-                        <button class="carousel-control-next" data-bs-target="#carouselExampleIndicators" role="button" data-bs-slide="next">
-                        <a class="btn btn-outline-secondary btn-sm" aria-hidden="true">&#10095;</a></button>
-                    </div>
-                </div>
-            </div> 
-       
-        </div> 
+                <br>
+                
 
-
-
+             
+        <div class="row mb-2">
+            <div class="col text-center ">
+                <button class="btn btn-outline-secondary btn-sm" data-bs-target="#carouselExampleIndicators" role="button" data-bs-slide="prev">&#10094;</button>
+                <button class="btn btn-outline-secondary btn-sm" data-bs-target="#carouselExampleIndicators" role="button" data-bs-slide="next">&#10095;</button>
+            </div>
+        </div>
+   
         <div class="row mb-2">
             <div class="col text-center ">
                 <a href="{{ continue_url }}">Back to Mission Overview</a>
             </div>
         </div>
 
-    </div>
+    </div></div> </div>
 {% endblock %}
