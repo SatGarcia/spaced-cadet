@@ -212,7 +212,6 @@ def review_objective(course_name, mission_id, objective_id):
                                                 course_name=course_name,
                                                 mission_id=mission_id),
                            review_questions=review_questions,
-                           course_name=course_name,
                            objective=objective)
 
 
