@@ -27,19 +27,11 @@
                             <div class="carousel-item active">
                                 <p class="pt-3"><strong>Question:</strong>
                                     <div class="px-3">{{ q.prompt }}</div></p>
-                    
-                                <div class="row border-bottom mb-2">
-                                    <div class="col"><strong>Correct Answer:</strong></div>
-                                </div>
-                                <div class="row">
-                                    <div class="col">{{ q.get_answer()|safe }}</div>
-                                </div>
-                            </div>
                         {% else %}                        
                             <div class="carousel-item">
                                 <p class="pt-3"><strong>Question:</strong>
                                     <div class="px-3">{{ q.prompt }}</div></p>
-                    
+                        {% endif %}
                                 <div class="row border-bottom mb-2">
                                     <div class="col"><strong>Correct Answer:</strong></div>
                                 </div>
@@ -47,7 +39,7 @@
                                     <div class="col">{{ q.get_answer()|safe }}</div>
                                 </div>
                             </div>
-                        {% endif %}
+                        
                     {% endfor %} 
                 </div>
                  
