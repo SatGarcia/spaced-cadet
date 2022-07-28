@@ -213,7 +213,8 @@ def review_objective(course_name, mission_id, objective_id):
                                                 course_name=course_name,
                                                 mission_id=mission_id),
                            review_questions=review_questions,
-                           objective=objective)
+                           objective=objective,
+                           course = course)
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review')

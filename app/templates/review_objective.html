@@ -4,7 +4,7 @@
         
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('user_views.missions_overview', course_name=course_name) }}">Mission Center</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">Mission Center</a></li>
 				<li class="breadcrumb-item"><a href="{{ continue_url }}">Completed Mission</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Learning Objective Review</li>
             </ol>
