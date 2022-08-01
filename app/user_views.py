@@ -258,7 +258,10 @@ def review_answer(course_name, mission_id):
         response_html += "</ul>"
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         selected_answer = attempt.responses.first()
-        response_html = markdown_to_html(selected_answer)
+        if selected_answer:
+            response_html = markdown_to_html(selected_answer.text)
+        else:
+            response_html = markdown_to_html("_No response given._")
     else: #question.type = auto-check
         selected_answer = attempt.response.strip()
         response_html = markdown_to_html(selected_answer)
