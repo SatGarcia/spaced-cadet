@@ -105,6 +105,14 @@
                                             Course Setup
                                         </a>
 									</li>
+
+                                    <li>
+										<a class="dropdown-item" 
+											href="{{ url_for('instructor.assessment_statistics', course_name=course.name) }}">
+                                            <i class="bi bi-clipboard-data"></i>
+                                            Assessment Statistics
+                                        </a>
+									</li>
 								</ul>
 							</li>
 						{% endfor %}

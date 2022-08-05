@@ -679,6 +679,21 @@ def manage_assessments(course_name):
                            page_title="Cadet: Manage Course Assessments",
                            course=course)
 
+@instructor.route('/c/<course_name>/admin/assessments_statistics')
+@login_required
+def assessment_statistics(course_name):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    return render_template("assessment_statistics.html",
+                           page_title="Cadet: Assessment Statistics",
+                           course=course)
 
 @instructor.route('/u/<int:user_id>/questions')
 @login_required
