@@ -84,11 +84,11 @@
 						{% endif %}
 					</div>
 				</div>
-                {% set zero = 0 %}
-                {% set very_little = 0 %}
-                {% set little = 0 %}
-                {% set some = 0 %}
-                {% set lots = 0 %}
+                {% set zero = 1 %}
+                {% set very_little = 1 %}
+                {% set little = 1 %}
+                {% set some = 1 %}
+                {% set lots = 1 %}
                 {% for user in course.users %}
                     {% if assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count() == 0 %}
                         {% set zero = zero + 1 %}
@@ -102,17 +102,17 @@
                         {% set lots = lots + 1 %} 
                     {% endif %}
                 {% endfor %}
-                <div class="fw-bold fs-5">Questions Remaining</div>
-                <div id="test"></div>
+                <div class="fw-bold fs-5">Questions Remaining<div id="test"></div></div>
+                
 
                 <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
                 <script>
                     var data = [{
                         type: "pie",
                         values: [{{zero}}, {{very_little}}, {{little}}, {{some}}, {{lots}}],
-                        labels: ["0", "1-2", "3-5", "5-10", "11+"],
+                        labels: ["All Completed", "1-2 Not Completed", "3-5 Not Completed", "5-10 Not Completed", "11+ Not Completed"],
                         marker: {
-                            colors: ["rgb(26,150,65)","rgb(166,217,106)","rgb(255,255,191)", "rgb(220,220,220)", "rgb(220,220,220)"]
+                            colors: ["rgb(26,150,65)","rgb(166,217,106)","#FFFF66", "#FFA500", "#FF3333"]
                         },
                         //automargin: true,
                         hole: 0.6,
@@ -120,10 +120,10 @@
                     }]
                     
                     var layout = {
-                        height: 300,
-                        width: 300,
+                        height: 200,
+                        width: 200,
                         margin: {"t": 0, "b": 0, "l": 0, "r": 0},
-                        showlegend: true,
+                        showlegend: false,
                         legend: {
                             x: 1,
                             y: 1}
@@ -133,7 +133,7 @@
                     Plotly.newPlot('test', data, layout)
                 </script>
 
-				<a role="button" class="mt-1 btn btn-sm btn-primary position-relative"
+				<a role="button" class="mt-auto btn btn-sm btn-primary position-relative"
 					 href="{{ url_for("user_views.test", course_name=course.name, mission_id=assessment.id) }}">
 					View Specifics
 				</a>
@@ -167,49 +167,3 @@
 		</div>
     </div>
 {% endblock %}
-
-<style>
-body{
-background-color:#eef3f4;    
-}
-
-.height-100{
-    height:100vh;
-}
-
-.card{
-    width:380px;
-    border:none;
-    height:280px;
-}
-
-.ratings{
-    margin-right:10px;
-}
-
-.ratings i{
-    
-    color:#cecece;
-    font-size:32px;
-}
-
-.rating-color{
-    color:#fbc634 !important;
-}
-
-.review-count{
-    font-weight:400;
-    margin-bottom:2px;
-    font-size:24px !important;
-}
-
-.small-ratings i{
-  color:#cecece;   
-}
-
-.review-stat{
-    font-weight:300;
-    font-size:18px;
-    margin-bottom:2px;
-}
-</style>
