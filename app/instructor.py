@@ -692,7 +692,7 @@ def assessment_statistics(course_name):
         abort(401)
 
     return render_template("assessment_statistics.html",
-                           page_title="Cadet: Assessment Statistics",
+                           page_title="Cadet: Mission Progress",
                            course=course)
 
 @instructor.route('/u/<int:user_id>/questions')
