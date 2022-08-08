@@ -67,7 +67,7 @@
                     var data = [{
                         type: "pie",
                         values: [{{every_day}}, {{every_other_day}}, {{every_3_days}}, {{every_4_days}}, {{every_5_days_or_more}}],
-                        labels: ["Everyday", "Every Other Day", "Every 3 Days", "Every 4 Days", "Every 5 Days or More"],
+                        labels: ["Everyday", "Every Other Day  ", "Every 3 Days", "Every 4 Days", "Every 5+ Days  "],
                         marker: {
                             colors: ["#FF3333","#FFA500","#FFFF66","rgb(166,217,106)","rgb(26,150,65)"]
                         },
@@ -91,8 +91,8 @@
                 </script>
                 <div>
 				<a role="button" class=" btn btn-sm btn-primary position-relative"
-					href="{{ url_for('user_views.test', course_name=course.name, mission_id=assessment.id) }}">
-					Most Missed Questions: not linked yet
+					href="{{ url_for('instructor.most_missed_questions', course_name=course.name, mission_id=assessment.id, objective_id=objective.id) }}">
+					Most Missed Questions
 				</a>
                 <br>
                 <a role="button" class="mt-auto btn btn-sm btn-primary position-relative"

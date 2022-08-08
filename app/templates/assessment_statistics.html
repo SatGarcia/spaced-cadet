@@ -113,7 +113,7 @@
                     var data = [{
                         type: "pie",
                         values: [{{zero}}, {{very_little}}, {{little}}, {{some}}, {{lots}}],
-                        labels: ["All Completed", "1-2 Not Completed", "3-5 Not Completed", "5-10 Not Completed", "11+ Not Completed"],
+                        labels: ["All Completed", "1-2 Not Completed", "3-5 Not Completed", "5-10 Not Completed  ", "11+ Not Completed  "],
                         marker: {
                             colors: ["rgb(26,150,65)","rgb(166,217,106)","#FFFF66", "#FFA500", "#FF3333"]
                         },
@@ -151,7 +151,7 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}">Home</a></li>
 				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview',course_name=course.name) }}">{{ course.name }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Mission_Statistics</li>
+                <li class="breadcrumb-item active" aria-current="page">Mission Statistics</li>
             </ol>
         </nav>
 

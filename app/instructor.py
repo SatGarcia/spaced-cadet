@@ -717,6 +717,46 @@ def assessment_objective_statistics(course_name, mission_id):
                            course=course,
                            assessment=mission)
 
+@instructor.route('/c/<course_name>/admin/assessments_statistics/mission/<int:mission_id>/assessment_objective_statistics/objective/<int:objective_id>')
+@login_required
+def most_missed_questions(course_name, mission_id, objective_id):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    mission = course.assessments.filter_by(id=mission_id).first()
+
+    if not mission:
+        abort(404)
+
+    objective = mission.objectives.filter_by(id=objective_id).first()
+
+    if not objective:
+        abort(404)
+
+    review_questions_dic = {}
+    for user in course.users:
+        questions = objective.review_questions(user, mission)
+        for question in questions:
+            if question not in review_questions_dic:
+                review_questions_dic[question]= 1
+            else:
+                review_questions_dic[question]+=1
+
+    review_questions = [(k,review_questions_dic[k])  for k in sorted(review_questions_dic, key=review_questions_dic.get, reverse=True)]
+
+    return render_template("most_missed_questions.html",
+                           page_title="Cadet: Most Missed Questions",
+                           course=course,
+                           assessment=mission,
+                           objective=objective,
+                           review_questions=review_questions)
+
 @instructor.route('/u/<int:user_id>/questions')
 @login_required
 def user_questions(user_id):
