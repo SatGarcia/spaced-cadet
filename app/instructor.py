@@ -695,6 +695,19 @@ def assessment_statistics(course_name):
                            page_title="Cadet: Mission Progress",
                            course=course)
 
+@instructor.route('/c/<course_name>/admin/assessments_statistics/mission/<int:mission_id>/objective/<int:objective_id>')
+@login_required
+def objective_progress(course_name, mission_id, objective_id):
+    course = Course.query.filter_by(name=course_name).first()
+    mission = course.assessments.filter_by(id=mission_id).first()
+    objective = Objective.query.filter_by(id = objective_id).first()
+
+    return render_template("objective_progress.html",
+                           page_title="Cadet: Objective Progress",
+                           course=course,
+                           mission = mission,
+                           objective = objective)
+
 @instructor.route('/u/<int:user_id>/questions')
 @login_required
 def user_questions(user_id):
