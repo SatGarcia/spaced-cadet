@@ -692,21 +692,70 @@ def assessment_statistics(course_name):
         abort(401)
 
     return render_template("assessment_statistics.html",
-                           page_title="Cadet: Mission Progress",
+                           page_title="Cadet: Assessment Statistics",
                            course=course)
 
-@instructor.route('/c/<course_name>/admin/assessments_statistics/mission/<int:mission_id>/objective/<int:objective_id>')
+@instructor.route('/c/<course_name>/admin/assessments_statistics/mission/<int:mission_id>/assessment_objective_statistics')
 @login_required
-def objective_progress(course_name, mission_id, objective_id):
+def assessment_objective_statistics(course_name, mission_id):
     course = Course.query.filter_by(name=course_name).first()
-    mission = course.assessments.filter_by(id=mission_id).first()
-    objective = Objective.query.filter_by(id = objective_id).first()
+    if not course:
+        abort(404)
 
-    return render_template("objective_progress.html",
-                           page_title="Cadet: Objective Progress",
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    mission = course.assessments.filter_by(id=mission_id).first()
+
+    if not mission:
+        abort(404)
+
+    return render_template("assessment_objective_statistics.html",
+                           page_title="Cadet: Objective Statistics",
                            course=course,
-                           mission = mission,
-                           objective = objective)
+                           assessment=mission)
+
+@instructor.route('/c/<course_name>/admin/assessments_statistics/mission/<int:mission_id>/assessment_objective_statistics/objective/<int:objective_id>')
+@login_required
+def most_missed_questions(course_name, mission_id, objective_id):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    mission = course.assessments.filter_by(id=mission_id).first()
+
+    if not mission:
+        abort(404)
+
+    objective = mission.objectives.filter_by(id=objective_id).first()
+
+    if not objective:
+        abort(404)
+
+    review_questions_dic = {}
+    for user in course.users:
+        questions = objective.review_questions(user, mission)
+        for question in questions:
+            if question not in review_questions_dic:
+                review_questions_dic[question]= 1
+            else:
+                review_questions_dic[question]+=1
+
+    review_questions = [(k,review_questions_dic[k])  for k in sorted(review_questions_dic, key=review_questions_dic.get, reverse=True)]
+
+    return render_template("most_missed_questions.html",
+                           page_title="Cadet: Most Missed Questions",
+                           course=course,
+                           assessment=mission,
+                           objective=objective,
+                           review_questions=review_questions)
 
 @instructor.route('/u/<int:user_id>/questions')
 @login_required
@@ -721,6 +770,7 @@ def user_questions(user_id):
         target_author = user_id
     else:
         target_author = 'self'
+
 
     return render_template("my_questions.html",
                            page_title="Cadet: My Questions",

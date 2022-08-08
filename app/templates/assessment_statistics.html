@@ -26,7 +26,10 @@
 
 					{% if assessment.objectives.count() != 0 %}
 						<div class="mt-1">
-							<span class="fw-bold">Learning Objectives:</span>
+                            <a role="button" class="fw-bold" style="color:#1F2022"
+                            href="{{ url_for('instructor.assessment_objective_statistics', course_name=course.name, mission_id=assessment.id) }}">
+                            Learning Objectives:
+                            </a>
 							<ol>
 								{% for objective in assessment.objectives %}
 									<li class="inline-p">
@@ -103,7 +106,7 @@
                         {% set lots = lots + 1 %} 
                     {% endif %}
                 {% endfor %}
-                <div class="fw-bold fs-5">Questions Remaining<div id="test"></div></div>
+                <div class="fw-bold fs-5">Users' Questions Remaining<div id="{{assessment.title}}"></div></div>
                 
 
                 <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
@@ -111,7 +114,7 @@
                     var data = [{
                         type: "pie",
                         values: [{{zero}}, {{very_little}}, {{little}}, {{some}}, {{lots}}],
-                        labels: ["All Completed", "1-2 Not Completed", "3-5 Not Completed", "5-10 Not Completed", "11+ Not Completed"],
+                        labels: ["All Completed", "1-2 Not Completed", "3-5 Not Completed", "5-10 Not Completed  ", "11+ Not Completed  "],
                         marker: {
                             colors: ["rgb(26,150,65)","rgb(166,217,106)","#FFFF66", "#FFA500", "#FF3333"]
                         },
@@ -121,22 +124,22 @@
                     }]
                     
                     var layout = {
-                        height: 200,
-                        width: 200,
+                        height: 250,
+                        width: 450,
                         margin: {"t": 0, "b": 0, "l": 0, "r": 0},
-                        showlegend: false,
+                        showlegend: true,
                         legend: {
                             x: 1,
-                            y: 1}
+                            y: 0.5}
                                     
                         }
                     
-                    Plotly.newPlot('test', data, layout)
+                    Plotly.newPlot('{{assessment.title}}', data, layout)
                 </script>
 
 				<a role="button" class="mt-auto btn btn-sm btn-primary position-relative"
-					 href="{{ url_for("user_views.test", course_name=course.name, mission_id=assessment.id) }}">
-					View Specifics
+					 href="{{ url_for('user_views.test', course_name=course.name, mission_id=assessment.id) }}">
+					View Chart Specifics: not linked yet
 				</a>
 			</li>
 		{% endfor %}
@@ -149,7 +152,7 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}">Home</a></li>
 				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview',course_name=course.name) }}">{{ course.name }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Missions</li>
+                <li class="breadcrumb-item active" aria-current="page">Mission Statistics</li>
             </ol>
         </nav>
 
