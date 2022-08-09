@@ -26,13 +26,12 @@
 
 					{% if assessment.objectives.count() != 0 %}
 						<div class="mt-1">
-                            Learning Objectives:
-                            </a>
+                            <a role="button" class="fw-bold" style="color:black" href="{{ url_for('instructor.assessment_objective_statistics', course_name=course.name, mission_id=assessment.id) }}">Learning Objectives:</a>
 							<ol>
 								{% for objective in assessment.objectives %}
 									<li class="inline-p">
-										<a role="button" href="{{ url_for('instructor.assessment_objective_statistics', course_name=course.name, mission_id=assessment.id) }}">
-                                            <span class="badge rounded-pill bg-light text-dark border">{{ objective.description|mdown|safe }}</span></a>
+										
+                                            <span class="badge rounded-pill bg-light text-dark border">{{ objective.description|mdown|safe }}</span>
                                         {% set average = 0 %}
                                         {% set count = 0 %}
                                         {% for user in course.users %}
