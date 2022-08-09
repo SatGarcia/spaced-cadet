@@ -695,6 +695,29 @@ def assessment_statistics(course_name):
                            page_title="Cadet: Assessment Statistics",
                            course=course)
 
+@instructor.route('/c/<course_name>/admin/assessments_statistics/mission/<int:mission_id>/user_progress')
+@login_required
+def user_progress(course_name, mission_id):
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    mission = course.assessments.filter_by(id=mission_id).first()
+
+    if not mission:
+        abort(404)
+
+    return render_template("user_progress.html",
+                           page_title="Cadet: Assessment Statistics",
+                           course=course,
+                           assessment=mission)
+
+
 @instructor.route('/c/<course_name>/admin/assessments_statistics/mission/<int:mission_id>/assessment_objective_statistics')
 @login_required
 def assessment_objective_statistics(course_name, mission_id):
