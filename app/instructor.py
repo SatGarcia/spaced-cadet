@@ -718,6 +718,7 @@ def user_progress(course_name, mission_id):
                            assessment=mission)
 
 
+
 @instructor.route('/c/<course_name>/admin/assessments_statistics/mission/<int:mission_id>/assessment_objective_statistics')
 @login_required
 def assessment_objective_statistics(course_name, mission_id):
