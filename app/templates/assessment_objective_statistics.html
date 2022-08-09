@@ -59,7 +59,7 @@
                         {% endfor %}
 
                         <div class="col-6">
-                            <span class="fw-bold">Student Mastery<div id="student_mastery"></div></span>
+                            <span class="fw-bold">Student Mastery<div id="student_mastery {{objective.id}}"></div></span>
                         
                             <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
                             <script>
@@ -86,7 +86,7 @@
                                                 
                                     }
                                 
-                                Plotly.newPlot('student_mastery', data, layout)
+                                Plotly.newPlot('student_mastery {{objective.id}}', data, layout)
                             </script>
                         </div>
 
