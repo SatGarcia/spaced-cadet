@@ -136,8 +136,8 @@
                 </script>
 
 				<a role="button" class="mt-auto btn btn-sm btn-primary position-relative"
-					 href="{{ url_for('user_views.test', course_name=course.name, mission_id=assessment.id) }}">
-					View Chart Specifics: not linked yet
+					 href="{{ url_for('instructor.user_progress', course_name=course.name, mission_id=assessment.id) }}">
+					View Chart Specifics
 				</a>
 			</li>
 		{% endfor %}
