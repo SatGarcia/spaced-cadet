@@ -42,18 +42,35 @@
                             </div>
                         
                         </div>
+        
+                        {% set mastered_count = 0 %}
+                        {% set proficient_count = 0 %}
+                        {% set attempted_count = 0 %}
+                        {% for user in course.users %}
+                            
+                            {% set user_ave = objective.get_e_factor_average(user, assessment) %}
+                            {% if user_ave < 3 %}
+                                {% set attempted_count = attempted_count + 1 %}
+                            {% elif rating < 4 %}
+                                {% set proficient_count = proficient_count + 1 %}
+                            {% else %}
+                                {% set mastered_count = mastered_count + 1 %}
+                            {% endif%}
+                        {% endfor %}
 
-                        <div class="col">
-                            <div class="row">
-                                <div class="progress" style="height: 20px; float:right; width:30%;">
+                        <div class="col-6 justify-content-start">
+                            <div class="row pt-2 justify-content-start">
+                                <div class="fw-bold">Students Mastered</div>
+                                <div class="progress" style="height: 20px; float:left; width:30%">
                                     <div class="progress-bar bg-success w3-container w3-center" role="progressbar" 
-                                         style="width:50%" 
-                                         aria-valuenow=50 aria-valuemin="0" 
-                                         aria-valuemax=100>
+                                            style="width:{{ (mastered_count/course.users.count()) * 100 }}%" 
+                                            aria-valuenow="{{(mastered_count/course.users.count()) * 100}}" aria-valuemin= "0"
+                                            aria-valuemax="{{course.users.count()}}">
                                     </div>
                                 </div>
                             </div>
                             <div class="row pt-2">
+                                <div class="fw-bold">Students Proficient</div>
                                 <div class="progress" style="height: 20px; float:right; width:30%;">
                                     <div class="progress-bar bg-success w3-container w3-center" role="progressbar" 
                                     style="width:50%" 
@@ -63,6 +80,7 @@
                                 </div>
                             </div>
                             <div class="row pt-2">
+                                <div class="fw-bold">Students Attempted</div>
                                 <div class="progress" style="height: 20px; float:right; width:30%;">
                                     <div class="progress-bar bg-success w3-container w3-center" role="progressbar" 
                                     style="width:50%" 
@@ -73,17 +91,11 @@
                             </div>
                         </div>
 
-                        <div class="col w-auto">
+                        <div class="col w-auto mx-auto">
                             <div class="row">
-                                <a role="button" class=" btn btn-sm btn-primary position-relative" style = "width:30%"
+                                <a role="button" class=" btn btn-sm btn-primary position-relative"
                                 href="{{ url_for('instructor.most_missed_questions', course_name=course.name, mission_id=assessment.id, objective_id=objective.id) }}">
                                 Most Missed Questions
-                                </a>
-                            </div>
-                            <div class="row pt-2">
-                                <a role="button" class="mt-auto btn btn-sm btn-primary position-relative" style = "width:50%"
-                                href="{{ url_for('user_views.test', course_name=course.name, mission_id=assessment.id) }}">
-                                See Overall Objective Statistics: not linked yet
                                 </a>
                             </div>
                         </div>
