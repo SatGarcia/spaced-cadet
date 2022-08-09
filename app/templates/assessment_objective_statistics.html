@@ -58,37 +58,8 @@
                             {% endif%}
                         {% endfor %}
 
-                        <div class="col-6 justify-content-start">
-                            <div class="row pt-2 justify-content-start">
-                                <div class="fw-bold">Students Mastered</div>
-                                <div class="progress" style="height: 20px; float:left; width:30%">
-                                    <div class="progress-bar bg-success w3-container w3-center" role="progressbar" 
-                                            style="width:{{ (mastered_count/course.users.count()) * 100 }}%" 
-                                            aria-valuenow="{{(mastered_count/course.users.count()) * 100}}" aria-valuemin= "0"
-                                            aria-valuemax="{{course.users.count()}}">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row pt-2">
-                                <div class="fw-bold">Students Proficient</div>
-                                <div class="progress" style="height: 20px; float:right; width:30%;">
-                                    <div class="progress-bar bg-success w3-container w3-center" role="progressbar" 
-                                    style="width:50%" 
-                                    aria-valuenow=50 aria-valuemin="0" 
-                                    aria-valuemax=100>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row pt-2">
-                                <div class="fw-bold">Students Attempted</div>
-                                <div class="progress" style="height: 20px; float:right; width:30%;">
-                                    <div class="progress-bar bg-success w3-container w3-center" role="progressbar" 
-                                    style="width:50%" 
-                                    aria-valuenow=50 aria-valuemin="0" 
-                                    aria-valuemax=100>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="col-6">
+                            <span class="fw-bold">Student Mastery<div id="student_mastery"></div></span>
                         </div>
 
                         <div class="col w-auto mx-auto">
@@ -115,7 +86,7 @@
                 <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}">Home</a></li>
 				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview',course_name=course.name) }}">{{ course.name }}</a></li>
                 <li class="breadcrumb-item"><a href="{{ url_for('instructor.assessment_statistics',course_name=course.name) }}">Assessment Statistics</a></li>
-                <li class="breadcrumb-item active" aria-current="page"> {{assessment.title}} Objective Statistics</li>
+                <li class="breadcrumb-item active" aria-current="page"> {{assessment.title}} Progress</li>
             </ol>
         </nav>
 
@@ -123,4 +94,32 @@
 		{{ objective_list_group(assessment.objectives) }}
 
     </div>
+    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+    <script>
+        var data = [{
+            type: "pie",
+            values: [{{mastered_count}}, {{proficient_count}}, {{attempted_count}}],
+            labels: ["mastered_count", "proficient_count", "attempted_count"],
+            marker: {
+                colors: ["rgb(26,150,65)","rgb(166,217,106)","#FFFF66"]
+            },
+            //automargin: true,
+            hole: 0.6,
+            textinfo: 'none'
+            }]
+        
+        var layout = {
+            height: 250,
+            width: 450,
+            margin: {"t": 0, "b": 0, "l": 0, "r": 0},
+            showlegend: true,
+            legend: {
+                x: 1,
+                y: 0.5}
+                        
+            }
+        
+        Plotly.newPlot('student_mastery', data, layout)
+    </script>
 {% endblock %}
+
