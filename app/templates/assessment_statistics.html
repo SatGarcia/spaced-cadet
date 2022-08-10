@@ -32,28 +32,7 @@
 									<li class="inline-p">
 										
                                             <span class="badge rounded-pill bg-light text-dark border">{{ objective.description|mdown|safe }}</span>
-                                        {% set average = 0 %}
-                                        {% set count = 0 %}
-                                        {% for user in course.users %}
-                                            {% set average = average + objective.get_e_factor_average(user, assessment) %}
-                                        {% endfor %}
-                                        {% if course.users.count() == 0 %}
-                                            {% set count = 1 %}
-                                        {% else %}
-                                            {% set count = course.users.count() %}
-                                        {% endif%}
-                                        {% set rating = average / count %}
-                                        {% if rating < 1.8 %}
-                                            {% set full = 1 %}  
-                                        {% elif rating < 2.4 %}
-                                            {% set full = 2 %} 
-                                        {% elif rating < 3 %}
-                                            {% set full = 3 %}
-                                        {% elif rating < 5 %}
-                                            {% set full = 4 %}
-                                        {% else %}
-                                            {% set full = 5 %}
-                                        {% endif %}
+                                        {% set full = course.star_rating(objective, assessment) %}
                                         {% for i in range(full) %}
                                             <i class="bi bi-star-fill" style="color: gold"></i>
                                             {% endfor %}
@@ -85,24 +64,12 @@
 						{% endif %}
 					</div>
 				</div>
-                {% set zero = 1 %}
-                {% set very_little = 1 %}
-                {% set little = 1 %}
-                {% set some = 1 %}
-                {% set lots = 1 %}
-                {% for user in course.users %}
-                    {% if assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count() == 0 %}
-                        {% set zero = zero + 1 %}
-                    {% elif assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count() < 3 %}
-                        {% set very_little = very_little + 1 %} 
-                    {% elif assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count() < 6 %}
-                        {% set little = little + 1 %} 
-                    {% elif assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count() < 11 %}
-                        {% set some = some + 1 %} 
-                    {% else %}
-                        {% set lots = lots + 1 %} 
-                    {% endif %}
-                {% endfor %}
+                {% set breakdown = course.questions_remaining_breakdown(assessment) %}
+                {% set zero = breakdown[0] %}
+                {% set very_little = breakdown[1] %}
+                {% set little = breakdown[2] %}
+                {% set some = breakdown[3] %}
+                {% set lots = breakdown[4] %}
                 
                 <span class="fw-bold">Users' Questions Remaining<div id="{{assessment.title}}"></div></span>
                 

@@ -711,6 +711,69 @@ class Course(SearchableMixin, db.Model):
         """Returns all ClassMeetings that occured before today"""
         return self.meetings.filter(ClassMeeting.date < date.today() )
 
+    def star_rating(self, objective, assessment):
+        """ Returns the number of full stars based on the average e_factor of that objective """
+        average = 0 
+
+        for user in self.users:
+            average = average + objective.get_e_factor_average(user, assessment)
+
+        if self.users.count() == 0:
+            return 0
+        else:
+            rating = average / self.users.count()
+            full = 0
+            if rating < 2:
+                full = 1  
+            elif rating < 3:
+                full = 2 
+            elif rating < 5:
+                full = 3 
+            elif rating < 7:
+                full = 4
+            else:
+                full = 5 
+        
+        return full
+
+    def questions_remaining_breakdown(self, assessment):
+        """ Returns a list containing the breakdown of how many questions are remaining for all users in a course"""
+        zero = 0
+        very_little = 0
+        little = 0
+        some = 0
+        lots = 0
+        for user in self.users:
+            questions_remaining = assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count()
+            if questions_remaining == 0:
+                zero = zero + 1 
+            elif questions_remaining < 3:
+                very_little = very_little + 1  
+            elif questions_remaining < 6:
+                little = little + 1  
+            elif questions_remaining < 11:
+                some = some + 1  
+            else:
+                lots = lots + 1 
+
+        return [zero, very_little, little, some, lots]
+
+    def student_mastery_breakdown(self, objective, assessment):
+        mastered_count = 0
+        proficient_count = 0 
+        needs_improvement_count = 0 
+
+        for user in self.users:
+            user_ave = objective.get_e_factor_average(user, assessment)
+            if user_ave < 3:
+                needs_improvement_count = needs_improvement_count + 1 
+            elif user_ave < 4:
+                proficient_count = proficient_count + 1 
+            else:
+                mastered_count = mastered_count + 1
+
+        return [mastered_count, proficient_count, needs_improvement_count]
+
 
 class CourseSchema(Schema):
     class Meta:

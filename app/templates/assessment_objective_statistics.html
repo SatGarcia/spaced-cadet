@@ -11,28 +11,7 @@
                         <div class="col">
                             <div class="fw-bold fs-8">
                                 {{ objective.description }}
-                                {% set average = 0 %}
-                                {% set count = 0 %}
-                                {% for user in course.users %}
-                                    {% set average = average + objective.get_e_factor_average(user, assessment) %}
-                                {% endfor %}
-                                {% if course.users.count() == 0 %}
-                                    {% set count = 1 %}
-                                {% else %}
-                                    {% set count = course.users.count() %}
-                                {% endif%}
-                                {% set rating = average / count %}
-                                {% if rating < 1.8 %}
-                                    {% set full = 1 %}  
-                                {% elif rating < 2.4 %}
-                                    {% set full = 2 %} 
-                                {% elif rating < 3 %}
-                                    {% set full = 3 %}
-                                {% elif rating < 5 %}
-                                    {% set full = 4 %}
-                                {% else %}
-                                    {% set full = 5 %}
-                                {% endif %}
+                                {% set full = course.star_rating(objective, assessment) %}
                                 {% for i in range(full) %}
                                     <i class="bi bi-star-fill" style="color: gold"></i>
                                     {% endfor %}
@@ -42,21 +21,11 @@
                             </div>
                         
                         </div>
-        
-                        {% set mastered_count = 0 %}
-                        {% set proficient_count = 0 %}
-                        {% set attempted_count = 0 %}
-                        {% for user in course.users %}
-                            
-                            {% set user_ave = objective.get_e_factor_average(user, assessment) %}
-                            {% if user_ave < 3 %}
-                                {% set attempted_count = attempted_count + 1 %}
-                            {% elif rating < 4 %}
-                                {% set proficient_count = proficient_count + 1 %}
-                            {% else %}
-                                {% set mastered_count = mastered_count + 1 %}
-                            {% endif%}
-                        {% endfor %}
+                        {% set breakdown = course.student_mastery_breakdown(objective, assessment) %}
+                        {% set mastered_count = breakdown[0] %}
+                        {% set proficient_count = breakdown[1] %}
+                        {% set needs_improvement_count = breakdown[2] %}
+
 
                         <div class="col-6">
                             <span class="fw-bold">Student Mastery<div id="student_mastery {{objective.id}}"></div></span>
@@ -65,8 +34,8 @@
                             <script>
                                 var data = [{
                                     type: "pie",
-                                    values: [{{mastered_count}}, {{proficient_count}}, {{attempted_count}}],
-                                    labels: ["mastered_count", "proficient_count", "attempted_count"],
+                                    values: [{{mastered_count}}, {{proficient_count}}, {{needs_improvement_count}}],
+                                    labels: ["Mastered", "Proficient", "Needs Improvement  "],
                                     marker: {
                                         colors: ["rgb(26,150,65)","rgb(166,217,106)","#FFFF66"]
                                     },

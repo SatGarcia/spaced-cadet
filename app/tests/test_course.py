@@ -117,4 +117,7 @@ class CourseModelCase(unittest.TestCase):
         
         # any meetings before today are previous
         self.assertCountEqual(self.c.previous_meetings(), [self.cm1])
+
+    def test_star_rating(self):
+        pass
         
