@@ -244,6 +244,7 @@ def review_answer(course_name, mission_id):
     if question.type == QuestionType.MULTIPLE_SELECTION:
         for option in attempt.responses:
             response_html += markdown_to_html(option.text) + "\n"
+
     elif question.type == QuestionType.CODE_JUMBLE:
         response_html = "<ul class=\"list-unstyled jumble\">"
         user_response = ast.literal_eval(attempt.response)
@@ -256,12 +257,14 @@ def review_answer(course_name, mission_id):
             indent_amount = (block[1]* 20) + 15
             response_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
         response_html += "</ul>"
+
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         selected_answer = attempt.responses.first()
         if selected_answer:
             response_html = markdown_to_html(selected_answer.text)
         else:
             response_html = markdown_to_html("_No response given._")
+
     else: #question.type = auto-check
         selected_answer = attempt.response.strip()
         response_html = markdown_to_html(selected_answer)
@@ -272,7 +275,7 @@ def review_answer(course_name, mission_id):
                                                 course_name=course_name,
                                                 mission_id=mission_id),
                            prompt=Markup(prompt_html),
-                           response = Markup(response_html),
+                           response=Markup(response_html),
                            answer=Markup(answer_html))
 
 
@@ -652,4 +655,6 @@ from app.db_models import (
     SelectionAttempt, JumbleBlock, Course, Objective, User, Assessment
 )
 
+
 from app.auth import check_authorization, AuthorizationError
+

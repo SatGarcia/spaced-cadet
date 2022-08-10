@@ -873,7 +873,7 @@ class Objective(SearchableMixin, db.Model):
     def __repr__(self):
         return f"<Objective {self.id}: {self.description}>"
 
-    def get_e_factor_average(self,user,assessment=None):
+    def get_e_factor_average(self, user, assessment=None):
         """ Returns the average e_factor given an objective, assessment, and user... will return 0 if no questions in objective"""
         e_factor_sum = 0.0
         question_count = 0
@@ -910,6 +910,21 @@ class Objective(SearchableMixin, db.Model):
 
         return review_list
 
+    def review_questions(self, user, assessment=None, e_factor_threshold=2.5):
+        """ Returns a list of all of the questions in an objective that have an e_factor of below 2.5 """
+        review_list = []
+
+        if assessment == None:
+            questions = self.questions.filter(Question.objective_id == self.id)
+        else:
+            questions = assessment.questions.filter(Question.objective_id == self.id)
+
+        for question in questions:
+            latest_attempt = question.get_latest_attempt(user)
+            if (latest_attempt != None) and (latest_attempt.e_factor < e_factor_threshold) and (latest_attempt.next_attempt > date.today()):
+                review_list.append(question)
+
+        return review_list
 
 class LearningObjectiveSchema(Schema):
     id = fields.Int(dump_only=True)
