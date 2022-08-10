@@ -721,7 +721,7 @@ class Course(SearchableMixin, db.Model):
         if self.users.count() == 0:
             return 0
         else:
-            rating = average / self.users.count()
+            rating = average / self.users.count() # average of all the user's average e_factors
             full = 0
             if rating < 2:
                 full = 1  
