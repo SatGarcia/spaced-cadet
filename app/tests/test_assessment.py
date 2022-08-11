@@ -373,17 +373,17 @@ class AssessmentModelCase(unittest.TestCase):
         # before any attempts, there shouldn't be any objectives to review
         self.assertEqual(self.a.objectives_to_review(self.u1), [])
 
-        # lo2: attempt where average e_factor is above 2.5, shouldn't be returned
+        # lo2: attempt where average e_factor is above 2.6, shouldn't be returned
         q2_attempt = TextAttempt(response="Attempt2", user=self.u1, question=self.q2,
                                  next_attempt=date.today(),e_factor = 3)
 
-        # lo3: attempt where average e_factor is below 2.5, will be returned
+        # lo3: attempt where average e_factor is below 2.6, will be returned
         q3_attempt = TextAttempt(response="Attempt3", user=self.u1, question=self.q3,
                                  next_attempt=date.today(), e_factor = 1.4)
 
-        # lo4: attempt where average e_factor is same as 2.5, shouldn't be returned
+        # lo4: attempt where average e_factor is same as 2.6, shouldn't be returned
         q4_attempt = TextAttempt(response="Attempt4", user=self.u1, question=self.q4,
-                                 next_attempt=date.today(), e_factor = 2.5)
+                                 next_attempt=date.today(), e_factor = 2.6)
 
         # lo1: single attempt for u2, to make sure method differentiates between users
         q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=self.q1,
@@ -396,7 +396,7 @@ class AssessmentModelCase(unittest.TestCase):
     def test_objectives_to_review_over_three(self):
         self.setup_objectives()
 
-        #add more tests for where more than three objective have an average e_factor < 2.5
+        #add more tests for where more than three objective have an average e_factor < 2.6
         lo1_attempt = TextAttempt(response="Attempt1", user=self.u1, question=self.q1,
                                  next_attempt=date.today()+timedelta(days=1),e_factor=2)
 
