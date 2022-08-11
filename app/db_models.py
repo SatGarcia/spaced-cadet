@@ -956,6 +956,24 @@ class Objective(SearchableMixin, db.Model):
         else:
             average = e_factor_sum/question_count
             return float(f"{average:.3f}")
+    
+    def review_questions(self, user, assessment=None, e_factor_threshold=2.6):
+        """ 
+        Returns a list of all of the questions in an objective(either in or not in an assessment) that have an e_factor of below the e_factor_threshold for a specific user. 
+        """
+        review_list = []
+
+        if assessment is None:
+            questions = self.questions.filter(Question.objective_id == self.id)
+        else:
+            questions = assessment.questions.filter(Question.objective_id == self.id)
+
+        for question in questions:
+            latest_attempt = question.get_latest_attempt(user)
+            if (latest_attempt != None) and (latest_attempt.e_factor < e_factor_threshold) and (latest_attempt.next_attempt > date.today()):
+                review_list.append(question)
+
+        return review_list
 
     def review_questions(self, user, assessment=None, e_factor_threshold=2.6):
         """ Returns a list of all of the questions in an objective that have an e_factor of below 2.6 """
@@ -1275,8 +1293,10 @@ class Assessment(db.Model):
 
 
     def objectives_to_review(self, user, max_num_objectives=3, average_threshold=2.6):
-        """ Returns the 3 learning objectives with the lowest average e_factors in the form of: 
-        a list of 3 tuples that contain (learning objective, e_factor average)"""
+        """
+        Returns the max_num_objectives learning objectives with the lowest average e_factors that is below the average_threshold for attempts of a specific user in the form of: 
+        a list of 3 tuples that contain (learning objective, e_factor average).
+        """
 
         lo_review = [] # (lo,e_factor_average)
         for lo in self.objectives: 

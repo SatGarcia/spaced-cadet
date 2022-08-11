@@ -196,6 +196,25 @@ def check_mission_inclusion(mission_id, course):
         abort(404)
     else:
         return mission
+        
+@user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/objective/<int:objective_id>')
+@login_required
+def review_objective(course_name, mission_id, objective_id):
+    course = check_course_authorization(course_name)
+    mission = check_mission_inclusion(mission_id, course)
+    objective = mission.objectives.filter(Objective.id == objective_id).first()
+
+    review_questions = objective.review_questions(current_user, mission)
+
+    return render_template("review_objective.html",
+                           page_title="Cadet Review Center: Review Questions",
+                           continue_url=url_for('.test',
+                                                course_name=course_name,
+                                                mission_id=mission_id),
+                           review_questions=review_questions,
+                           objective=objective,
+                           mission=mission,
+                           course = course)
 
 
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review')
@@ -258,7 +277,6 @@ def review_answer(course_name, mission_id):
                            prompt=Markup(prompt_html),
                            response=Markup(response_html),
                            answer=Markup(answer_html))
-
 
 
 def create_new_text_attempt(question, user, response, previous_attempt):
