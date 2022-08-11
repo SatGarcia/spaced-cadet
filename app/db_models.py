@@ -718,10 +718,10 @@ class Course(SearchableMixin, db.Model):
         for user in self.users:
             average = average + objective.get_e_factor_average(user, assessment)
 
-        if self.users.count() == 0:
+        if self.users.count() == 0 or average == 0:
             return 0
         else:
-            rating = average / self.users.count()
+            rating = average / self.users.count() # average of all the user's average e_factors
             full = 0
             if rating < 2:
                 full = 1  

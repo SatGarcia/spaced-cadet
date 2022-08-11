@@ -30,6 +30,89 @@ class CourseModelCase(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
+    def create_users(self):
+        self.u1 = User(email="test@test.com", first_name="Test", last_name="User")
+        self.u1.set_password("test")
+        self.u2 = User(email="test2@test.com", first_name="Test2", last_name="User")
+        self.u2.set_password("test")
+        self.u3 = User(email="test3@test.com", first_name="Test3", last_name="User")
+        self.u3.set_password("test")
+        self.u4 = User(email="test4@test.com", first_name="Test4", last_name="User")
+        self.u4.set_password("test")
+        self.u5 = User(email="test5@test.com", first_name="Test5", last_name="User")
+        self.u5.set_password("test")
+        self.u6 = User(email="test6@test.com", first_name="Test6", last_name="User")
+        self.u6.set_password("test")
+        self.u7 = User(email="test7@test.com", first_name="Test7", last_name="User")
+        self.u7.set_password("test")
+        self.u8 = User(email="test8@test.com", first_name="Test8", last_name="User")
+        self.u8.set_password("test")
+        self.u9 = User(email="test9@test.com", first_name="Test9", last_name="User")
+        self.u9.set_password("test")
+        self.u10 = User(email="test10@test.com", first_name="Test10", last_name="User")
+        self.u10.set_password("test")
+
+        db.session.add_all([self.u1, self.u2,self.u3, self.u4, self.u5, self.u6, self.u7, self.u8, self.u9, self.u10])
+        db.session.commit()
+
+        self.c.users.append(self.u1)
+        self.c.users.append(self.u2)
+        self.c2.users.append(self.u3)
+        self.c2.users.append(self.u4)
+        self.c3.users.append(self.u5)
+        self.c3.users.append(self.u6)
+        self.c4.users.append(self.u7)
+        self.c4.users.append(self.u8)
+        self.c5.users.append(self.u9)
+        self.c5.users.append(self.u10)
+
+    def create_objectives_and_more_courses(self):
+        self.c3 = Course(name="test-course3", title="Test Course 3", description="",
+                    start_date=(date.today()-timedelta(days=3)),
+                    end_date=(date.today()+timedelta(days=3)))
+
+        self.c4 = Course(name="test-course4", title="Test Course 4", description="",
+                    start_date=(date.today()-timedelta(days=3)),
+                    end_date=(date.today()+timedelta(days=3)))
+
+        self.c5 = Course(name="test-course5", title="Test Course 5", description="",
+                    start_date=(date.today()-timedelta(days=3)),
+                    end_date=(date.today()+timedelta(days=3)))
+        
+        db.session.add(self.c3)
+        db.session.add(self.c4)
+        db.session.add(self.c5)
+        db.session.commit()
+
+        self.a = Assessment(title="Test assessment3", time = datetime.now()) 
+
+        self.lo1 = Objective(description="Learning Objective 1")
+        self.lo2 = Objective(description="Learning Objective 2")
+        self.lo3 = Objective(description="Learning Objective 3")
+        self.lo4 = Objective(description="Learning Objective 4")
+        self.lo5 = Objective(description="Learning Objective 5")
+
+        self.q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1",objective = self.lo1)
+        self.q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2",objective = self.lo2)
+        self.q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3",objective = self.lo3)
+        self.q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4",objective = self.lo4)
+        self.q5 = ShortAnswerQuestion(prompt="Question 5", answer="Answer 5",objective = self.lo5)
+
+        db.session.add_all([self.a, self.lo1, self.lo2, self.lo3, self.lo4, self.lo5, self.q1, self.q2, self.q3, self.q4, self.q5])
+        db.session.commit()
+
+        self.a.objectives.append(self.lo1)
+        self.a.objectives.append(self.lo2)
+        self.a.objectives.append(self.lo3)
+        self.a.objectives.append(self.lo4)
+        self.a.objectives.append(self.lo5)
+
+        self.a.questions.append(self.q1)
+        self.a.questions.append(self.q2)
+        self.a.questions.append(self.q3)
+        self.a.questions.append(self.q4)
+        self.a.questions.append(self.q5)
+
 
     def create_assessments(self):
         self.a1 = Assessment(title="Test assessment1", time = datetime.now()-timedelta(days=2))  # assessment occurs during course, before current date
@@ -120,15 +203,48 @@ class CourseModelCase(unittest.TestCase):
 
     def test_star_rating(self):
 
-        u1 = User(email="test1@test.com", first_name="Test", last_name="User")
-        u1.set_password('test')
-        u2 = User(email="test2@test.com", first_name="Test", last_name="User")
-        u2.set_password('test')
+        self.create_objectives_and_more_courses()
+        # test: if no attempts are made then 0 should be returned
+        self.assertEqual(self.c.star_rating(self.lo1, self.a), 0) 
 
-        db.session.add_all([u1, u2])
-        db.session.commit()
+        self.create_users()
+        # test: if no users are made then 0 should be returned
+        self.assertEqual(self.c.star_rating(self.lo1, self.a), 0) 
 
-        u1.courses.append(self.c)
+        # test with u1, u2 and lo1 for 1 full star
+        user1_attempt = TextAttempt(response="Attempt1", user=self.u1, question=self.q1, e_factor = 1.5)
+        user2_attempt = TextAttempt(response="Attempt2", user=self.u2, question=self.q1, e_factor = 1.5)
+        db.session.add_all([user1_attempt, user2_attempt])
+
+        self.assertEqual(self.c.star_rating(self.lo1, self.a), 1) 
+
+        # test with u3, u4 and lo2 for 2 full stars
+        user3_attempt = TextAttempt(response="Attempt1", user=self.u3, question=self.q2, e_factor = 2.5)
+        user4_attempt = TextAttempt(response="Attempt2", user=self.u4, question=self.q2, e_factor = 2.5)
+        db.session.add_all([user3_attempt, user4_attempt])
+
+        self.assertEqual(self.c2.star_rating(self.lo2, self.a), 2) 
+
+        # test with u5, u6 and lo3 for 3 full stars
+        user5_attempt = TextAttempt(response="Attempt1", user=self.u5, question=self.q3, e_factor = 4)
+        user6_attempt = TextAttempt(response="Attempt2", user=self.u6, question=self.q3, e_factor = 4)
+        db.session.add_all([user5_attempt, user6_attempt])
+
+        self.assertEqual(self.c3.star_rating(self.lo3, self.a), 3) 
+
+        # test with u7, u8 and lo4 for 4 full stars
+        user7_attempt = TextAttempt(response="Attempt1", user=self.u7, question=self.q4, e_factor = 6)
+        user8_attempt = TextAttempt(response="Attempt2", user=self.u8, question=self.q4, e_factor = 6)
+        db.session.add_all([user7_attempt, user8_attempt])
+
+        self.assertEqual(self.c4.star_rating(self.lo4, self.a), 4) 
+
+        # test with u9, u10 and lo5 for 5 full stars
+        user9_attempt = TextAttempt(response="Attempt1", user=self.u9, question=self.q5, e_factor = 10)
+        user10_attempt = TextAttempt(response="Attempt2", user=self.u10, question=self.q5, e_factor = 10)
+        db.session.add_all([user9_attempt, user10_attempt])
+
+        self.assertEqual(self.c5.star_rating(self.lo5, self.a), 5)
     
     def test_questions_remaining_breakdown(self):
 
