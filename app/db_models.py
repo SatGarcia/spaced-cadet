@@ -873,7 +873,7 @@ class Objective(SearchableMixin, db.Model):
     def __repr__(self):
         return f"<Objective {self.id}: {self.description}>"
 
-    def get_e_factor_average(self,user,assessment=None):
+    def get_e_factor_average(self, user, assessment=None):
         """ Returns the average e_factor given an objective, assessment, and user... will return 0 if no questions in objective"""
         e_factor_sum = 0.0
         question_count = 0
@@ -895,10 +895,12 @@ class Objective(SearchableMixin, db.Model):
             return float(f"{average:.3f}")
     
     def review_questions(self, user, assessment=None, e_factor_threshold=2.6):
-        """ Returns a list of all of the questions in an objective that have an e_factor of below 2.5 """
+        """ 
+        Returns a list of all of the questions in an objective(either in or not in an assessment) that have an e_factor of below the e_factor_threshold for a specific user. 
+        """
         review_list = []
 
-        if assessment == None:
+        if assessment is None:
             questions = self.questions.filter(Question.objective_id == self.id)
         else:
             questions = assessment.questions.filter(Question.objective_id == self.id)
@@ -1213,7 +1215,7 @@ class Assessment(db.Model):
 
 
     def objectives_to_review(self, user, max_num_objectives=3, average_threshold=2.6):
-        """ Returns the 3 learning objectives with the lowest average e_factors in the form of: 
+        """ Returns the max_num_objectives learning objectives with the lowest average e_factors that is below the average_threshold for attempts of a specific user in the form of: 
         a list of 3 tuples that contain (learning objective, e_factor average)"""
 
         lo_review = [] # (lo,e_factor_average)

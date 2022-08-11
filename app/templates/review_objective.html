@@ -4,8 +4,9 @@
         
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview', course_name=course.name) }}">Course Overview</a></li>
                 <li class="breadcrumb-item"><a href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">Mission Center</a></li>
-				<li class="breadcrumb-item"><a href="{{ continue_url }}">Completed Mission</a></li>
+				<li class="breadcrumb-item"><a href="{{ continue_url }}">{{mission.title}} Training</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Learning Objective Review</li>
             </ol>
         </nav>
@@ -16,7 +17,7 @@
             </div>
         </div>
 
-        <div id="carouselExampleIndicators" class="carousel carousel-dark slide row mb-5" data-bs-ride="carousel" data-bs-interval="false">
+        <div id="questionCarousel" class="carousel carousel-dark slide row mb-5" data-bs-ride="carousel" data-bs-interval="false">
             <div class="col">
 
                 <div class="carousel-inner">
@@ -44,8 +45,8 @@
              
         <div class="row mb-2">
             <div class="col text-center ">
-                <button class="btn btn-outline-secondary btn-sm" data-bs-target="#carouselExampleIndicators" role="button" data-bs-slide="prev">&#10094;</button>
-                <button class="btn btn-outline-secondary btn-sm" data-bs-target="#carouselExampleIndicators" role="button" data-bs-slide="next">&#10095;</button>
+                <button class="btn btn-outline-secondary btn-sm" data-bs-target="#questionCarousel" role="button" data-bs-slide="prev">&#10094;</button>
+                <button class="btn btn-outline-secondary btn-sm" data-bs-target="#questionCarousel" role="button" data-bs-slide="next">&#10095;</button>
             </div>
         </div>
 
