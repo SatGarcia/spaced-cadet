@@ -1,27 +1,48 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
-        <h2>Welcome{%if current_user.is_authenticated %}, {{ current_user.first_name }}{% endif %}!</h2>
-        SpacedCadet is an app that uses spaced repetition to optimize your
-        learning.
+        <div class="row border-bottom mb-5">
+            <h2>Welcome{%if current_user.is_authenticated %}, {{ current_user.first_name }}{% endif %}!</h2>
+            SpacedCadet is an app that uses spaced repetition to optimize your
+            learning.
+            <br><br>
+        </div>
 
         {% if ns.current_courses %}
             <div class="pt-3">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        Begin Training!
-                    </button>
-                    <ul class="dropdown-menu">
-                        {% for course in ns.current_courses %}
-                            <li>
-                                <a class="dropdown-item"
-                                   href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">
-                                    {{ course.name }}
-                                </a>
-                            </li>
+                {% for course in ns.current_courses %}
+                    <div class="container">
+                        <div class = "row mb-4">
+                            <h5 class="border-bottom mb-1">{{course.name}}</h5>
+                            <br>
+                        </div>
+                        {% for assessment in course.assessments %}
+                            {% set num_needing_practice = assessment.fresh_questions(current_user).count() + assessment.repeat_questions(current_user).count() %}
+                            {% if num_needing_practice > 0 %}
+                                <div class = "row mb-1">
+                                    <div class = "col">
+                                        <h6>{{ assessment.title }}</h6>
+                                        <br>
+                                    </div>
+                                    <div class = "col">
+                                        <a role="button" class="mt-1 btn btn-sm btn-primary position-relative"
+                                            href="{{ url_for("user_views.test", course_name=course.name, mission_id=assessment.id) }}">
+                                            Begin Training
+                                            <span class="position-absolute top-0 start-100 translate-middle badge bg-danger">
+                                                {{ num_needing_practice }}
+                                                <span class="visually-hidden">questions that need practice</span>
+                                            </span>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
                         {% endfor %}
-                    </ul>
-                </div>
+                        <a href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">
+                            Go to Training Center
+                        </a>
+                            
+                    </div>               
+                {% endfor %}
             </div>
 
         {% endif %}
