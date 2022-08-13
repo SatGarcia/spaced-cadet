@@ -11,37 +11,35 @@
         {% if ns.current_courses %}
             <div class="pt-3">
                 {% for course in ns.current_courses %}
-                    <div class="container">
-                        <div class = "row mb-4">
-                            <h5 class="border-bottom mb-1">{{course.name}}</h5>
-                            <br>
-                        </div>
-                        {% for assessment in course.assessments %}
-                            {% set num_needing_practice = assessment.fresh_questions(current_user).count() + assessment.repeat_questions(current_user).count() %}
-                            {% if num_needing_practice > 0 %}
-                                <div class = "row mb-1">
-                                    <div class = "col">
-                                        <h6>{{ assessment.title }}</h6>
-                                        <br>
+                    <ul class="list-group">
+                        <li class="list-group-item">
+                            <div class = "row mb-1">
+                                <h5>{{course.name}}</h5>
+                                <br>
+                            </div>
+                            {% for assessment in course.assessments %}
+                                {% set num_needing_practice = assessment.fresh_questions(current_user).count() + assessment.repeat_questions(current_user).count() %}
+                                {% if num_needing_practice > 0 %}
+                                    <div class = "row mb-2">
+                                        <div class="col">{{ assessment.title }}</div>
+                                        <div class = "col align-items-right">
+                                            <a role="button" class="mt-1 btn btn-sm btn-primary position-relative"
+                                                href="{{ url_for("user_views.test", course_name=course.name, mission_id=assessment.id) }}">
+                                                Begin Training
+                                                <span class="position-absolute top-0 start-100 translate-middle badge bg-danger">
+                                                    {{ num_needing_practice }}
+                                                    <span class="visually-hidden">questions that need practice</span>
+                                                </span>
+                                            </a>
+                                        </div>
                                     </div>
-                                    <div class = "col">
-                                        <a role="button" class="mt-1 btn btn-sm btn-primary position-relative"
-                                            href="{{ url_for("user_views.test", course_name=course.name, mission_id=assessment.id) }}">
-                                            Begin Training
-                                            <span class="position-absolute top-0 start-100 translate-middle badge bg-danger">
-                                                {{ num_needing_practice }}
-                                                <span class="visually-hidden">questions that need practice</span>
-                                            </span>
-                                        </a>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                        <a href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">
-                            Go to Training Center
-                        </a>
-                            
-                    </div>               
+                                {% endif %}
+                            {% endfor %}
+                            <a href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">
+                                Go to Training Center
+                            </a>   
+                        </li>                     
+                    </ul>               
                 {% endfor %}
             </div>
 
