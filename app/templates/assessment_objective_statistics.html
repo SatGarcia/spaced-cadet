@@ -21,21 +21,25 @@
                             </div>
                         
                         </div>
-                        {% set breakdown = course.student_mastery_breakdown(objective, assessment) %}
-                        {% set mastered_count = breakdown[0] %}
-                        {% set proficient_count = breakdown[1] %}
-                        {% set needs_improvement_count = breakdown[2] %}
+
+                        {% set breakdown = course.student_skill_breakdown(objective, assessment) %}
+                        {% set proficient_count = breakdown[0] %}
+                        {% set limited_count = breakdown[1] %}
+                        {% set undeveloped_count = breakdown[2] %}
 
 
                         <div class="col-6">
-                            <span class="fw-bold">Student Mastery<div id="student_mastery {{objective.id}}"></div></span>
+                            <strong>
+                                Student Proficiency
+                                <div id="student_proficiency {{objective.id}}"></div>
+                            </strong>
                         
                             <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
                             <script>
                                 var data = [{
                                     type: "pie",
-                                    values: [{{mastered_count}}, {{proficient_count}}, {{needs_improvement_count}}],
-                                    labels: ["Mastered", "Proficient", "Needs Improvement  "],
+                                    values: [{{proficient_count}}, {{limited_count}}, {{undeveloped_count}}],
+                                    labels: ["Proficient", "Limited", "Undeveloped"],
                                     marker: {
                                         colors: ["rgb(26,150,65)","#FFFF66","#FF3333"]
                                     },
@@ -55,7 +59,7 @@
                                                 
                                     }
                                 
-                                Plotly.newPlot('student_mastery {{objective.id}}', data, layout)
+                                Plotly.newPlot('student_proficiency {{objective.id}}', data, layout)
                             </script>
                         </div>
 

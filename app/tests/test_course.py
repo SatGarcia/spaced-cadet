@@ -245,25 +245,98 @@ class CourseModelCase(unittest.TestCase):
         db.session.add_all([user9_attempt, user10_attempt])
 
         self.assertEqual(self.c5.star_rating(self.lo5, self.a), 5)
-    
-    def test_questions_remaining_breakdown(self):
 
-        u1 = User(email="test1@test.com", first_name="Test", last_name="User")
+
+    def create_attempts(self, user, questions, question_nums):
+        attempts = []
+
+        for q_num in question_nums:
+            attempts.append(TextAttempt(response=f"Attempt for Q{q_num}",
+                                        user=user,
+                                        question=questions[q_num],
+                                        time=date.today(),
+                                        next_attempt=(date.today()+timedelta(days=1)),
+                                        quality=4))
+
+        db.session.add_all(attempts)
+
+
+    def test_questions_remaining_breakdown(self):
+        # create 10 users
+        users = []
+
+        for i in range(10):
+            user = User(email=f"test{i}@test.com", first_name=f"Test{i}", last_name="User")
+            user.set_password('test')
+            user.courses.append(self.c)
+
+            users.append(user)
+
+        a = Assessment(title="Test assessment")
+        self.c.assessments.append(a)
+        db.session.add(a)
+
+        # create 12 questions
+        questions = []
+
+        for i in range(12):
+            q = ShortAnswerQuestion(prompt=f"Question {i}", answer=f"Answer {i}")
+            questions.append(q)
+
+        a.questions = questions
+
+        db.session.add_all(users)
+        db.session.commit()
+
+        # with no attempts, all users should have 'lots' (i.e. 10+) of
+        # remaining questions
+        self.assertEqual(self.c.questions_remaining_breakdown(a), (0, 0, 0, 0, 10))
+
+        # users 0 and 9 attempt all questions (i.e. 0 remaining)
+        self.create_attempts(users[0], questions, range(12))
+        self.create_attempts(users[9], questions, range(12))
+
+        # users 1 and 8 attempt all but 1 or 2 questions (i.e. "very little"
+        # remaining)
+        self.create_attempts(users[1], questions, range(11))
+        self.create_attempts(users[8], questions, range(1, 12))
+
+        # users 2, 6, and 7 have 3, 4, or 5 remaining (i.e. "little")
+        self.create_attempts(users[2], questions, [0, 2, 3, 4, 6, 7, 9, 10, 11])
+        self.create_attempts(users[6], questions, [1, 2, 4, 5, 6, 9, 10, 11])
+        self.create_attempts(users[7], questions, [0, 2, 3, 5, 6, 7, 9])
+
+        # users 3 and 5 have 6-10 remaining (i.e. "some")
+        self.create_attempts(users[3], questions, [0, 2, 3, 7, 8, 11])
+        self.create_attempts(users[5], questions, [0, 1, 2])
+
+        # note: user 4 has no attempts
+
+        db.session.commit()
+
+        self.assertEqual(self.c.questions_remaining_breakdown(a), (2, 2, 3, 2, 1))
+
+
+    def test_student_skill_breakdown(self):
+        u1 = User(email="test1@test.com", first_name="Test1", last_name="User")
         u1.set_password('test')
-        u2 = User(email="test2@test.com", first_name="Test", last_name="User")
+        u2 = User(email="test2@test.com", first_name="Test2", last_name="User")
         u2.set_password('test')
+        u3 = User(email="test3@test.com", first_name="Test2", last_name="User")
+        u3.set_password('test')
 
         u1.courses.append(self.c)
         u2.courses.append(self.c)
+        u3.courses.append(self.c)
 
-        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1")
-        q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2")
-        q3 = ShortAnswerQuestion(prompt="Question 3", answer="Answer 3")
-        q4 = ShortAnswerQuestion(prompt="Question 4", answer="Answer 4")
+        lo1 = Objective(description="Learning Objective 1")
+        lo2 = Objective(description="Learning Objective 2")
+
+        q1 = ShortAnswerQuestion(prompt="Question 1 (LO1)", answer="Answer 1", objective=lo1)
+        q2 = ShortAnswerQuestion(prompt="Question 2 (LO1)", answer="Answer 2", objective=lo1)
+        q3 = ShortAnswerQuestion(prompt="Question 3 (LO2)", answer="Answer 3", objective=lo2)
 
         a = Assessment(title="Test assessment")
-
-        self.c.assessments.append(a)
 
         db.session.add_all([u1, u2, a])
         db.session.commit()
@@ -271,76 +344,34 @@ class CourseModelCase(unittest.TestCase):
         a.questions.append(q1)
         a.questions.append(q2)
         a.questions.append(q3)
-        a.questions.append(q4)
 
-        self.assertEqual(self.c.questions_remaining_breakdown(a), [0, 0, 2, 0 , 0])
+        # no attempts on LO1 questions so all users should be categorized as
+        # "undeveloped" for LO1
+        self.assertEqual(self.c.student_skill_breakdown(lo1, a), (0, 0, 3))
 
-        # user1 has no unattempted questions remaining
-        q1_attempt = TextAttempt(response="Attempt1", user=u1, question=q1,
-                                 time=date.today(), next_attempt=(date.today()+timedelta(days=1)), quality = 4)
-        
-        q2_attempt = TextAttempt(response="Attempt1", user=u1, question=q2,
-                                 time=date.today(), next_attempt=(date.today()+timedelta(days=1)), quality = 4)
+        # set attempt to give u1 a "proficient" rating (i.e. avg. efactor >= 4)
+        u1_attempt = TextAttempt(response="User1 Attempt", user=u1, question=q1,
+                                 time=date.today(),
+                                 next_attempt=(date.today()+timedelta(days=1)),
+                                 e_factor = 4.5)
 
-        q3_attempt = TextAttempt(response="Attempt1", user=u1, question=q3,
-                                 time=date.today(), next_attempt=(date.today()+timedelta(days=1)), quality = 4)
+        # set attempt to give u2 a "limited" rating (i.e. avg. efactor between
+        # 3 and 4)
+        u2_attempt = TextAttempt(response="User2 Attempt", user=u2, question=q2,
+                                 time=date.today(),
+                                 next_attempt=(date.today()+timedelta(days=1)),
+                                 e_factor = 3.5)
 
-        q4_attempt = TextAttempt(response="Attempt1", user=u1, question=q4,
-                                 time=date.today(), next_attempt=(date.today()+timedelta(days=1)), quality = 4)
-        
-        # user2 has 3 unattempted questions remaining
-        q1_attemptb = TextAttempt(response="Attempt1", user=u2, question=q1,
-                            time=date.today(), next_attempt=(date.today()+timedelta(days=1)), quality = 4)
+        # set attempt for LO2 question as proficient, which shouldn't affect
+        # LO1's default value of "undeveloped"
+        u3_attempt = TextAttempt(response="User3 Attempt", user=u3, question=q3,
+                                 time=date.today(),
+                                 next_attempt=(date.today()+timedelta(days=1)),
+                                 e_factor = 4.5)
 
-        db.session.add_all([q1_attempt, q2_attempt, q3_attempt, q4_attempt, q1_attemptb])
+
+        db.session.add_all([u1_attempt, u2_attempt, u3_attempt])
         db.session.commit()
 
-        self.assertEqual(self.c.questions_remaining_breakdown(a), [1, 0, 1, 0 , 0])
+        self.assertEqual(self.c.student_skill_breakdown(lo1, a), (1, 1, 1))
 
-    def test_student_mastery_breakdown(self):
- 
-        u1 = User(email="test1@test.com", first_name="Test", last_name="User")
-        u1.set_password('test')
-        u2 = User(email="test2@test.com", first_name="Test", last_name="User")
-        u2.set_password('test')
-
-        u1.courses.append(self.c)
-        u2.courses.append(self.c)
-
-        lo1 = Objective(description="Learning Objective 1")
-
-        q1 = ShortAnswerQuestion(prompt="Question 1", answer="Answer 1",objective = lo1)
-        q2 = ShortAnswerQuestion(prompt="Question 2", answer="Answer 2",objective = lo1)
-        a = Assessment(title="Test assessment")
-        
-        db.session.add_all([u1, u2, a])
-        db.session.commit()
-
-        a.questions.append(q1)
-        a.questions.append(q2)
-        # no attempts so no questions are mastered
-        self.assertEqual(self.c.student_mastery_breakdown(lo1, a), [0, 0, 2])
-
-        q1_attempt = TextAttempt(response="Attempt1", user=u1, question=q1,
-                                 time=date.today(), next_attempt=(date.today()+timedelta(days=1)), e_factor = 4)
-        
-        q2_attempt = TextAttempt(response="Attempt1", user=u1, question=q2,
-                                 time=date.today(), next_attempt=(date.today()+timedelta(days=1)), e_factor = 4)
-              
-        db.session.add_all([q1_attempt, q2_attempt])
-        db.session.commit()
-
-        self.assertEqual(self.c.student_mastery_breakdown(lo1, a), [1, 0, 1])    
-
-
-
-
-
-
-
-
-
-    
-
-
-        

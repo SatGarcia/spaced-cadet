@@ -737,7 +737,8 @@ class Course(SearchableMixin, db.Model):
         return full
 
     def questions_remaining_breakdown(self, assessment):
-        """ Returns a list containing the breakdown of how many questions are remaining for all users in a course"""
+        """ Returns a tuple containing the breakdown of how many questions are
+        remaining for all users in the given assessment for this course. """
         zero = 0
         very_little = 0
         little = 0
@@ -746,33 +747,41 @@ class Course(SearchableMixin, db.Model):
         for user in self.users:
             questions_remaining = assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count()
             if questions_remaining == 0:
-                zero = zero + 1 
+                zero += 1
+
             elif questions_remaining < 3:
-                very_little = very_little + 1  
+                very_little += 1
+
             elif questions_remaining < 6:
-                little = little + 1  
+                little += 1
+
             elif questions_remaining < 11:
-                some = some + 1  
+                some += 1
+
             else:
-                lots = lots + 1 
+                lots += 1
 
-        return [zero, very_little, little, some, lots]
+        return (zero, very_little, little, some, lots)
 
-    def student_mastery_breakdown(self, objective, assessment):
-        mastered_count = 0
-        proficient_count = 0 
-        needs_improvement_count = 0 
+    def student_skill_breakdown(self, objective, assessment):
+        """ Returns the number of users in this course with various levels of
+        profiency (provificient, limited, undeveloped) for the given
+        assessment and learning objective. """
+
+        proficient_count = 0
+        limited_count = 0
+        undeveloped_count = 0
 
         for user in self.users:
             user_ave = objective.get_e_factor_average(user, assessment)
             if user_ave < 3:
-                needs_improvement_count = needs_improvement_count + 1 
+                undeveloped_count += 1
             elif user_ave < 4:
-                proficient_count = proficient_count + 1 
+                limited_count += 1
             else:
-                mastered_count = mastered_count + 1
+                proficient_count += 1
 
-        return [mastered_count, proficient_count, needs_improvement_count]
+        return (proficient_count, limited_count, undeveloped_count)
 
 
 class CourseSchema(Schema):
@@ -956,10 +965,13 @@ class Objective(SearchableMixin, db.Model):
         else:
             average = e_factor_sum/question_count
             return float(f"{average:.3f}")
-    
+
+
     def review_questions(self, user, assessment=None, e_factor_threshold=2.6):
-        """ 
-        Returns a list of all of the questions in an objective(either in or not in an assessment) that have an e_factor of below the e_factor_threshold for a specific user. 
+        """
+        Returns a list of all of the questions in an objective(either in or
+        not in an assessment) that have an e_factor of below the
+        e_factor_threshold for a specific user.
         """
         review_list = []
 

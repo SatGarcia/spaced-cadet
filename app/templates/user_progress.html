@@ -30,10 +30,13 @@
 						<tr >
 							<td>{{ user.first_name }} {{ user.last_name }}</td>
 							<td>{% set num_needing_practice = assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count() %} {{ num_needing_practice }}</td>
-                            <td>{% set objectives = assessment.objectives_to_review(user) %}
-                                {% for objective in objectives %}
-                                <span class="badge rounded-pill bg-light text-dark border">{{ objective[0].description|mdown|safe }}</span>
-                                {% endfor %}</td>
+							<td>
+								<ol>
+                                {% for objective in assessment.objectives_to_review(users) %}
+									<li>objective[0].description|mdown|safe }}</li>
+								{% endfor %}
+								</ol>
+							</td>
 						</tr>
 					{% endfor %}
 				</tbody>
