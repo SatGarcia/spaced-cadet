@@ -739,11 +739,13 @@ class Course(SearchableMixin, db.Model):
     def questions_remaining_breakdown(self, assessment):
         """ Returns a tuple containing the breakdown of how many questions are
         remaining for all users in the given assessment for this course. """
+
         zero = 0
         very_little = 0
         little = 0
         some = 0
         lots = 0
+
         for user in self.users:
             questions_remaining = assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count()
             if questions_remaining == 0:
