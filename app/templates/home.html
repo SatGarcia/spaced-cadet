@@ -1,43 +1,53 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
-        <div class="row border-bottom mb-5">
+        <div class="row mb-3">
             <h2>Welcome{%if current_user.is_authenticated %}, {{ current_user.first_name }}{% endif %}!</h2>
+            <div>
             SpacedCadet is an app that uses spaced repetition to optimize your
             learning.
-            <br><br>
+            </div>
         </div>
 
-        {% if ns.current_courses %}
-            <div class="pt-3">
+        {% if current_user.is_authenticated and ns.current_courses %}
+            <h4>Current Courses</h4>
+            <div>
                 {% for course in ns.current_courses %}
+                    {% set course_id = loop.index0 %}
                     <ul class="list-group">
-                        <li class="list-group-item">
-                            <div class = "row mb-1">
-                                <h5>{{course.name}}</h5>
+                        <li class="list-group-item" id="course-{{course_id}}">
+                            <div class="row mb-1">
+                                <h5>{{course.name}}: {{course.title}}</h5>
                                 <br>
                             </div>
-                            {% for assessment in course.upcoming_assessments() %}
-                                {% set num_needing_practice = assessment.fresh_questions(current_user).count() + assessment.repeat_questions(current_user).count() %}
-                                {% if num_needing_practice > 0 %}
-                                    <div class = "row mb-2">
-                                        <div class="col">{{ assessment.title }}</div>
-                                        <div class = "col align-items-right">
-                                            <a role="button" class="mt-1 btn btn-sm btn-primary position-relative"
+                            {% if course.upcoming_assessments().count() == 0 %}
+                                <em>No upcoming missions.</em>
+                            {% else %}
+                                {% for assessment in course.upcoming_assessments() %}
+                                    {% set mission_id = loop.index0 %}
+                                    <div class="row mb-4" id="mission-{{course_id}}_{{mission_id}}">
+                                        <strong>{{ assessment.title }}</strong>
+                                        <div class="mt-1">
+                                            <span class="fw-bold">Deadline:</span>
+                                            {{ assessment.time.strftime('%B %d, %Y @ %I:%M %p') }}
+                                        </div>
+
+                                        <div>
+                                            <a role="button" class="mt-2 btn btn-sm btn-primary position-relative"
                                                 href="{{ url_for("user_views.test", course_name=course.name, mission_id=assessment.id) }}">
                                                 Begin Training
                                                 <span class="position-absolute top-0 start-100 translate-middle badge bg-danger">
-                                                    {{ num_needing_practice }}
+                                                    {{ assessment.num_questions_to_practice(current_user) }}
                                                     <span class="visually-hidden">questions that need practice</span>
                                                 </span>
                                             </a>
                                         </div>
                                     </div>
-                                {% endif %}
-                            {% endfor %}
-                            <a href="{{ url_for('user_views.missions_overview', course_name=course.name) }}" class="link-decoration-none">
+                                {% endfor %}
+                            {% endif %}
+                            <a href="{{ url_for('user_views.missions_overview', course_name=course.name) }}" class="text-decoration-none">
                                 Visit Course Training Center
-                            </a>   
+                            </a>
                         </li>                     
                     </ul>               
                 {% endfor %}
