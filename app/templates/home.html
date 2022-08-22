@@ -17,7 +17,7 @@
                                 <h5>{{course.name}}</h5>
                                 <br>
                             </div>
-                            {% for assessment in course.assessments %}
+                            {% for assessment in course.upcoming_assessments() %}
                                 {% set num_needing_practice = assessment.fresh_questions(current_user).count() + assessment.repeat_questions(current_user).count() %}
                                 {% if num_needing_practice > 0 %}
                                     <div class = "row mb-2">
