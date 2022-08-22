@@ -876,14 +876,14 @@ class User(UserMixin, db.Model):
 
     def get_active_courses(self):
         """ Returns all courses whose end date is today or later """
-        
+
         return self.courses.filter(Course.end_date >= date.today())\
             .order_by(Course.start_date)\
             .all()
-    
+
     def get_past_courses(self):
         """ Returns all courses whose end date is earlier than today """
-        
+
         return self.courses.filter(Course.end_date < date.today())\
             .order_by(Course.start_date)\
             .all()
@@ -1260,7 +1260,16 @@ class Assessment(db.Model):
                                      .subquery()
 
         return self.questions.join(poor_attempts)
-    
+
+
+    def num_questions_to_practice(self, user):
+        """
+        Returns the number of assessment questions the given user still
+        needs to complete today. This includes both fresh and repeat quetions.
+        """
+        return self.fresh_questions(user).count() + self.repeat_questions(user).count()
+
+
     def breakdown_today(self, user):
         """ Returns a breakdown of all assessment questions whose latest attempt was 
         today and not repeated.  

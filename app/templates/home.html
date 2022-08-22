@@ -1,27 +1,56 @@
 {% extends "base.html" %}
 {% block body %}
     <div class="container pt-3">
-        <h2>Welcome{%if current_user.is_authenticated %}, {{ current_user.first_name }}{% endif %}!</h2>
-        SpacedCadet is an app that uses spaced repetition to optimize your
-        learning.
+        <div class="row mb-3">
+            <h2>Welcome{%if current_user.is_authenticated %}, {{ current_user.first_name }}{% endif %}!</h2>
+            <div>
+            SpacedCadet is an app that uses spaced repetition to optimize your
+            learning.
+            </div>
+        </div>
 
-        {% if ns.current_courses %}
-            <div class="pt-3">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        Begin Training!
-                    </button>
-                    <ul class="dropdown-menu">
-                        {% for course in ns.current_courses %}
-                            <li>
-                                <a class="dropdown-item"
-                                   href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">
-                                    {{ course.name }}
-                                </a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
+        {% if current_user.is_authenticated and ns.current_courses %}
+            <h4>Current Courses</h4>
+            <div>
+                {% for course in ns.current_courses %}
+                    {% set course_id = loop.index0 %}
+                    <ul class="list-group">
+                        <li class="list-group-item" id="course-{{course_id}}">
+                            <div class="row mb-1">
+                                <h5>{{course.name}}: {{course.title}}</h5>
+                                <br>
+                            </div>
+                            {% if course.upcoming_assessments().count() == 0 %}
+                                <em>No upcoming missions.</em>
+                            {% else %}
+                                {% for assessment in course.upcoming_assessments() %}
+                                    {% set mission_id = loop.index0 %}
+                                    <div class="row mb-4" id="mission-{{course_id}}_{{mission_id}}">
+                                        <strong>{{ assessment.title }}</strong>
+                                        <div class="mt-1">
+                                            <span class="fw-bold">Deadline:</span>
+                                            {{ assessment.time.strftime('%B %d, %Y @ %I:%M %p') }}
+                                        </div>
+
+                                        <div>
+                                            <a role="button" class="mt-2 btn btn-sm btn-primary position-relative"
+                                                href="{{ url_for("user_views.test", course_name=course.name, mission_id=assessment.id) }}">
+                                                Begin Training
+                                                <span class="position-absolute top-0 start-100 translate-middle badge bg-danger">
+                                                    {{ assessment.num_questions_to_practice(current_user) }}
+                                                    <span class="visually-hidden">questions that need practice</span>
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            <a href="{{ url_for('user_views.missions_overview', course_name=course.name) }}" class="text-decoration-none">
+                                Visit Course Training Center
+                            </a>
+                        </li>                     
+                    </ul>               
+                {% endfor %}
             </div>
 
         {% endif %}

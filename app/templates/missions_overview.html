@@ -4,6 +4,7 @@
 {% macro assessment_list_group(assessments) %}
 	<ul class="list-group">
 		{% for assessment in assessments %}
+			{% set num_needing_practice = assessment.num_questions_to_practice(current_user) %}
 			<li class="list-group-item d-flex justify-content-between align-items-start">
 				<div>
 					<div class="fw-bold fs-5">{{ assessment.title }}</div>
@@ -37,8 +38,6 @@
 						</div>
 					{% endif %}
 
-					{% set num_needing_practice = assessment.fresh_questions(current_user).count() + assessment.repeat_questions(current_user).count() %}
-
 					<div class="mt-1">
 						<span class="fw-bold">Questions:</span>
 						Total: {{ assessment.questions.count() }}
@@ -46,8 +45,8 @@
 						{% if num_needing_practice > 0 %}
 							( Needs Practice:
 							<span class="text-danger">
-							{{ num_needing_practice }}
-							<i class="bi-exclamation-circle"></i>
+								{{ num_needing_practice }}
+								<i class="bi-exclamation-circle"></i>
 							</span>
 							)
 						{% endif %}
