@@ -115,7 +115,7 @@ def seed_course():
 
     for i in range(data['num_upcoming_assessments']):
         a = Assessment(title=f"Assessment {assess_num}",
-                       time=(datetime.now()+timedelta(days=i)))
+                       time=(datetime.now()+timedelta(days=i, hours=1)))
         new_course.assessments.append(a)
         assess_num += 1
 
