@@ -711,6 +711,80 @@ class Course(SearchableMixin, db.Model):
         """Returns all ClassMeetings that occured before today"""
         return self.meetings.filter(ClassMeeting.date < date.today() )
 
+    def star_rating(self, objective, assessment):
+        """ Returns the number of full stars based on the average e_factor of that objective """
+        average = 0 
+
+        for user in self.users:
+            average = average + objective.get_e_factor_average(user, assessment)
+
+        if self.users.count() == 0 or average == 0:
+            return 0
+        else:
+            rating = average / self.users.count() # average of all the user's average e_factors
+            full = 0
+            if rating < 2:
+                full = 1  
+            elif rating < 3:
+                full = 2 
+            elif rating < 5:
+                full = 3 
+            elif rating < 7:
+                full = 4
+            else:
+                full = 5 
+        
+        return full
+
+    def questions_remaining_breakdown(self, assessment):
+        """ Returns a tuple containing the breakdown of how many questions are
+        remaining for all users in the given assessment for this course. """
+
+        zero = 0
+        very_little = 0
+        little = 0
+        some = 0
+        lots = 0
+
+        for user in self.users:
+            questions_remaining = assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count()
+            if questions_remaining == 0:
+                zero += 1
+
+            elif questions_remaining < 3:
+                very_little += 1
+
+            elif questions_remaining < 6:
+                little += 1
+
+            elif questions_remaining < 11:
+                some += 1
+
+            else:
+                lots += 1
+
+        return (zero, very_little, little, some, lots)
+
+    def student_skill_breakdown(self, objective, assessment):
+        """ Returns the number of users in this course with various levels of
+        profiency (provificient, limited, undeveloped) for the given
+        assessment and learning objective. """
+
+        proficient_count = 0
+        limited_count = 0
+        undeveloped_count = 0
+
+        for user in self.users:
+            user_ave = objective.get_e_factor_average(user, assessment)
+            if user_ave < 3:
+                undeveloped_count += 1
+            elif user_ave < 4:
+                limited_count += 1
+            else:
+                proficient_count += 1
+
+        return (proficient_count, limited_count, undeveloped_count)
+
 
 class CourseSchema(Schema):
     class Meta:
@@ -893,10 +967,13 @@ class Objective(SearchableMixin, db.Model):
         else:
             average = e_factor_sum/question_count
             return float(f"{average:.3f}")
-    
+
+
     def review_questions(self, user, assessment=None, e_factor_threshold=2.6):
-        """ 
-        Returns a list of all of the questions in an objective(either in or not in an assessment) that have an e_factor of below the e_factor_threshold for a specific user. 
+        """
+        Returns a list of all of the questions in an objective(either in or
+        not in an assessment) that have an e_factor of below the
+        e_factor_threshold for a specific user.
         """
         review_list = []
 
@@ -912,8 +989,8 @@ class Objective(SearchableMixin, db.Model):
 
         return review_list
 
-    def review_questions(self, user, assessment=None, e_factor_threshold=2.5):
-        """ Returns a list of all of the questions in an objective that have an e_factor of below 2.5 """
+    def review_questions(self, user, assessment=None, e_factor_threshold=2.6):
+        """ Returns a list of all of the questions in an objective that have an e_factor of below 2.6 """
         review_list = []
 
         if assessment == None:
@@ -1230,8 +1307,10 @@ class Assessment(db.Model):
 
 
     def objectives_to_review(self, user, max_num_objectives=3, average_threshold=2.6):
-        """ Returns the max_num_objectives learning objectives with the lowest average e_factors that is below the average_threshold for attempts of a specific user in the form of: 
-        a list of 3 tuples that contain (learning objective, e_factor average)"""
+        """
+        Returns the max_num_objectives learning objectives with the lowest average e_factors that is below the average_threshold for attempts of a specific user in the form of: 
+        a list of 3 tuples that contain (learning objective, e_factor average).
+        """
 
         lo_review = [] # (lo,e_factor_average)
         for lo in self.objectives: 

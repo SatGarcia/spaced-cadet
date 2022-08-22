@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% macro objective_list_group(objectives) %}
+	<ul class="list-group">
+		{% for objective in objectives %}
+			<li class="list-group-item d-flex justify-content-between align-items-start">
+				<div class = "container">
+
+                    <div class="row pt-2">
+                        <div class="col">
+                            <div class="fw-bold fs-8">
+                                {{ objective.description }}
+                                {% set full = course.star_rating(objective, assessment) %}
+                                {% for i in range(full) %}
+                                    <i class="bi bi-star-fill" style="color: gold"></i>
+                                    {% endfor %}
+                                {% for i in range(5-full) %}
+                                    <i class="bi bi-star" style="color: gold"></i>
+                                    {% endfor %}
+                            </div>
+                        
+                        </div>
+
+                        {% set breakdown = course.student_skill_breakdown(objective, assessment) %}
+                        {% set proficient_count = breakdown[0] %}
+                        {% set limited_count = breakdown[1] %}
+                        {% set undeveloped_count = breakdown[2] %}
+
+
+                        <div class="col-6">
+                            <strong>
+                                Student Proficiency
+                                <div id="student_proficiency {{objective.id}}"></div>
+                            </strong>
+                        
+                            <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+                            <script>
+                                var data = [{
+                                    type: "pie",
+                                    values: [{{proficient_count}}, {{limited_count}}, {{undeveloped_count}}],
+                                    labels: ["Proficient", "Limited", "Undeveloped"],
+                                    marker: {
+                                        colors: ["rgb(26,150,65)","#FFFF66","#FF3333"]
+                                    },
+                                    //automargin: true,
+                                    hole: 0.6,
+                                    textinfo: 'none'
+                                    }]
+                                
+                                var layout = {
+                                    height: 250,
+                                    width: 450,
+                                    margin: {"t": 0, "b": 0, "l": 0, "r": 0},
+                                    showlegend: true,
+                                    legend: {
+                                        x: 1,
+                                        y: 0.5}
+                                                
+                                    }
+                                
+                                Plotly.newPlot('student_proficiency {{objective.id}}', data, layout)
+                            </script>
+                        </div>
+
+                        <div class="col w-auto mx-auto">
+                            <div class="row">
+                                <a role="button" class=" btn btn-sm btn-primary position-relative"
+                                href="{{ url_for('instructor.most_missed_questions', course_name=course.name, mission_id=assessment.id, objective_id=objective.id) }}">
+                                Most Missed Questions
+                                </a>
+                            </div>
+                        </div>
+                        
+                    </div>
+            
+                </div>
+			</li>
+		{% endfor %}
+	</ul>
+{% endmacro %}
+
+{% block body %}
+    <div class="container pt-3">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}">Home</a></li>
+				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview',course_name=course.name) }}">{{ course.name }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('instructor.assessment_statistics',course_name=course.name) }}">Assessment Statistics</a></li>
+                <li class="breadcrumb-item active" aria-current="page"> {{assessment.title}} Progress</li>
+            </ol>
+        </nav>
+
+		<h5>Learning Objective Progress: {{assessment.title}}</h5>
+		{{ objective_list_group(assessment.objectives) }}
+
+    </div>
+    
+{% endblock %}
+

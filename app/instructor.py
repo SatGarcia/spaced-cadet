@@ -679,6 +679,124 @@ def manage_assessments(course_name):
                            page_title="Cadet: Manage Course Assessments",
                            course=course)
 
+@instructor.route('/c/<course_name>/stats')
+@login_required
+def assessment_statistics(course_name):
+    """ Route to provide statistics for all the assessments in this course,
+    including the difficulty of each learning objective and the number of
+    incomplete questions. """
+
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    return render_template("assessment_statistics.html",
+                           page_title="Cadet: Assessment Statistics",
+                           course=course)
+
+@instructor.route('/c/<course_name>/mission/<int:mission_id>/stats/progress')
+@login_required
+def user_progress(course_name, mission_id):
+    """ Route to provide statistics for the given assessment on a user-by-user
+    basis. The statistics includes the number of questions due as well as the
+    objectives that they have performed the worst on. """
+
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    mission = course.assessments.filter_by(id=mission_id).first()
+
+    if not mission:
+        abort(404)
+
+    return render_template("user_progress.html",
+                           page_title="Cadet: Assessment Statistics",
+                           course=course,
+                           assessment=mission)
+
+
+
+@instructor.route('/c/<course_name>/mission/<int:mission_id>/stats/objectives')
+@login_required
+def assessment_objective_statistics(course_name, mission_id):
+    """ Route to provide the instructor with per-objective statistics for this
+    assessment. This includes the difficulty of the learning objective (based
+    on student performance) as well as the number of students with various
+    proficiency levels. """
+
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    mission = course.assessments.filter_by(id=mission_id).first()
+
+    if not mission:
+        abort(404)
+
+    return render_template("assessment_objective_statistics.html",
+                           page_title="Cadet: Objective Statistics",
+                           course=course,
+                           assessment=mission)
+
+@instructor.route('/c/<course_name>/mission/<int:mission_id>/objective/<int:objective_id>/stats')
+@login_required
+def most_missed_questions(course_name, mission_id, objective_id):
+    """ Route to show ranking of which questions in this given assessment +
+    learning objective were the most frequently missed. """
+
+    course = Course.query.filter_by(name=course_name).first()
+    if not course:
+        abort(404)
+
+    try:
+        check_authorization(current_user, course=course, instructor=True)
+    except AuthorizationError:
+        abort(401)
+
+    mission = course.assessments.filter_by(id=mission_id).first()
+
+    if not mission:
+        abort(404)
+
+    objective = mission.objectives.filter_by(id=objective_id).first()
+
+    if not objective:
+        abort(404)
+
+    review_questions_dic = {}
+    for user in course.users:
+        questions = objective.review_questions(user, mission)
+        for question in questions:
+            if question not in review_questions_dic:
+                review_questions_dic[question] = 1
+            else:
+                review_questions_dic[question] += 1
+
+    review_questions = [(k, review_questions_dic[k])
+                        for k in sorted(review_questions_dic, key=review_questions_dic.get, reverse=True)]
+
+    return render_template("most_missed_questions.html",
+                           page_title="Cadet: Most Missed Questions",
+                           course=course,
+                           assessment=mission,
+                           objective=objective,
+                           review_questions=review_questions)
 
 @instructor.route('/u/<int:user_id>/questions')
 @login_required
@@ -693,6 +811,7 @@ def user_questions(user_id):
         target_author = user_id
     else:
         target_author = 'self'
+
 
     return render_template("my_questions.html",
                            page_title="Cadet: My Questions",

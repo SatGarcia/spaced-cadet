@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% macro assessment_list_group(assessments) %}
+	<ul class="list-group">
+		{% for assessment in assessments %}
+			<li class="list-group-item d-flex justify-content-between align-items-start">
+				<div>
+					<div class="fw-bold fs-5">{{ assessment.title }}</div>
+
+					{{ assessment.description }}
+
+					<div class="mt-1">
+						<span class="fw-bold">Deadline:</span>
+						{{ assessment.time.strftime('%B %d, %Y @ %I:%M %p') }}
+					</div>
+
+					{% if assessment.topics.count() != 0 %}
+						<div class="mt-1">
+							<span class="fw-bold">Topics:</span>
+							{% for topic in assessment.topics %}
+								<span class="badge rounded-pill bg-light text-dark border">{{ topic.text }}</span>
+							{% endfor %}
+						</div>
+					{% endif %}
+
+					{% if assessment.objectives.count() != 0 %}
+						<div class="mt-1">
+                            <a role="button" class="fw-bold" style="color:black" href="{{ url_for('instructor.assessment_objective_statistics', course_name=course.name, mission_id=assessment.id) }}">Learning Objectives:</a>
+							<ol>
+								{% for objective in assessment.objectives %}
+									<li class="inline-p">
+										
+                                            <span class="badge rounded-pill bg-light text-dark border">{{ objective.description|mdown|safe }}</span>
+                                        {% set full = course.star_rating(objective, assessment) %}
+                                        {% for i in range(full) %}
+                                            <i class="bi bi-star-fill" style="color: gold"></i>
+                                            {% endfor %}
+                                        {% for i in range(5-full) %}
+                                            <i class="bi bi-star" style="color: gold"></i>
+                                            {% endfor %}
+									</li>
+								{% endfor %}
+							</ol>
+						</div>
+					{% endif %}
+
+                    {% set num_needing_practice = 0 %}
+                    {% for user in course.users %}
+					    {% set num_needing_practice = num_needing_practice + assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count() %}
+                    {% endfor %}
+
+					<div class="mt-1">
+						<span class="fw-bold">Questions:</span>
+						Total: {{ assessment.questions.count() }}
+
+						{% if num_needing_practice > 0 %}
+							( Needs Practice:
+							<span class="text-danger">
+							{{ num_needing_practice }}
+							<i class="bi-exclamation-circle"></i>
+							</span>
+							)
+						{% endif %}
+					</div>
+				</div>
+                {% set breakdown = course.questions_remaining_breakdown(assessment) %}
+                {% set zero = breakdown[0] %}
+                {% set very_little = breakdown[1] %}
+                {% set little = breakdown[2] %}
+                {% set some = breakdown[3] %}
+                {% set lots = breakdown[4] %}
+                
+                <span class="fw-bold">Users' Questions Remaining<div id="{{assessment.title}}"></div></span>
+                
+
+                <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+                <script>
+                    var data = [{
+                        type: "pie",
+                        values: [{{zero}}, {{very_little}}, {{little}}, {{some}}, {{lots}}],
+                        labels: ["All Completed", "1-2 Not Completed", "3-5 Not Completed", "5-10 Not Completed  ", "11+ Not Completed  "],
+                        marker: {
+                            colors: ["rgb(26,150,65)","rgb(166,217,106)","#FFFF66", "#FFA500", "#FF3333"]
+                        },
+                        //automargin: true,
+                        hole: 0.6,
+                        textinfo: 'none'
+                    }]
+                    
+                    var layout = {
+                        height: 250,
+                        width: 450,
+                        margin: {"t": 0, "b": 0, "l": 0, "r": 0},
+                        showlegend: true,
+                        legend: {
+                            x: 1,
+                            y: 0.5}
+                                    
+                        }
+                    
+                    Plotly.newPlot('{{assessment.title}}', data, layout)
+                </script>
+
+				<a role="button" class="mt-auto btn btn-sm btn-primary position-relative"
+					 href="{{ url_for('instructor.user_progress', course_name=course.name, mission_id=assessment.id) }}">
+					View Student Info
+				</a>
+			</li>
+		{% endfor %}
+	</ul>
+{% endmacro %}
+
+{% block body %}
+    <div class="container pt-3">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}">Home</a></li>
+				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview',course_name=course.name) }}">{{ course.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Mission Statistics</li>
+            </ol>
+        </nav>
+
+		<h5>Upcoming Missions</h5>
+		{{ assessment_list_group(course.upcoming_assessments()) }}
+
+		<div class="mt-4">
+			<h5>Past Missions
+			<button class="btn btn-sm btn-link text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#pastMissions" aria-expanded="false" aria-controls="pastMissions">
+				[Show/Hide]
+			</button>
+			</h5>
+			<div class="collapse" id="pastMissions">
+				{{ assessment_list_group(course.past_assessments()) }}
+			</div>
+		</div>
+    </div>
+{% endblock %}

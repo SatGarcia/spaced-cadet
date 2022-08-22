@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% macro question_list_group(questions) %}
+	<ul class="list-group">
+		{% for question_tuple in questions %}
+            {% set num_missed = question_tuple[1] %}
+            {% set question = question_tuple[0] %}
+			<li class="list-group-item d-flex justify-content-between align-items-start">
+				<div>
+					<div class="fw-bold fs-5">{{ question.prompt }}</div>
+                    
+                    <span class="text-danger">
+                    <i class="bi-exclamation-circle"></i>
+                    Number of students missing this question:
+                    {{ num_missed }}
+                    </span>
+
+					</div>
+                <div>
+                <br>
+			</li>
+		{% endfor %}
+	</ul>
+{% endmacro %}
+
+{% block body %}
+    <div class="container pt-3">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}">Home</a></li>
+				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview',course_name=course.name) }}">{{ course.name }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('instructor.assessment_statistics',course_name=course.name) }}">Assessment Statistics</a></li>
+                <li class="breadcrumb-item active" aria-current="page"> {{assessment.title}} Objective Statistics</li>
+            </ol>
+        </nav>
+
+
+		<h5>Most Missed Questions in {{objective.description}}</h5>
+		{{ question_list_group(review_questions) }}
+
+    </div>
+{% endblock %}
