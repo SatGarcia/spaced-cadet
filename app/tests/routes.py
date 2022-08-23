@@ -9,14 +9,14 @@ from datetime import date, datetime, timedelta
 from app import db
 from app.tests import tests
 from app.db_models import (
-    User, UserSchema, Course, CourseSchema, Assessment, Objective,
-    LearningObjectiveSchema, Question,
+    User, UserSchema, Course, CourseSchema, Assessment, AssessmentSchema,
+    Objective, LearningObjectiveSchema, Question,
     ShortAnswerQuestion, ShortAnswerQuestionSchema,
     AutoCheckQuestion, AutoCheckQuestionSchema,
     MultipleChoiceQuestion, MultipleChoiceQuestionSchema, AnswerOption,
     MultipleSelectionQuestion, MultipleSelectionQuestionSchema,
     CodeJumbleQuestion, CodeJumbleQuestionSchema, JumbleBlock, Topic,
-    TopicSchema, Textbook, TextbookSchema, TextbookSection
+    TopicSchema, Textbook, TextbookSchema, TextbookSection, TextAttempt
 )
 
 Faker.seed(0)
@@ -142,6 +142,15 @@ def seed_topics():
     db.session.commit()
 
     return jsonify(TopicSchema().dump(new_topics, many=True))
+
+
+def create_random_objective(author=None):
+    noun1 = fake.word(part_of_speech="noun")
+    noun2 = fake.word(part_of_speech="noun")
+    verb = fake.word(part_of_speech="verb")
+
+    lo_description = f"Use {noun1} to {verb} a {noun2}"
+    return Objective(description=lo_description, author=author)
 
 
 @tests.route('/seed/objective', methods=['POST'])
@@ -375,3 +384,114 @@ def seed_code_jumble():
     """ Creates randomized code jumble questions. """
     new_questions = create_questions(random_code_jumble)
     return jsonify(CodeJumbleQuestionSchema().dump(new_questions, many=True))
+
+
+@tests.route('/seed/assessment', methods=['POST'])
+def seed_assessment():
+    """ Creates randomized short answer (self-graded) questions. """
+
+    AssessmentDataSchema = Schema.from_dict({
+        'assessment_id': fields.Int(required=True),
+        'num_objectives': fields.Int(required=True),
+        'questions_per_objective': fields.Int(required=True),
+    })
+
+    try:
+        data = load_data(AssessmentDataSchema())
+    except LoadDataError as err:
+        return err.response, err.status_code
+
+    assessment = Assessment.query.filter_by(id=data['assessment_id']).first()
+    if not assessment:
+        return jsonify(message="Invalid assessment_id"), 422
+
+    for _ in range(data['num_objectives']):
+        lo = create_random_objective()
+        assessment.objectives.append(lo)
+        db.session.add(lo)
+
+        for _ in range(data['questions_per_objective']):
+            q = random_auto_check(None, True, True)
+            q.objective = lo
+            assessment.questions.append(q)
+            db.session.add(q)
+
+        db.session.commit()
+
+        """
+        For each user, create an attempt for each question. The attempts will
+        go from incorrect, to hard, to medium, to easy, but the exact
+        questions for each will be randomized so each student has a different
+        mix of e_factors.
+        """
+        for user in assessment.course.users:
+            all_lo_questions = lo.questions.all()
+            shuffle(all_lo_questions)
+            for i, question in enumerate(all_lo_questions):
+                if i % 4 == 0:
+                    # incorrect attempt, followed by correct "medium" repeat attempt
+                    a1 = TextAttempt(response="wrong",
+                                     question=question,
+                                     user=user,
+                                     correct=False,
+                                     e_factor=1.5,
+                                     quality=0,
+                                     time=datetime.now(),
+                                     next_attempt=(date.today() + timedelta(days=1)))
+                    a2 = TextAttempt(response="medium now",
+                                     question=question,
+                                     correct=True,
+                                     user=user,
+                                     e_factor=1.5,
+                                     quality=4,
+                                     time=datetime.now(),
+                                     next_attempt=(date.today() + timedelta(days=1)))
+                    db.session.add_all([a1, a2])
+
+                elif i % 4 == 1:
+                    # correct "hard" attempt, followed by correct "easy"
+                    # repeat
+                    a1 = TextAttempt(response="correct, but hard",
+                                     question=question,
+                                     user=user,
+                                     correct=True,
+                                     e_factor=2.7,
+                                     quality=3,
+                                     time=datetime.now(),
+                                     next_attempt=(date.today() + timedelta(days=6)))
+                    a2 = TextAttempt(response="easy now",
+                                     question=question,
+                                     user=user,
+                                     correct=True,
+                                     e_factor=2.7,
+                                     quality=5,
+                                     time=datetime.now(),
+                                     next_attempt=(date.today() + timedelta(days=1)))
+                    db.session.add_all([a1, a2])
+
+                elif i % 4 == 2:
+                    # correct "medium" attempt
+                    a = TextAttempt(response="correct, medium",
+                                    question=question,
+                                    user=user,
+                                    correct=True,
+                                    e_factor=3.5,
+                                    quality=4,
+                                    time=datetime.now(),
+                                    next_attempt=(date.today() + timedelta(days=6)))
+                    db.session.add(a)
+                else:
+                    # correct easy attempt
+                    a = TextAttempt(response="correct, easy",
+                                    question=question,
+                                    user=user,
+                                    correct=True,
+                                    e_factor=4.2,
+                                    quality=5,
+                                    time=datetime.now(),
+                                    next_attempt=(date.today() + timedelta(days=6)))
+                    db.session.add(a)
+
+        db.session.commit()
+
+    return jsonify(AssessmentSchema().dump(assessment))
