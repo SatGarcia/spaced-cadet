@@ -4,51 +4,89 @@
         
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview', course_name=course.name) }}">Course Overview</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">Mission Center</a></li>
-				<li class="breadcrumb-item"><a href="{{ continue_url }}">{{mission.title}} Training</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Learning Objective Review</li>
+                <li class="breadcrumb-item">
+                    <a class="text-decoration-none" href="{{ url_for('user_views.course_overview', course_name=course.name) }}">Course Overview</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a class="text-decoration-none" href="{{ url_for('user_views.missions_overview', course_name=course.name) }}">Mission Center</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a class="text-decoration-none" href="{{ continue_url }}">{{mission.title}} Training</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">
+                    Question Review
+                </li>
             </ol>
         </nav>
 
         <div class="row mb-2">
             <div class="col">
-                <h4>Reviewing Questions in Learning Objective: {{objective.description}}</h4>
+                <h4>Question Review</h4>
+                <div>
+                    <div>
+                        <strong>Mission:</strong> {{mission.title}}
+                    </div>
+                    <div>
+                        <strong>Learning Objective:</strong>
+                        <span class="inline-p">{{objective.description|mdown|safe}}</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div id="questionCarousel" class="carousel carousel-dark slide row mb-5" data-bs-ride="carousel" data-bs-interval="false">
+        <div id="questionCarousel" class="carousel carousel-dark slide row mb-5"
+                data-bs-ride="carousel" data-bs-interval="false">
             <div class="col">
-
                 <div class="carousel-inner">
                     {% for q in review_questions %}
                         {% if q == review_questions[0] %}
-                            <div class="carousel-item active">
+                            <div class="carousel-item active" id="question{{loop.index0}}">
                         {% else %}                        
-                            <div class="carousel-item">    
+                            <div class="carousel-item" id="question{{loop.index0}}">
                         {% endif %}
-                                <p class="pt-3"><strong>Question:</strong>
-                                    <div class="px-3">{{ q.prompt }}</div></p>
-                                <div class="row border-bottom mb-2">
-                                    <div class="col"><strong>Correct Answer:</strong></div>
+                                <p class="pt-3">
+                                    <strong>Question:</strong>
+                                    <div class="ms-2">{{ q.prompt }}</div>
+                                </p>
+
+                                <div class="border-bottom mb-2">
+                                    <strong class="d-inline-block">Correct Answer:</strong>
+                                    <button class="btn btn-link"
+                                            type="button" data-bs-toggle="collapse"
+                                                          data-bs-target="#answer{{loop.index0}}"
+                                                          aria-expanded="false" aria-controls="answer{{loop.index0}}">
+                                        Show/Hide
+                                    </button>
                                 </div>
-                                <div class="row">
-                                    <div class="col">{{ q.get_answer()|safe }}</div>
+                                <div class="collapse" id="answer{{loop.index0}}">
+                                    <div class="ms-2">{{ q.get_answer()|safe }}</div>
                                 </div>
                             </div>
                         
                     {% endfor %} 
                 </div>
-                <br>
                 
 
              
-        <div class="row mb-2">
-            <div class="col text-center ">
-                <button class="btn btn-outline-secondary btn-sm" data-bs-target="#questionCarousel" role="button" data-bs-slide="prev">&#10094;</button>
-                <button class="btn btn-outline-secondary btn-sm" data-bs-target="#questionCarousel" role="button" data-bs-slide="next">&#10095;</button>
+            <div class="row mb-2">
+                <div class="col text-center">
+                    <button class="btn btn-outline-secondary btn-sm" data-bs-target="#questionCarousel"
+                            role="button" data-bs-slide="prev">&#10094; Previous</button>
+                    <button class="btn btn-outline-secondary btn-sm" data-bs-target="#questionCarousel"
+                            role="button" data-bs-slide="next">Next &#10095;</button>
+                </div>
             </div>
         </div>
-
     </div>
+
+    <script>
+        const qCarousel = document.getElementById('questionCarousel');
+
+        /* When we leave a carousel question, hide it's answer. */
+        qCarousel.addEventListener('slide.bs.carousel', function (event) {
+            const answerToCollapse = document.getElementById(`answer${event.from}`);
+            const c = bootstrap.Collapse.getOrCreateInstance(answerToCollapse);
+            c.hide();
+        })
+    </script>
 {% endblock %}
