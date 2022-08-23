@@ -976,6 +976,7 @@ class Objective(SearchableMixin, db.Model):
         If a question needs to be practiced today, it is not included in the
         returned list of questions (to stop users from finding answers before
         they make an attempt).
+
         If an assessment is given, only questions associated with that
         assessment are returned.
         """
@@ -983,7 +984,7 @@ class Objective(SearchableMixin, db.Model):
         review_list = []
 
         if assessment is None:
-            questions = self.questions.filter(Question.objective_id == self.id)
+            questions = self.questions
         else:
             questions = assessment.questions.filter(Question.objective_id == self.id)
 
