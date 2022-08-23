@@ -5,10 +5,16 @@
     <div class="container pt-3">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('user_views.root') }}">Home</a></li>
-				<li class="breadcrumb-item"><a href="{{ url_for('user_views.course_overview',course_name=course.name) }}">{{ course.name }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('instructor.assessment_statistics',course_name=course.name) }}">Assessment Statistics</a></li>
-                <li class="breadcrumb-item active" aria-current="page">User Statistics for {{assessment.title}}</li>
+				<li class="breadcrumb-item">
+					<a class="text-decoration-none" href="{{ url_for('user_views.root') }}">Home</a>
+				</li>
+				<li class="breadcrumb-item">
+					<a class="text-decoration-none" href="{{ url_for('user_views.course_overview',course_name=course.name) }}">{{ course.name }}</a>
+				</li>
+				<li class="breadcrumb-item">
+					<a class="text-decoration-none" href="{{ url_for('instructor.assessment_statistics',course_name=course.name) }}">Assessment Statistics</a>
+				</li>
+				<li class="breadcrumb-item active" aria-current="page">User Statistics for {{assessment.title}}</li>
             </ol>
         </nav>
 
@@ -20,20 +26,19 @@
 				<thead>
 					<tr>
 						<th scope="col">Name</th>
-						<th scope="col"> Remaining Questions</th>
-                        <th scope="col"> Objectives to Work On</th>
+						<th scope="col">Remaining Questions</th>
+                        <th scope="col">Objectives to Work On</th>
 					</tr>
 				</thead>
 				<tbody>
-					{% for user in course.users %}
-
-						<tr >
+					{% for user in course.users.filter_by(instructor=False) %}
+						<tr>
 							<td>{{ user.first_name }} {{ user.last_name }}</td>
-							<td>{% set num_needing_practice = assessment.fresh_questions(user).count() + assessment.repeat_questions(user).count() %} {{ num_needing_practice }}</td>
+							<td>{{ assessment.num_questions_to_practice(user) }}</td>
 							<td>
 								<ol>
-                                {% for objective in assessment.objectives_to_review(users) %}
-									<li>objective[0].description|mdown|safe }}</li>
+                                {% for objective in assessment.objectives_to_review(user, average_threshold=3.0) %}
+									<li>{{ objective[0].description|mdown|safe }}</li>
 								{% endfor %}
 								</ol>
 							</td>
