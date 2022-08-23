@@ -26,19 +26,20 @@
 
 					{% if assessment.objectives.count() != 0 %}
 						<div class="mt-1">
-                            <a role="button" class="fw-bold" style="color:black" href="{{ url_for('instructor.assessment_objective_statistics', course_name=course.name, mission_id=assessment.id) }}">Learning Objectives:</a>
+							<strong>Learning Objectives:</strong>
+							(<a role="button" class="text-decoration-none"
+								href="{{ url_for('instructor.assessment_objective_statistics', course_name=course.name, mission_id=assessment.id) }}">View Objective Stats</a>)
 							<ol>
 								{% for objective in assessment.objectives %}
 									<li class="inline-p">
-										
-                                            <span class="badge rounded-pill bg-light text-dark border">{{ objective.description|mdown|safe }}</span>
+										{{ objective.description|mdown|safe }}
                                         {% set full = course.star_rating(objective, assessment) %}
                                         {% for i in range(full) %}
                                             <i class="bi bi-star-fill" style="color: gold"></i>
-                                            {% endfor %}
+										{% endfor %}
                                         {% for i in range(5-full) %}
                                             <i class="bi bi-star" style="color: gold"></i>
-                                            {% endfor %}
+										{% endfor %}
 									</li>
 								{% endfor %}
 							</ol>
@@ -51,8 +52,7 @@
                     {% endfor %}
 
 					<div class="mt-1">
-						<span class="fw-bold">Questions:</span>
-						Total: {{ assessment.questions.count() }}
+						<strong>Questions:</strong> {{ assessment.questions.count() }}
 
 						{% if num_needing_practice > 0 %}
 							( Needs Practice:
@@ -64,42 +64,35 @@
 						{% endif %}
 					</div>
 				</div>
-                {% set breakdown = course.questions_remaining_breakdown(assessment) %}
-                {% set zero = breakdown[0] %}
-                {% set very_little = breakdown[1] %}
-                {% set little = breakdown[2] %}
-                {% set some = breakdown[3] %}
-                {% set lots = breakdown[4] %}
                 
-                <span class="fw-bold">Users' Questions Remaining<div id="{{assessment.title}}"></div></span>
-                
+                <span class="fw-bold">Users' Questions Remaining<div id="mission{{loop.index0}}"></div></span>
 
-                <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
                 <script>
+                	{% set zero, very_little, little, some, lots = course.questions_remaining_breakdown(assessment) %}
                     var data = [{
                         type: "pie",
                         values: [{{zero}}, {{very_little}}, {{little}}, {{some}}, {{lots}}],
-                        labels: ["All Completed", "1-2 Not Completed", "3-5 Not Completed", "5-10 Not Completed  ", "11+ Not Completed  "],
+                        labels: ["All Complete", "1-2 Incomplete", "3-5 Incomplete", "5-10 Incomplete", "11+ Incomplete"],
                         marker: {
                             colors: ["rgb(26,150,65)","rgb(166,217,106)","#FFFF66", "#FFA500", "#FF3333"]
                         },
                         //automargin: true,
-                        hole: 0.6,
-                        textinfo: 'none'
+                        hole: 0.5,
+                        textinfo: 'value+percent'
                     }]
                     
                     var layout = {
-                        height: 250,
-                        width: 450,
+                        height: 200,
+                        width: 200,
                         margin: {"t": 0, "b": 0, "l": 0, "r": 0},
-                        showlegend: true,
+                        showlegend: false,
                         legend: {
                             x: 1,
                             y: 0.5}
                                     
                         }
                     
-                    Plotly.newPlot('{{assessment.title}}', data, layout)
+					Plotly.newPlot('mission{{loop.index0}}', data, layout,  {displayModeBar: false})
                 </script>
 
 				<a role="button" class="mt-auto btn btn-sm btn-primary position-relative"
@@ -120,6 +113,8 @@
                 <li class="breadcrumb-item active" aria-current="page">Mission Statistics</li>
             </ol>
         </nav>
+
+		<script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
 
 		<h5>Upcoming Missions</h5>
 		{{ assessment_list_group(course.upcoming_assessments()) }}
