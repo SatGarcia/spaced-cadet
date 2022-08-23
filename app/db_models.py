@@ -971,10 +971,12 @@ class Objective(SearchableMixin, db.Model):
 
     def review_questions(self, user, assessment=None, e_factor_threshold=2.6):
         """
-        Returns a list of all of the questions in an objective(either in or
-        not in an assessment) that have an e_factor of below the
-        e_factor_threshold for a specific user.
+        Returns a list of all of this objective's questions that have an
+        e_factor of below the e_factor_threshold for a specific user.
+        If an assessment is given, only questions associated with that
+        assessment are returned.
         """
+
         review_list = []
 
         if assessment is None:
