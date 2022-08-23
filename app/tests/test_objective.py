@@ -105,6 +105,7 @@ class ObjectiveModelCase(unittest.TestCase):
         self.assertEqual(self.lo1.get_e_factor_average(self.u1), 2.633)
 
     def test_review_questions_with_assessment(self):
+
         self.a.objectives.append(self.lo1)
         self.a.objectives.append(self.lo2)
 
@@ -113,6 +114,10 @@ class ObjectiveModelCase(unittest.TestCase):
         self.a.questions.append(self.q3)
         self.a.questions.append(self.q4)
         self.a.questions.append(self.q5)
+
+        # create question that isn't part of this assessment
+        q6 = ShortAnswerQuestion(prompt="Question 6", answer="Answer 6", objective=self.lo1)
+        db.session.add(q6)
 
         # before any attempts, there shouldn't be any in the list
         self.assertEqual(self.lo1.review_questions(self.u1, self.a), [])
@@ -144,6 +149,10 @@ class ObjectiveModelCase(unittest.TestCase):
         # lo1: single attempt for u2, to make sure method differentiates between users
         q1_attempt = TextAttempt(response="Attempt1", user=self.u2, question=self.q1,
                                  next_attempt=date.today()+timedelta(days=1), e_factor = 2)
+
+        # question that isn't part of the assessment shouldn't show up
+        q6_attempt = TextAttempt(response="Attempt6", user=self.u1, question=q6,
+                                 next_attempt=date.today()+timedelta(days=1), e_factor=2)
 
 
         db.session.add_all([q2_attempt2, q3_attempt, q4_attempt, q4_attempt2, q1_attempt, q5_attempt])
