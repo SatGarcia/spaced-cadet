@@ -442,6 +442,26 @@ describe('Mission Training', function() {
       // check that there are three learning objectives listed
       cy.get("#objectivesToReview").find('li').should('have.length', 3)
       cy.get("#objectivesToReview").contains("View Questions").click()
+
+      // only the first question should be visible
+      cy.get('#question0').should('be.visible')
+      cy.get('#question1').should('not.be.visible')
+
+      // answer shouldn't be visible until we click show/hide
+      cy.get('#answer0').should('not.be.visible')
+      cy.contains('Show/Hide').click()
+      cy.get('#answer0').should('be.visible')
+
+      // switching to next question, question but not answer should be visible
+      cy.contains('Next').click()
+      cy.get('#question1').should('be.visible')
+      cy.get('#answer1').should('not.be.visible')
+
+      // switching back to the previous question (0), the answer shouldn't be
+      // visible (should be auto hidden when we switched to next question)
+      cy.contains('Previous').click()
+      cy.get('#question0').should('be.visible')
+      cy.get('#answer0').should('not.be.visible')
     })
   })
 
