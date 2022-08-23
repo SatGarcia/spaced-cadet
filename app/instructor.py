@@ -779,17 +779,20 @@ def most_missed_questions(course_name, mission_id, objective_id):
     if not objective:
         abort(404)
 
-    review_questions_dic = {}
+    # create a dictionary that maps the question to the number of students who
+    # have missed that question
+    num_students_who_missed = {}
     for user in course.users:
         questions = objective.review_questions(user, mission)
         for question in questions:
-            if question not in review_questions_dic:
-                review_questions_dic[question] = 1
+            if question not in num_students_who_missed:
+                num_students_who_missed[question] = 1
             else:
-                review_questions_dic[question] += 1
+                num_students_who_missed[question] += 1
 
-    review_questions = [(k, review_questions_dic[k])
-                        for k in sorted(review_questions_dic, key=review_questions_dic.get, reverse=True)]
+    review_questions = [(k, num_students_who_missed[k])
+                        for k in sorted(num_students_who_missed,
+                                        key=num_students_who_missed.get, reverse=True)]
 
     return render_template("most_missed_questions.html",
                            page_title="Cadet: Most Missed Questions",

@@ -973,6 +973,9 @@ class Objective(SearchableMixin, db.Model):
         """
         Returns a list of all of this objective's questions that have an
         e_factor of below the e_factor_threshold for a specific user.
+        If a question needs to be practiced today, it is not included in the
+        returned list of questions (to stop users from finding answers before
+        they make an attempt).
         If an assessment is given, only questions associated with that
         assessment are returned.
         """
@@ -986,7 +989,7 @@ class Objective(SearchableMixin, db.Model):
 
         for question in questions:
             latest_attempt = question.get_latest_attempt(user)
-            if (latest_attempt != None) and (latest_attempt.e_factor < e_factor_threshold) and (latest_attempt.next_attempt > date.today()):
+            if (latest_attempt is not None) and (latest_attempt.e_factor < e_factor_threshold) and (latest_attempt.next_attempt > date.today()):
                 review_list.append(question)
 
         return review_list
