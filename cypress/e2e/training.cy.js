@@ -425,5 +425,25 @@ describe('Mission Training', function() {
 
   })
 
+  describe('Completion Page Stats', function() {
+    beforeEach(function() {
+      cy.request('POST', '/test/seed/assessment', { 
+        'assessment_id': 4,
+        'num_objectives': 5,
+        'questions_per_objective': 6,
+      })
+        .its('body')
+        .as('currentAssessment')
+    })
+
+    it('Student Training Stats and Review', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      // check that there are three learning objectives listed
+      cy.get("#objectivesToReview").find('li').should('have.length', 3)
+      cy.get("#objectivesToReview").contains("View Questions").click()
+    })
+  })
+
 })
 

@@ -33,7 +33,7 @@
                         The following learning objectives are in need of the most
                         review based on your past performance.
                 
-                        <ol class="mt-2">
+                        <ol class="mt-2" id="objectivesToReview">
                             {% for lo in objectives_to_review %}
                                 <li class="inline-p">
                                     {{lo.description|mdown|safe}}
