@@ -7,68 +7,89 @@
             <i class="bi-flag" style="color: mediumseagreen"></i>
         </h2>
         Your training for this mission is complete for now. Check back later for more training
-        questions or
+        questions or check for other missions to train for in this course's
         <a class="text-decoration-none"
             href="{{ url_for('user_views.missions_overview', course_name=course_name) }}">
-            check for other missions to train for</a>.
+            Missions Control Center</a>.
 
-        <br>
-        <br>
         <div class="row m-3">
-            <div class="col col-md-auto m-3">
-                {% set incorrect = breakdown_today[0].count() %}
-                {% set easy = breakdown_today[1].count() %}
-                {% set mid = breakdown_today[2].count() %}
-                {% set hard = breakdown_today[3].count() %}
-                <h5 class="text-left">Today's Progress</h5>
-                <div id="test"></div>
+            {% set incorrect = breakdown_today[0].count() %}
+            {% set easy = breakdown_today[1].count() %}
+            {% set mid = breakdown_today[2].count() %}
+            {% set hard = breakdown_today[3].count() %}
+
+            {% if (incorrect + easy + mid + hard) != 0 %}
+            <div class="col col-4 m-3">
+                <h5 class="text-left">Today's Responses</h5>
+                <div id="progressGraph" class="mt-2"></div>
             </div>
+            {% endif %}
 
             <div class="col mx-auto border">
                 <h5 class="text-left m-3">Learning Objective Review Center</h5>
+
+                <div class="container">
+                    {% if objectives_to_review|length > 0 %}
+                        The following learning objectives are in need of the most
+                        review based on your past performance.
                 
-                {% for lo in topics_to_review %}
-                    {% set learning_objective = lo %}
-                    <div class="container">
-                        <div class ="row">
-                            <div class="col"><h6 class="text-left m-3" ><i class="bi bi-star-fill"  style="color: black">   {{learning_objective.description}}</i></h6></div>
-                            <div class="col"><a class="btn btn-primary"  href="{{ url_for('user_views.review_objective', course_name=course_name, mission_id=mission.id, objective_id=learning_objective.id) }}" role="button">Review Objective</a></div>
+                        <ol class="mt-2">
+                            {% for lo in objectives_to_review %}
+                                <li class="inline-p">
+                                    {{lo.description|mdown|safe}}
+                                    (<a href="{{ url_for('user_views.review_objective',
+                                                            course_name=course_name, mission_id=mission.id,
+                                                            objective_id=lo.id) }}"
+                                        class="text-decoration-none">View Questions</a>)
+                                </li>
+                            {% endfor %}  
+                        </ol>
+                    {% else %}
+                        <div class="mt-2">
+                            You've done quite well on all of this mission's
+                            learning objectives so we don't have any specific
+                            recommendations for you.
+                            <em>Great work</em>
                         </div>
-                    </div>
-                {% endfor %}  
-                </br> 
+                    {% endif %}
+                </div>
             </div>
 
         </div>
 
     </div>
 
-    <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
-    <script>
-        var data = [{
-            type: "pie",
-            values: [{{easy}}, {{mid}}, {{hard}}, {{incorrect}}],
-            labels: ["Easy", "Medium", "Difficult", "Incorrect"],
-            marker: {
-                colors: ["rgb(26,150,65)","rgb(166,217,106)","rgb(255,255,191)", "rgb(220,220,220)"]
-            },
-            //automargin: true,
-            hole: 0.6,
-            textinfo: 'none'
-        }]
-        
-        var layout = {
-            height: 300,
-            width: 300,
-            margin: {"t": 0, "b": 0, "l": 0, "r": 0},
-            showlegend: true,
-            legend: {
-                x: 1,
-                y: 1}
-                        
-            }
-        
-        Plotly.newPlot('test', data, layout)
-    </script>
+    {% if (incorrect + easy + mid + hard) != 0 %}
+        <script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+        <script>
+            var data = [{
+                type: "pie",
+                values: [{{easy}}, {{mid}}, {{hard}}, {{incorrect}}],
+                labels: ["Correct (Easy)", "Correct (Medium)", "Correct (Hard)", "Incorrect"],
+                marker: {
+                    colors: ["rgb(26,150,65)","rgb(166,217,106)","rgb(255,255,191)", "rgb(220,100,100)"]
+                },
+                //automargin: true,
+                hole: 0.5,
+                textinfo: "value",
+                insidetextorientation: "horizontal",
+            }]
+            
+            var layout = {
+                height: 300,
+                width: 250,
+                margin: {"t": 0, "b": 0, "l": 0, "r": 0},
+                showlegend: true,
+                legend: {
+                    x: 0,
+                    y: -0.5,
+                    yanchor: 'bottom',
+                    traceorder: 'normal',
+                },
+                }
+            
+            Plotly.newPlot('progressGraph', data, layout, {displayModeBar: false, responsive: false})
+        </script>
+    {% endif %}
 
 {% endblock %}

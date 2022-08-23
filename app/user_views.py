@@ -456,14 +456,14 @@ def test(course_name, mission_id):
 
         if question is None:
             # Training is done (for today) so display a congrats/completed page
-            topics_to_review=mission.objectives_to_review(current_user)
-            new_list_of_topics = [ topic[0] for topic in topics_to_review ]
+            worst_objectives = mission.objectives_to_review(current_user, average_threshold=3.0)
+            objectives_to_review = [ objective for objective, _ in worst_objectives ]
             return render_template("completed.html",
                                    page_title="Cadet: Complete",
                                    course_name=course_name,
                                    mission = mission,
                                    breakdown_today=mission.breakdown_today(current_user),
-                                   topics_to_review=new_list_of_topics)
+                                   objectives_to_review=objectives_to_review)
         else:
             form = get_form(question, False)
 
