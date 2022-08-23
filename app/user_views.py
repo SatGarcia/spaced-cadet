@@ -196,7 +196,7 @@ def check_mission_inclusion(mission_id, course):
         abort(404)
     else:
         return mission
-        
+
 @user_views.route('/c/<course_name>/mission/<int:mission_id>/train/review/objective/<int:objective_id>')
 @login_required
 def review_objective(course_name, mission_id, objective_id):
@@ -204,7 +204,10 @@ def review_objective(course_name, mission_id, objective_id):
     mission = check_mission_inclusion(mission_id, course)
     objective = mission.objectives.filter(Objective.id == objective_id).first()
 
-    review_questions = objective.review_questions(current_user, mission)
+    # show (basically) all the questions in this question associated with this
+    # objective.
+    review_questions = objective.review_questions(current_user, mission,
+                                                  e_factor_threshold=5.0)
 
     return render_template("review_objective.html",
                            page_title="Cadet Review Center: Review Questions",
