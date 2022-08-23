@@ -961,7 +961,7 @@ class Objective(SearchableMixin, db.Model):
             if question.get_latest_attempt(user) != None:
                 e_factor_sum += question.get_latest_attempt(user).e_factor
                 question_count += 1
-               
+
         if question_count == 0:
             return 0
         else:
@@ -1289,24 +1289,31 @@ class Assessment(db.Model):
 
         for q in self.questions:
             attempts_today = q.attempts.filter(db.and_(Attempt.user_id == user.id,
+                                                       Attempt.time >= midnight_today,
+                                                       Attempt.time < (midnight_today + timedelta(days=1))))\
+                                        .order_by(Attempt.time)
 
-                                                Attempt.time >= midnight_today,            
-                                                     Attempt.time < midnight_today +timedelta(days=1) ))\
-                                            .order_by(Attempt.time)
+            num_attempts_today = attempts_today.count()
 
-            if (attempts_today.count() > 0) and (attempts_today.first().correct == True):
+            if (num_attempts_today > 0) and (attempts_today.first().correct == True):
+                first_attempt = attempts_today.first()
 
-                if attempts_today.first().quality == 5:
+                if first_attempt.quality == 5:
                     correct_easy_id.append(q.id)
-                elif attempts_today.first().quality == 4:
+                elif first_attempt.quality == 4:
                     correct_mid_id.append(q.id)
-                elif attempts_today.first().quality == 3:
+                elif first_attempt.quality == 3:
                     correct_hard_id.append(q.id)
-                    
-            elif (attempts_today.count() > 1) and (attempts_today.first().correct == False):
+                else:
+                    pass # TODO: log an error... this should never happen!
+
+            elif (num_attempts_today > 1) and (attempts_today.first().correct == False):
                 incorrect_id.append(q.id)
-                         
-        
+
+            else:
+                pass # TODO: log an error if this is anything other than short answer
+
+
         incorrect_questions = self.questions.filter(Question.id.in_(incorrect_id))
         correct_easy = self.questions.filter(Question.id.in_(correct_easy_id))
         correct_mid = self.questions.filter(Question.id.in_(correct_mid_id))
@@ -1317,23 +1324,25 @@ class Assessment(db.Model):
 
     def objectives_to_review(self, user, max_num_objectives=3, average_threshold=2.6):
         """
-        Returns the max_num_objectives learning objectives with the lowest average e_factors that is below the average_threshold for attempts of a specific user in the form of: 
-        a list of 3 tuples that contain (learning objective, e_factor average).
+        Returns the max_num_objectives learning objectives with the lowest
+        average e_factors that is below the average_threshold for attempts of
+        a specific user in the form of: a list of tuples that contain
+        (learning objective, e_factor average).
         """
 
         lo_review = [] # (lo,e_factor_average)
-        for lo in self.objectives: 
+        for lo in self.objectives:
             average = lo.get_e_factor_average(user, self)
-            if average < average_threshold and average > 0.1:
-                lo_review.append((lo,average))
+            if (average < average_threshold) and (average > 0.1):
+                lo_review.append((lo, average))
 
         lo_review_sorted = sorted(lo_review, key=lambda i: i[-1]) # sorts elements by last item(e_factor_average) in increasing order
-        
-        if len(lo_review_sorted) <= max_num_objectives: 
+
+        if len(lo_review_sorted) <= max_num_objectives:
             return lo_review_sorted
-        else: 
+        else:
             return lo_review_sorted[0:max_num_objectives]
-                 
+
 
 class AssessmentSchema(Schema):
     id = fields.Int(dump_only=True)
