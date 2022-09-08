@@ -8,27 +8,25 @@
 				<div class = "container">
 
                     <div class="row pt-2">
-                        <div class="col">
+                        <div class="col-4">
                             <div class="fw-bold fs-8">
                                 {{ objective.description }}
-                                {% set full = course.star_rating(objective, assessment) %}
-                                {% for i in range(full) %}
-                                    <i class="bi bi-star-fill" style="color: gold"></i>
+                                <div>
+                                    {% set num_stars = course.star_rating(objective, assessment) %}
+                                    {% for i in range(num_stars) %}
+                                        <i class="bi bi-star-fill" style="color: gold"></i>
                                     {% endfor %}
-                                {% for i in range(5-full) %}
-                                    <i class="bi bi-star" style="color: gold"></i>
+                                    {% for i in range(5-num_stars) %}
+                                        <i class="bi bi-star" style="color: gold"></i>
                                     {% endfor %}
+                                </div>
                             </div>
                         
                         </div>
 
-                        {% set breakdown = course.student_skill_breakdown(objective, assessment) %}
-                        {% set proficient_count = breakdown[0] %}
-                        {% set limited_count = breakdown[1] %}
-                        {% set undeveloped_count = breakdown[2] %}
+                        {% set proficient_count, limited_count, undeveloped_count = course.student_skill_breakdown(objective, assessment) %}
 
-
-                        <div class="col-6">
+                        <div class="col-3">
                             <strong>
                                 Student Proficiency
                                 <div id="student_proficiency {{objective.id}}"></div>
@@ -44,22 +42,22 @@
                                         colors: ["rgb(26,150,65)","#FFFF66","#FF3333"]
                                     },
                                     //automargin: true,
-                                    hole: 0.6,
+                                    hole: 0.5,
                                     textinfo: 'none'
                                     }]
                                 
                                 var layout = {
-                                    height: 250,
-                                    width: 450,
+                                    height: 200,
+                                    width: 200,
                                     margin: {"t": 0, "b": 0, "l": 0, "r": 0},
-                                    showlegend: true,
+                                    showlegend: false,
                                     legend: {
                                         x: 1,
                                         y: 0.5}
                                                 
                                     }
                                 
-                                Plotly.newPlot('student_proficiency {{objective.id}}', data, layout)
+                                Plotly.newPlot('student_proficiency {{objective.id}}', data, layout, {displayModeBar: false})
                             </script>
                         </div>
 
