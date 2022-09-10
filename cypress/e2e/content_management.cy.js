@@ -39,16 +39,16 @@ describe('Instructor Course Management', () => {
     cy.contains('Create New Question').click()
     cy.contains('Short Answer (Self-Graded)').click()
 
-    cy.get('textarea[name=prompt]').type("What is this?")
-    cy.get('textarea[name=answer]').type("No one really knows.")
+    cy.get('textarea[name=prompt]').type("Original Prompt")
+    cy.get('textarea[name=answer]').type("Original Answer")
     cy.get('input[type=submit]').click()
 
     getIframeBody().contains("Question Preview")
-    getIframeBody().contains("What is this?")
+    getIframeBody().contains("Original Prompt")
     getIframeBody().contains("I Don't Know").should('be.disabled')
     getIframeBody().contains("Submit").should('be.disabled')
 
-    cy.contains("No one really knows")
+    cy.contains("Original Answer")
     cy.get('#learningObjective').contains("None")
     cy.get('#learningObjective').contains("Add Objective").click()
 
@@ -88,7 +88,7 @@ describe('Instructor Course Management', () => {
 
     cy.contains("Finish Review").click()
 
-    // TODO: check URL to see that we are on the my questions overview page
+    cy.location('pathname').should('eq', '/u/1/questions')
     
     cy.get('tbody')
       .should('have.length', 1)
@@ -107,6 +107,18 @@ describe('Instructor Course Management', () => {
       .find('i')
       .should('have.length', 1)
       .and('have.class', 'bi-check-circle')
+
+    // attempt to edit the question
+    cy.contains('Edit').click()
+
+    cy.location('pathname').should('eq', '/q/1/edit')
+
+    cy.get('textarea[name=prompt]').clear().type("Updated Prompt")
+    cy.get('textarea[name=answer]').clear().type("Updated Answer")
+    cy.get('input[type=submit]').click()
+
+    cy.location('pathname').should('eq', '/u/1/questions')
+    cy.contains("Updated Prompt")
 
     //cy.get("#searchObjectives").type(this.learningObjective.description + '{enter}')
     //cy.get('#setObjectiveModal').contains("Create a New Objective").click()
