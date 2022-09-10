@@ -136,7 +136,7 @@
 						<!-- Column with actions only for individual objectives -->
 						<div class="col-1 pt-2 border border-start-0">
 							<i class="bi-pencil-square"></i>
-							<a class="text-decoration-none text-secondary" :href="'/lo/' +  objective.id  + '/edit'">
+							<a class="text-decoration-none text-secondary" :href="editObjectiveUrls[index]">
 								Edit
 							</a>
 						</div>
@@ -219,6 +219,13 @@
 			},
 
 			computed: {
+				editObjectiveUrls() {
+					function getEditUrl(lo) {
+						return Flask.url_for('instructor.edit_learning_objective', {'objective_id': lo.id})
+					}
+					return this.displayed_objectives.map(getEditUrl);
+				},
+
 				mass_select_state() {
 					if (this.selected_indices.length === this.displayed_objectives.length) {
 						return "checked";

@@ -161,12 +161,12 @@
 						</div>
 						<div class="col-auto pt-2 border border-start-0">
 							<i class="bi-pencil-square"></i>
-							<a class="text-decoration-none text-secondary" :href="'/q/' +  q.id  + '/edit'">
+							<a class="text-decoration-none text-secondary" :href="editQuestionUrls[index]">
 								Edit
 							</a>
 							<br/>
 							<i class="bi-eye"></i>
-							<a class="text-decoration-none text-secondary" :href="'/q/' +  q.id  + '/preview'">
+							<a class="text-decoration-none text-secondary" :href="previewQuestionUrls[index]">
 								Preview
 							</a>
 						</div>
@@ -251,6 +251,20 @@
 			computed: {
 				typeStrings() {
 					return this.displayed_questions.map(this.getTypeString);
+				},
+
+				editQuestionUrls() {
+					function getEditUrl(q) {
+						return Flask.url_for('instructor.edit_question', {'question_id': q.id})
+					}
+					return this.displayed_questions.map(getEditUrl);
+				},
+
+				previewQuestionUrls() {
+					function getPreviewUrl(q) {
+						return Flask.url_for('instructor.preview_question', {'question_id': q.id})
+					}
+					return this.displayed_questions.map(getPreviewUrl);
 				},
 
 				mass_select_state() {
