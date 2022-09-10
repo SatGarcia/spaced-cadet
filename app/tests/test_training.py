@@ -45,6 +45,11 @@ class TrainingTests(unittest.TestCase):
                                              regex=False)
         a.questions.append(self.ac_question)
 
+        self.ac_regex_question = AutoCheckQuestion(prompt="Auto Check Regex Question",
+                                                   answer="regex +answer( \d)?",
+                                                   regex=True)
+        a.questions.append(self.ac_regex_question)
+
         self.mc_question = MultipleChoiceQuestion(prompt="Multiple Choice Question")
         o1 = AnswerOption(text="Good", correct=True)
         o2 = AnswerOption(text="Not good", correct=False)
@@ -166,7 +171,6 @@ class TrainingTests(unittest.TestCase):
                                         data={
                                             "question_id": str(self.ac_question.id),
                                             "response": "Answer 2",
-                                            "booger": "MEOW",
                                             "submit": "y"
                                         })
 
@@ -187,6 +191,41 @@ class TrainingTests(unittest.TestCase):
             # clear out attempts for next user test
             Attempt.query.delete()
             TextAttempt.query.delete()
+
+
+    def test_correct_auto_check_regex_question_submission(self):
+        self.course.users.append(self.u2)
+        db.session.commit()
+
+        for user in [self.u1, self.u2]:
+            for user_response in ["regex answer", "regex  answer", "regex answer 6"]:
+                client = self.app.test_client(user=user)
+                response = client.post(url_for('user_views.test',
+                                                    course_name="test-course",
+                                                    mission_id=1),
+                                            data={
+                                                "question_id": str(self.ac_regex_question.id),
+                                                "response": user_response,
+                                                "submit": "y"
+                                            })
+
+                # check that user was sent to the difficulty page
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(urlparse(response.location).path,
+                                          url_for('user_views.difficulty',
+                                                  course_name="test-course",
+                                                  mission_id=1,
+                                                  _external=False))
+
+                # check that there is now a single (text) attempt
+                self.check_text_attempt(self.ac_regex_question.id, user.id, user_response)
+
+                attempt = TextAttempt.query.first()
+                self.assertTrue(attempt.correct)
+
+                # clear out attempts for next user test
+                Attempt.query.delete()
+                TextAttempt.query.delete()
 
     # TODO: check for correct auto check submission when caSiNG is different
 
@@ -211,6 +250,33 @@ class TrainingTests(unittest.TestCase):
 
         attempt = TextAttempt.query.first()
         self.assertFalse(attempt.correct)
+
+
+    def test_incorrect_auto_check_regex_question_submission(self):
+        for user_response in [" regex answer", "regex answer 6 "]:
+            client = self.app.test_client(user=self.u1)
+            response = client.post(url_for('user_views.test',
+                                                course_name="test-course",
+                                                mission_id=1),
+                                        data={
+                                            "question_id": str(self.ac_question.id),
+                                            "response": user_response,
+                                            "submit": "y"
+                                        })
+
+            # check that user was sent to the review correct answer page
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(urlparse(response.location).path,
+                                      url_for('user_views.review_answer',
+                                              course_name="test-course",
+                                              mission_id=1,
+                                              _external=False))
+
+            attempt = TextAttempt.query.first()
+            self.assertFalse(attempt.correct)
+
+            Attempt.query.delete()
+            TextAttempt.query.delete()
 
 
     def test_correct_multiple_choice_question_submission(self):

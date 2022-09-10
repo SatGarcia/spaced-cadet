@@ -13,7 +13,7 @@ from wtforms.validators import (
 )
 from flask_login import current_user, login_required
 
-import ast, markdown
+import re, ast, markdown
 from datetime import date, timedelta, datetime
 
 from app import db
@@ -510,7 +510,12 @@ def test(course_name, mission_id):
             # Other question types can be graded automatically 
             if question.type == QuestionType.AUTO_CHECK:
                 user_response = attempt.response.strip()
-                attempt.correct = attempt.response.strip() == question.answer
+
+                if question.regex:
+                    match = re.fullmatch(question.answer, user_response)
+                    attempt.correct = (match is not None)
+                else:
+                    attempt.correct = user_response == question.answer
 
             elif question.type == QuestionType.MULTIPLE_CHOICE:
                 attempt.correct = attempt.responses.filter_by(correct=True).count() == 1
