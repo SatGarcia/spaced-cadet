@@ -199,11 +199,3 @@ table.codehilitetable {
 }
 */
 
-/* floats for submit buttons to appear in desired order */
-.floatright {
-	float: right;
-}
-
-.clearfloat {
-	clear: both;
-}
