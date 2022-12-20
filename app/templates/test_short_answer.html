@@ -16,9 +16,10 @@
 				</div>
 			{% endif %}
 
-			<p class="pt-2">
-				{{ form.no_answer(class_="btn btn-secondary btn-sm") }}
-				{{ form.submit(class_="btn btn-primary btn-sm") }}
+			<p class="pt-2" id="submit-buttons">
+				{{ form.submit(class_="btn btn-primary btn-sm floatright") }}
+				{{ form.no_answer(class_="btn btn-secondary btn-sm floatright") }}
+				<div class="clearfloat"></div>
 			</p>
 		</form>
 	</div>

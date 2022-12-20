@@ -198,3 +198,12 @@ table.codehilitetable {
 	mask-image: none;
 }
 */
+
+/* floats for submit buttons to appear in desired order */
+.floatright {
+	float: right;
+}
+
+.clearfloat {
+	clear: both;
+}
