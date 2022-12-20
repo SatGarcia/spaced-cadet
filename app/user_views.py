@@ -249,27 +249,34 @@ def review_answer(course_name, mission_id):
             response_html += markdown_to_html(option.text) + "\n"
 
     elif question.type == QuestionType.CODE_JUMBLE:
-        response_html = "<ul class=\"list-unstyled jumble\">"
-        user_response = ast.literal_eval(attempt.response)
-        for block in user_response:
-            jumble_block = JumbleBlock.query.filter(JumbleBlock.id == int(block[0]),
-                                                    JumbleBlock.question_id == int(question.id)).first()
-            language_str = "" if not question.language else question.language
-            code_str = f"```{language_str}\n{jumble_block.code}\n```\n"
-            block_html = markdown_to_html(code_str, code_linenums=False)
-            indent_amount = (block[1]* 20) + 15
-            response_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
-        response_html += "</ul>"
+        # make sure they didn't select "IDK"
+        if not attempt.response.strip():
+            response_html = markdown_to_html("_I don't know._")
+
+        else:
+            response_html = "<ul class=\"list-unstyled jumble\">"
+            user_response = ast.literal_eval(attempt.response)
+            for block in user_response:
+                jumble_block = JumbleBlock.query.filter(JumbleBlock.id == int(block[0]),
+                                                        JumbleBlock.question_id == int(question.id)).first()
+                language_str = "" if not question.language else question.language
+                code_str = f"```{language_str}\n{jumble_block.code}\n```\n"
+                block_html = markdown_to_html(code_str, code_linenums=False)
+                indent_amount = (block[1]* 20) + 15
+                response_html += f"<li style=\"padding-left: {indent_amount}px;\">{block_html}</li>"
+            response_html += "</ul>"
 
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         selected_answer = attempt.responses.first()
         if selected_answer:
             response_html = markdown_to_html(selected_answer.text)
         else:
-            response_html = markdown_to_html("_No response given._")
+            response_html = markdown_to_html("_I don't know._")
 
-    else: #question.type = auto-check
+    else: # short answer (self-graded or auto-graded)
         selected_answer = attempt.response.strip()
+        if not selected_answer:
+            selected_answer = "_I don't know._"
         response_html = markdown_to_html(selected_answer)
 
     return render_template("review_correct_answer.html",
@@ -504,7 +511,8 @@ def test(course_name, mission_id):
             # if this is a self-graded question, send them to the review page
             if question.type == QuestionType.SHORT_ANSWER:
                 return redirect(url_for('.self_review',
-                                        course_name=course_name, mission_id=mission_id,
+                                        course_name=course_name,
+                                        mission_id=mission_id,
                                         attempt=attempt.id))
 
             # Other question types can be graded automatically 
@@ -597,9 +605,16 @@ class TextResponseForm(FlaskForm):
     submit = SubmitField("Submit")
 
     def create_attempt(self, question, user, previous_attempt):
+        # TODO: rather than put a blank string here, make no DB table allow
+        # None for a response then check for that in the review_answer
+        # function.
+        if self.no_answer.data:
+            response = ""
+        else:
+            response = self.response.data
+
         attempt = create_new_text_attempt(question, user,
-                                          self.response.data,
-                                          previous_attempt)
+                                          response, previous_attempt)
 
         return attempt
 
