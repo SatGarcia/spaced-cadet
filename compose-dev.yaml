@@ -1,0 +1,32 @@
+version: "3.9"
+services:
+  backend:
+    build:
+      context: .
+      target: development
+    ports:
+      - "5000:5000"
+    depends_on:
+      - es
+      - slurper
+  es:
+    image: "elasticsearch:7.10.1"
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+  slurper:
+    image: "derekahn/mailslurper"
+    ports:
+      - "8080:8080"
+      - "8085:8085"
+      - "2500:2500"
+    volumes:
+      - ./slurper-config.json:/opt/mailslurper/config.json
