@@ -9,9 +9,7 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
-    #container: cypress/browsers:node16.14.0-chrome99-ff97
-    #container: elsaturnino/cypress-python
-    container: cypress/included:10.0.1
+    container: nikolaik/python-nodejs:python3.10-nodejs16-slim
 
     # Service containers to run with `container-job`
     services:
@@ -24,12 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - run: apt-get update && apt-get install -y lsb-release libc6 && apt-get clean all
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-          cache: 'pip'
+      - name: Install Cypress cependencies
+        run: apt-get update && apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2 libxtst6 xauth xvfb
       - name: Install Python dependencies
         run: python -m pip install -r requirements.txt
       - name: Create Flask instance config
@@ -37,9 +31,10 @@ jobs:
           mkdir instance
           echo "ELASTICSEARCH_URL = 'http://elasticsearch:9200'" > instance/config.py
       - name: Start Flask and run Cypress
-        uses: cypress-io/github-action@v4
+        uses: cypress-io/github-action@v5
         env:
           APP_CONFIG_CLASS: config.E2ETestingConfig
         with:
           start: flask run
           wait-on: 'http://localhost:5000'
+          env: video=false,screenshotOnRunFailure=false
