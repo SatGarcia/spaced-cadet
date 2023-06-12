@@ -10,7 +10,8 @@ jobs:
   cypress-run:
     runs-on: ubuntu-latest
     #container: cypress/browsers:node16.14.0-chrome99-ff97
-    container: elsaturnino/cypress-python
+    #container: elsaturnino/cypress-python
+    container: cypress/included:10.0.1
 
     # Service containers to run with `container-job`
     services:
@@ -26,16 +27,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10.5'
+          python-version: '3.10'
       - name: Install Python dependencies
         run: pip install -r requirements.txt
-      - name: Set up Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-          cache: 'npm'
-      - name: Install Node dependencies
-        run: npm install
       - name: Create Flask instance config
         run: |
           mkdir instance
