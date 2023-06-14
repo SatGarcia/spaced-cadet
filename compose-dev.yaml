@@ -9,8 +9,10 @@ services:
     volumes:
       - ./:/cadet
     depends_on:
-      - es
-      - slurper
+      slurper:
+        condition: service_started
+      es:
+        condition: service_healthy
   es:
     image: "elasticsearch:7.10.1"
     environment:
