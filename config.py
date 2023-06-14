@@ -26,7 +26,7 @@ class ProductionConfig(Config):
     #APPLICATION_ROOT = '/cadet'
 
 class DevelopmentConfig(Config):
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///cadet_db.sqlite'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:////db/cadet_dev.sqlite'
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     LOGGING_LEVEL = logging.DEBUG
     MAIL_SERVER = 'slurper'

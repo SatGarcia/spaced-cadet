@@ -1,6 +1,7 @@
 FROM python:3.10-slim AS development
 
 RUN mkdir /cadet
+RUN mkdir /db
 WORKDIR /cadet
 
 COPY requirements.txt requirements.txt
