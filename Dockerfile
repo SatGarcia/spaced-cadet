@@ -1,4 +1,4 @@
-FROM python:3.9-slim-buster as development
+FROM python:3.10 as development
 
 RUN mkdir /cadet
 WORKDIR /cadet
