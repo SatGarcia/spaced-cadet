@@ -1,3 +1,21 @@
+FROM python:3.9-slim-buster as development
+
+RUN mkdir /cadet
+WORKDIR /cadet
+
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+
+COPY app app
+COPY migrations migrations
+COPY cadet.py config.py .flaskenv .
+RUN flask db upgrade
+
+EXPOSE 5000
+CMD ["flask", "run"]
+
+
+
 FROM python:3.9-slim-buster
 
 RUN apt-get update

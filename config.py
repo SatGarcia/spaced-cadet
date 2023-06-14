@@ -29,7 +29,9 @@ class DevelopmentConfig(Config):
     SQLALCHEMY_DATABASE_URI = 'sqlite:///cadet_db.sqlite'
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     LOGGING_LEVEL = logging.DEBUG
-    MAIL_PORT = 1099
+    MAIL_SERVER = 'slurper'
+    MAIL_PORT = 2500
+    ELASTICSEARCH_URL = 'http://es:9200'
 
 class E2ETestingConfig(DevelopmentConfig):
     WTF_CSRF_ENABLED = False
