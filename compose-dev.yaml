@@ -6,6 +6,8 @@ services:
       target: development
     ports:
       - "5000:5000"
+    volumes:
+      - ./:/cadet
     depends_on:
       - es
       - slurper

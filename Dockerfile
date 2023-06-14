@@ -1,4 +1,4 @@
-FROM python:3.10 AS development
+FROM python:3.10-slim AS development
 
 RUN mkdir /cadet
 WORKDIR /cadet
@@ -10,6 +10,9 @@ COPY app app
 COPY migrations migrations
 COPY cadet.py config.py .flaskenv .
 RUN flask db upgrade
+RUN flask add-user --admin --instructor teacher@email.com Yo Teacher
+
+VOLUME /cadet
 
 EXPOSE 5000
 CMD ["flask", "run"]
