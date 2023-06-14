@@ -1,8 +1,8 @@
 import requests, sys, json, click, csv
 import urllib.parse as up
 
-USER_EMAIL = 'sat@sandiego.edu'
-USER_PASSWORD = 'foobar123!'
+USER_EMAIL = 'teacher@email.com'
+USER_PASSWORD = 'password123!'
 
 def get_logged_in_session(base_url):
     s = requests.Session()
