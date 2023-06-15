@@ -7,7 +7,12 @@ USER_PASSWORD=password123!
 echo "Change the password for $USER_EMAIL to $USER_PASSWORD through the web interface and then press any key to continue..."
 read junk
 
-http -h POST $SERVER_NAME/api/login email=$USER_EMAIL password=$USER_PASSWORD  | python3 setup-cookies.py session.json
+# clear out old session file and recreate it by logging in and then grabbing
+# the CSRF token from the response to be inserted as a special header
+# (X-CSRF-TOKEN) on every request.
+http -h --session=./session.json POST $SERVER_NAME/api/login email=$USER_EMAIL password=$USER_PASSWORD
+
+python3 setup-cookies.py session.json
 
 # create a couple of fake courses
 http --session=./session.json POST $SERVER_NAME/api/courses name=comp101-sp20 \
