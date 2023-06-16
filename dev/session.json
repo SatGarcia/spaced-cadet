@@ -16,7 +16,7 @@
             "name": "access_token_cookie",
             "path": "/",
             "secure": false,
-            "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY4Njg1MzUzMSwianRpIjoiZTAxOTFjMGQtYzRiOC00N2RhLTk3MmMtYmRlYzRlMmFmZDRhIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6MSwibmJmIjoxNjg2ODUzNTMxLCJjc3JmIjoiZDlmY2NkMmQtNTY3Yy00ZmVlLWI4NTQtODZhYzk4NjQxMzVlIiwiZXhwIjoxNjg2ODU3MTMxfQ.VKCpShMr6B9pwDR4SisjNoCevtt3s3zAQQHhJA9xj0U"
+            "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY4NjkzNDc0MCwianRpIjoiZTJlNzg3NmUtNmY3NC00YTRlLTlhMDktYTA1YzRmYzlhM2YzIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6MSwibmJmIjoxNjg2OTM0NzQwLCJjc3JmIjoiMjcxMDk3YjktN2U2Zi00OThlLTg4YTYtY2U5NzRjZjc5NGY2IiwiZXhwIjoxNjg2OTM4MzQwfQ.3DWy5WjMLQqmErbsKPTMN_cvPexZXE8j0hGsRAyuRE0"
         },
         {
             "domain": "localhost.local",
@@ -24,13 +24,17 @@
             "name": "csrf_access_token",
             "path": "/",
             "secure": false,
-            "value": "d9fccd2d-567c-4fee-b854-86ac9864135e"
+            "value": "271097b9-7e6f-498e-88a6-ce974cf794f6"
         }
     ],
     "headers": [
         {
             "name": "Accept",
             "value": "application/json, */*;q=0.5"
+        },
+        {
+            "name": "X-CSRF-TOKEN",
+            "value": "271097b9-7e6f-498e-88a6-ce974cf794f6"
         }
     ]
 }

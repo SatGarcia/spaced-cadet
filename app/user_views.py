@@ -520,6 +520,10 @@ def test(course_name, mission_id):
                 user_response = attempt.response.strip()
                 attempt.correct = attempt.response.strip() == question.answer
 
+            elif question.type == QuestionType.SINGLE_LINE_CODE_QUESTION:
+                user_response = attempt.response.strip()
+                attempt.correct = ast_solver.same_ast_tree(attempt.response.strip(), question.answer)
+
             elif question.type == QuestionType.MULTIPLE_CHOICE:
                 attempt.correct = attempt.responses.filter_by(correct=True).count() == 1
                 #AnswerOption.query.filter_by(id=form.response.data).first().correct
