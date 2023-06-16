@@ -37,6 +37,7 @@ class E2ETestingConfig(DevelopmentConfig):
     WTF_CSRF_ENABLED = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     ENABLE_TEST_ROUTES = True
+    ELASTICSEARCH_URL = 'http://es:9200'
 
 class TestConfig(Config):
     TESTING = True
