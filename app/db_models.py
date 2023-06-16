@@ -390,7 +390,7 @@ class SingleLineCodeQuestionSchema(QuestionSchema):
     def make_obj(self, data):
         return SingleLineCodeQuestion(**data)
 
-    def update_obj(self, question, data):
+    def update_obj(self, question, data): # What is this doing
         super().update_obj(question, data)
 
         for field in ['answer', 'regex']:
