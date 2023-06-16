@@ -933,7 +933,9 @@ class NewSingleLineCodeQuestionForm(FlaskForm):
     prompt = TextAreaField("Question Prompt", [DataRequired()])
     answer = StringField("Question Answer", [DataRequired()])
     add_body = BooleanField("Add Body")
-    language = StringField("Language", [DataRequired()])
+    language = SelectField("Language",
+                           validators=[InputRequired()],
+                           choices=[('python', "Python")])
     submit = SubmitField("Continue...")
 
 
