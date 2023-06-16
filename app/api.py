@@ -15,6 +15,7 @@ from app.db_models import (
     QuestionType,
     ShortAnswerQuestion, ShortAnswerQuestionSchema,
     AutoCheckQuestion, AutoCheckQuestionSchema,
+    SingleLineCodeQuestion, SingleLineCodeQuestionSchema,
     MultipleChoiceQuestion, MultipleChoiceQuestionSchema,
     MultipleSelectionQuestion, MultipleSelectionQuestionSchema,
     AnswerOption,
@@ -134,6 +135,7 @@ topics_schema = TopicSchema(many=True)
 question_schema = QuestionSchema(unknown=EXCLUDE)
 sa_question_schema = ShortAnswerQuestionSchema()
 ac_question_schema = AutoCheckQuestionSchema()
+slc_question_schema = SingleLineCodeQuestionSchema()
 mc_question_schema = MultipleChoiceQuestionSchema()
 ms_question_schema = MultipleSelectionQuestionSchema()
 cj_question_schema = CodeJumbleQuestionSchema()

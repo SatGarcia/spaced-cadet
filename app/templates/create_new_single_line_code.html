@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+    <div class="container pt-3">
+        {% if edit_mode %}
+            <h4>Edit Question (Auto-Graded Short Answer)</h4>
+        {% else %}
+            <h4>Create New Question (Auto-Graded Short Answer)</h4>
+        {% endif %}
+
+		<div class="row">
+			<form method="POST" action="">
+				{{ form.csrf_token }}
+
+                {{ forms.input(form.prompt, placeholder="Enter the prompt. Markdown formatting is allowed.") }}
+                {{ forms.input(form.answer, placeholder="Enter the exact answer or a regular expression.") }}
+                {{ forms.input(form.language, placeholder="Enter the coding language the answer will be in.") }}
+
+                <div class="pb-2 mx-1 text-secondary">
+                    <i class="bi-info-circle"></i>
+                    Student responses will have leading and trailing
+                    whitespace stripped before comparing with the given answer.
+                </div>
+
+                <div class="form-group ms-1 pt-2 pb-2">
+                    {{ form.add_body(class_="pl-2 form-check-input") }}
+                    The answer above should be treated as a regular expression
+                </div>
+
+                {{ form.submit(class_="btn btn-primary btn-sm") }}
+			</form>
+		</div>
+    </div>
+
+{% endblock %}

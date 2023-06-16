@@ -16,8 +16,8 @@ from flask_login import current_user, login_required
 import ast, markdown
 from datetime import date, timedelta, datetime
 
-from app import db
-from app import ast_solver
+from app import db, ast_solver
+
 
 user_views = Blueprint('user_views', __name__)
 
@@ -385,6 +385,9 @@ def get_form(question, use_existing):
 
     elif question.type == QuestionType.AUTO_CHECK:
         return AutoCheckForm(**kwargs)
+    
+    elif question.type == QuestionType.SINGLE_LINE_CODE_QUESTION:
+        return SingleLineCodeForm(**kwargs)
 
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = MultipleChoiceForm(**kwargs)
@@ -415,6 +418,10 @@ def render_question(question, is_fresh, form, mission):
 
     elif question.type == QuestionType.AUTO_CHECK:
         #form = AutoCheckForm(question_id=question.id)
+        template_filename = "test_short_answer.html"
+    
+    elif question.type == QuestionType.SINGLE_LINE_CODE_QUESTION:
+        #form = SingleLineCodeForm(question_id=question.id)
         template_filename = "test_short_answer.html"
 
     elif question.type == QuestionType.MULTIPLE_CHOICE:
@@ -603,6 +610,9 @@ class ShortAnswerForm(TextResponseForm):
     response = TextAreaField('answer', validators=[DataRequiredIf('submit')])
 
 class AutoCheckForm(TextResponseForm):
+    response = StringField('answer', validators=[DataRequiredIf('submit')])
+
+class SingleLineCodeForm(TextResponseForm):
     response = StringField('answer', validators=[DataRequiredIf('submit')])
 
 class CodeJumbleForm(TextResponseForm):

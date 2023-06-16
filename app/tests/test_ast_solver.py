@@ -94,7 +94,7 @@ class TestASTSolver(unittest.TestCase):
         self.assertEqual(True, same_ast_tree("-2+1", "1+(-2)"))
         self.assertEqual(False, same_ast_tree("-2+1", "1-2")) 
 
-    def test_dicts(self): # should i be doing these with assignment or no
+    def test_dicts(self): 
         self.assertEqual(True, same_ast_tree("x={}", "x={}"))
         self.assertEqual(True, same_ast_tree("{}", "{}"))
         self.assertEqual(False, same_ast_tree("x={}", "x={'a':2}"))
@@ -104,7 +104,7 @@ class TestASTSolver(unittest.TestCase):
         self.assertEqual(False, same_ast_tree("x={'a':1, 'b':2}", "x={'a':1,'b':3}")) 
         self.assertEqual(True, same_ast_tree("x={2:1, 'b':2}", "x={2:1,'b':2}")) 
         # add differing types
-    # add another test function very commplex
+
 
     def test_return(self):
         self.assertEqual(True, same_ast_tree("return 1", "return 1"))
