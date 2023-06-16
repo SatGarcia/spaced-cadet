@@ -1,0 +1,36 @@
+{
+    "__meta__": {
+        "about": "HTTPie session file",
+        "help": "https://httpie.io/docs#sessions",
+        "httpie": "3.2.2"
+    },
+    "auth": {
+        "password": null,
+        "type": null,
+        "username": null
+    },
+    "cookies": [
+        {
+            "domain": "localhost.local",
+            "expires": null,
+            "name": "access_token_cookie",
+            "path": "/",
+            "secure": false,
+            "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTY4Njg1MzUzMSwianRpIjoiZTAxOTFjMGQtYzRiOC00N2RhLTk3MmMtYmRlYzRlMmFmZDRhIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6MSwibmJmIjoxNjg2ODUzNTMxLCJjc3JmIjoiZDlmY2NkMmQtNTY3Yy00ZmVlLWI4NTQtODZhYzk4NjQxMzVlIiwiZXhwIjoxNjg2ODU3MTMxfQ.VKCpShMr6B9pwDR4SisjNoCevtt3s3zAQQHhJA9xj0U"
+        },
+        {
+            "domain": "localhost.local",
+            "expires": null,
+            "name": "csrf_access_token",
+            "path": "/",
+            "secure": false,
+            "value": "d9fccd2d-567c-4fee-b854-86ac9864135e"
+        }
+    ],
+    "headers": [
+        {
+            "name": "Accept",
+            "value": "application/json, */*;q=0.5"
+        }
+    ]
+}

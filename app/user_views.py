@@ -17,6 +17,7 @@ import ast, markdown
 from datetime import date, timedelta, datetime
 
 from app import db
+from app import ast_solver
 
 user_views = Blueprint('user_views', __name__)
 
