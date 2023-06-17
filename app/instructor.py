@@ -18,9 +18,9 @@ from wtforms.validators import (
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
-import os, csv, re
+import os, csv, re, ast
 
-from app import db
+from app import db, ast_solver
 from app.user_views import (
     ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm, SingleLineCodeForm,
     MultipleChoiceForm, MultipleSelectionForm
@@ -150,7 +150,7 @@ def preview_question(question_id):
 
     elif question.type == QuestionType.SINGLE_LINE_CODE_QUESTION:
         form = SingleLineCodeForm(question_id=question.id)
-        return render_template("test_single_line_code.html",
+        return render_template("test_short_answer.html",
                                page_title=page_title,
                                preview_mode=True,
                                form=form,
@@ -937,6 +937,33 @@ class NewSingleLineCodeQuestionForm(FlaskForm):
                            validators=[InputRequired()],
                            choices=[('python', "Python")])
     submit = SubmitField("Continue...")
+
+    def validate(self):
+        actual = self.answer.data.strip()
+
+        if self.add_body.data:
+            actual+= "\n\tpass"
+            
+        try:
+            ast.parse(actual)
+            return True
+        except SyntaxError:
+            self.answer.errors = list(self.answer.errors)
+            self.add_body.errors = list(self.add_body.errors)
+    
+            try:
+                if not self.add_body.data:
+                    ast.parse(actual+"\n\tpass")
+                    self.add_body.errors.append('Empty body needs to be appended')
+                else:
+                    ast.parse(self.answer.data.strip())
+                    self.add_body.errors.append('Empty body does not need to be appended')
+                return False
+            except SyntaxError:
+                pass
+
+            self.answer.errors.append('Invalid line of Code')
+            return False
 
 
 class McOptionForm(FlaskForm):

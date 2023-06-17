@@ -376,10 +376,7 @@ class SingleLineCodeQuestion(Question):
     }
 
     def get_answer(self):
-        if self.regex:
-            return f"<code>{self.answer}</code>"
-        else:
-            return markdown_to_html(self.answer)
+        return markdown_to_html(self.answer)
 
 
 class SingleLineCodeQuestionSchema(QuestionSchema):
