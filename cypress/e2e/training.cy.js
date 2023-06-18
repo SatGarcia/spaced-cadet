@@ -169,6 +169,71 @@ describe('Mission Training', function() {
     })
   })
 
+  describe('Single Line Code', function() {
+    beforeEach(function() {
+      cy.request('POST', '/test/seed/question/single-line-code', { 
+        'author_id': this.instructorUser.id,
+        'assessment_id': 4,
+        'amount': 1
+      })
+        // .its('body')
+        // .then(questions => { return questions[0]; })
+        // .as('currentQuestion')
+    })
+
+    /* 
+     * Tests a single line code question, which is correctly answered and rated
+     * as easy.
+     */
+    it('Correct Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+      cy.get('input[name=response]').type(`${this.currentQuestion.answer}`)
+      cy.get('input[name=submit]').click()
+
+      // check that they are on the page where they rate their performance
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/rating`)
+
+      cy.contains('Easy').click()
+      cy.get('input[name=submit]').click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Congratulations")
+    })
+
+    /*
+     * Tests a response of "I Don't Know"
+     */
+    it('IDK Attempt', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      cy.contains("I Don't Know").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
+
+    /*
+     * Tests an incorrect response to the single line code question.
+     */
+    it('Incorrect Answer', function () {
+      cy.visit(`/c/${this.testCourse.name}/mission/4/train`)
+
+      // Note: by design, the random answer will always be a positive number
+      // so -1 will always be incorrect
+      cy.get('input[name=response]').type("-1")
+      cy.get('input[name=submit]').click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train/review`)
+      cy.contains("Continue Training").click()
+
+      cy.location('pathname').should('eq', `/c/${this.testCourse.name}/mission/4/train`)
+      cy.contains("Repeat Question")
+    })
+  })
+
   describe('Multiple Choice', function() {
     beforeEach(function() {
       cy.request('POST', '/test/seed/question/multiple-choice', { 
