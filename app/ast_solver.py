@@ -1,34 +1,42 @@
+"""
+File contains functions that test whether two ast trees are equivalently the same line of code
+"""
+
 import ast
 
-
+class UnsupportedSyntaxError(Exception):
+    """
+    Raised when a class has not been handled in our AST solver class
+    """
+    pass
 
 def same_ast_tree(expected, actual): 
     """
     Function determines whether two lines of code are equivalent
     Returns a boolean stating whether the two lines of code passed in are equivalent
     """
-    # print("testing if: "+expected+" equals "+actual)
     if expected == actual:
         return True
         
     try:
         expected_tree = ast.parse(expected.strip())
         actual_tree = ast.parse(actual.strip())
-        # print(ast.dump(actual_tree, indent=4))
     except SyntaxError:
-        #print("Syntax Error when compiling.")
         return False
 
     if len(expected_tree.body) != 1:
         return False
     elif type(expected_tree.body[0]) != type(actual_tree.body[0]): 
-        # an exception to this is AugAssign and Assign, which we will check
+        # ensuring the type of each class we are checking is the same
         if (isinstance(actual_tree.body[0], ast.AugAssign) or isinstance(actual_tree.body[0], ast.Assign)) and (isinstance(expected_tree.body[0], ast.AugAssign) or isinstance(expected_tree.body[0], ast.Assign)):
+            # an exception to the classes needing to be the same is AugAssign and Assign
             return check_augassign_or_assign_equal(expected_tree.body[0], actual_tree.body[0])
         return False 
     elif isinstance(actual_tree.body[0], ast.Expr):
+        # checking whether both classes are expressions, then checks whether the expressions are equivalent
         return check_type(expected_tree.body[0].value, actual_tree.body[0].value)
     elif isinstance(actual_tree.body[0], ast.Assign):
+        # checking whether both classes are assign statements, then checks whether the targets and values are the same
         if len(actual_tree.body[0].targets) != len(expected_tree.body[0].targets):
             return False
         for i in range(len(actual_tree.body[0].targets)):
@@ -36,12 +44,15 @@ def same_ast_tree(expected, actual):
                 return False
         return check_type(expected_tree.body[0].value, actual_tree.body[0].value)
     elif isinstance(actual_tree.body[0], ast.AugAssign):
+        # checking whether both classes are AugAssign statements, then checks whether the targets and values are the same
         if actual_tree.body[0].target.id == expected_tree.body[0].target.id: # check if being assigned to the same variable
             if type(actual_tree.body[0].op) == type(expected_tree.body[0].op): # check if same operation is being used
                 return check_type(expected_tree.body[0].value, actual_tree.body[0].value) # check if the values have the same type
     elif isinstance(actual_tree.body[0], ast.Return):
+        # checking whether both classes are return statements, then checks whether the values are the same
         return check_type(expected_tree.body[0].value, actual_tree.body[0].value)
     elif isinstance(actual_tree.body[0], ast.Delete):
+        # checking whether both classes are delete statements, then checks whether the targets are the same
         if len(actual_tree.body[0].targets) != len(expected_tree.body[0].targets):
             return False
         for i in range(len(actual_tree.body[0].targets)):
@@ -49,13 +60,17 @@ def same_ast_tree(expected, actual):
                 return False
         return True
     elif isinstance(actual_tree.body[0], ast.If):
+        # checking whether both classes are if statements, then checks whether the body,orelse and test are the same
         return check_type(expected_tree.body[0].body[0], actual_tree.body[0].body[0]) and check_type(expected_tree.body[0].orelse, actual_tree.body[0].orelse) and check_type(expected_tree.body[0].test, actual_tree.body[0].test) 
     elif isinstance(actual_tree.body[0], ast.For):
+        # checking whether both classes are if statements, then checks whether the body,orelse,iter, and target are the same
         return check_type(expected_tree.body[0].body, actual_tree.body[0].body) and check_type(expected_tree.body[0].orelse, actual_tree.body[0].orelse) and check_type(expected_tree.body[0].iter, actual_tree.body[0].iter) and check_type(expected_tree.body[0].target, actual_tree.body[0].target) 
     elif isinstance(actual_tree.body[0], ast.While):
+        # checking whether both classes are while loops, then checks whether the body,orelse and test are the same
         return check_type(expected_tree.body[0].body, actual_tree.body[0].body) and check_type(expected_tree.body[0].orelse, actual_tree.body[0].orelse) and check_type(expected_tree.body[0].test, actual_tree.body[0].test) 
     else:
-        print("Type not handled yet: "+ type(actual_tree.body[0]))
+        # print("Type not handled yet: "+ type(actual_tree.body[0]))
+        raise UnsupportedSyntaxError
  
     return False
 
@@ -65,7 +80,6 @@ def check_type(expected, actual):
     Returns a boolean stating whether the two classes passed in are equivalent
     """
     if type(actual) == type(expected):
-        # print(type(actual))
         if isinstance(actual, ast.Constant) or isinstance(actual, ast.Expr):
             return (actual.value == expected.value)
         elif isinstance(actual, ast.Name):
@@ -105,12 +119,16 @@ def check_type(expected, actual):
         elif isinstance(actual, ast.BoolOp):
             return check_bool_op(expected, actual)
         else:
-            print("another type that is not handled yet")
-            # print(ast.dump(actual, indent=4))
-            return True
+            # print("another type that is not handled yet")
+            # return False
+            raise UnsupportedSyntaxError
     return False
 
 def check_bool_op(expected, actual):
+    """
+    Function determines whether two BoolOp statements are equivalent
+    Returns a boolean stating whether the two BoolOp Statements passed in are equivalent
+    """
     if expected.op == actual.op:
         if isinstance(actual.op, ast.Or):
             return check_type(expected.values[0], actual.values[0]) and check_type(expected.values[1], actual.values[1])
@@ -125,6 +143,10 @@ def check_bool_op(expected, actual):
         return False
 
 def check_compare(expected,actual):
+    """
+    Function determines whether two Compare statements are equivalent
+    Returns a boolean stating whether the two Compare Statements passed in are equivalent
+    """
     if len(actual.comparators) != len(expected.comparators) or len(actual.ops) != len(expected.ops):
         return False
     elif len(actual.comparators) == 1:
@@ -137,10 +159,15 @@ def check_compare(expected,actual):
             else:
                 return False
     else:
-        print("case not handled yet")
-        return False
+        # print("case not handled yet")
+        # return False
+        raise UnsupportedSyntaxError
     
 def check_dict(expected, actual):
+    """
+    Function determines whether two dictionaries are equivalent
+    Returns a boolean stating whether the two dictionaries passed in are equivalent
+    """
     if (len(expected.keys) != len(actual.keys)) or (len(expected.values) != len(actual.values)):
         return False
     elif (len(expected.keys) != len(expected.values)) or (len(actual.keys) != len(actual.values)):
@@ -159,6 +186,10 @@ def check_dict(expected, actual):
     return True 
 
 def check_list(expected, actual):
+    """
+    Function determines whether two lists calls are equivalent
+    Returns a boolean stating whether the two lists passed in are equivalent
+    """
     if len(actual.elts) != len(expected.elts): # ensuring same number of elements
         return False
 
@@ -218,6 +249,10 @@ def check_augassign_or_assign_equal(expected_tree, actual_tree):
     return False
 
 def check_bin_op(expected_tree, actual_tree):
+    """
+    Function determines whether two binop calls are equivalent
+    Returns a boolean stating whether the two BinOps passed in are equivalent
+    """
     if actual_tree.op == expected_tree.op: # check that the operation is the same
         if isinstance(actual_tree.op, ast.Sub) or isinstance(actual_tree.op, ast.Div): # not commutative
             return check_type(expected_tree.right, actual_tree.right) and check_type(expected_tree.left, actual_tree.left)

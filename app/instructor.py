@@ -946,6 +946,7 @@ class NewSingleLineCodeQuestionForm(FlaskForm):
             
         try:
             ast.parse(actual)
+            ast_solver.same_ast_tree(actual, actual)
             return True
         except SyntaxError:
             self.answer.errors = list(self.answer.errors)
@@ -964,7 +965,10 @@ class NewSingleLineCodeQuestionForm(FlaskForm):
 
             self.answer.errors.append('Invalid line of Code')
             return False
-
+        except ast_solver.UnsupportedSyntaxError:
+            self.answer.errors = list(self.answer.errors)
+            self.answer.errors.append('Line of code is not supported yet by the program.')
+            return False
 
 class McOptionForm(FlaskForm):
     text = StringField('Text', [DataRequired()])
