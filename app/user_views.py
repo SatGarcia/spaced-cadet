@@ -269,7 +269,7 @@ def review_answer(course_name, mission_id):
         else:
             response_html = markdown_to_html("_No response given._")
 
-    else: #question.type = auto-check
+    else: #question.type = auto-check or single-line-code
         selected_answer = attempt.response.strip()
         response_html = markdown_to_html(selected_answer)
 

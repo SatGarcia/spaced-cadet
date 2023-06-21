@@ -254,7 +254,7 @@ def random_single_line_code(author, is_public, is_enabled):
     num = str(randint(1,100))
     prompt = f"Type: {num}+0"
     answer = f"{num}+0"
-    return SingleLineCodeQuestion(prompt=prompt, answer=answer, languauge="Python", add_body=False,
+    return SingleLineCodeQuestion(prompt=prompt, answer=answer, language="Python", add_body=False,
                              author=author, public=is_public,
                              enabled=is_enabled)
 

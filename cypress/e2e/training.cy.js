@@ -176,9 +176,9 @@ describe('Mission Training', function() {
         'assessment_id': 4,
         'amount': 1
       })
-        // .its('body')
-        // .then(questions => { return questions[0]; })
-        // .as('currentQuestion')
+        .its('body')
+        .then(questions => { return questions[0]; })
+        .as('currentQuestion')
     })
 
     /* 

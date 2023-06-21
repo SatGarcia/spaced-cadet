@@ -605,6 +605,8 @@ class QuestionApi(Resource):
             return sa_question_schema.dump(question)
         if question.type == QuestionType.AUTO_CHECK:
             return ac_question_schema.dump(question)
+        elif question.type == QuestionType.SINGLE_LINE_CODE_QUESTION:
+            return slc_question_schema.dump(question)
         elif question.type == QuestionType.MULTIPLE_CHOICE:
             return mc_question_schema.dump(question)
         elif question.type == QuestionType.MULTIPLE_SELECTION:
@@ -677,6 +679,8 @@ class QuestionApi(Resource):
             schema = sa_question_schema
         elif q.type == QuestionType.AUTO_CHECK:
             schema = ac_question_schema
+        elif q.type == QuestionType.SINGLE_LINE_CODE_QUESTION:
+            schema = slc_question_schema
         elif q.type == QuestionType.MULTIPLE_CHOICE:
             schema = mc_question_schema
         elif q.type == QuestionType.MULTIPLE_SELECTION:
@@ -979,8 +983,10 @@ class QuestionsApi(Resource):
         # based on the type of question, pick the schema to load with
         if json_data['type'] == 'short-answer':
             schema = sa_question_schema
-        if json_data['type'] == 'auto-check':
+        elif json_data['type'] == 'auto-check':
             schema = ac_question_schema
+        elif json_data['type'] == 'single-line-code':
+            schema = slc_question_schema
         elif json_data['type'] == 'multiple-choice':
             schema = mc_question_schema
         elif json_data['type'] == 'multiple-selection':
