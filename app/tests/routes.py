@@ -251,8 +251,9 @@ def random_auto_check(author, is_public, is_enabled):
                              enabled=is_enabled)
 
 def random_single_line_code(author, is_public, is_enabled):
-    answer = str(randint(1,100))
-    prompt = f"Type: {answer}+0"
+    num = str(randint(1,100))
+    prompt = f"Type: {num}+0"
+    answer = f"{num}+0"
     return SingleLineCodeQuestion(prompt=prompt, answer=answer, languauge="Python", add_body=False,
                              author=author, public=is_public,
                              enabled=is_enabled)
