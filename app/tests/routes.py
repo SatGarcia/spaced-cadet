@@ -12,6 +12,7 @@ from app.db_models import (
     User, UserSchema, Course, CourseSchema, Assessment, AssessmentSchema,
     Objective, LearningObjectiveSchema, Question,
     ShortAnswerQuestion, ShortAnswerQuestionSchema,
+    SingleLineCodeQuestion, SingleLineCodeQuestionSchema,
     AutoCheckQuestion, AutoCheckQuestionSchema,
     MultipleChoiceQuestion, MultipleChoiceQuestionSchema, AnswerOption,
     MultipleSelectionQuestion, MultipleSelectionQuestionSchema,
@@ -249,6 +250,13 @@ def random_auto_check(author, is_public, is_enabled):
                              author=author, public=is_public,
                              enabled=is_enabled)
 
+def random_single_line_code(author, is_public, is_enabled):
+    answer = str(randint(1,100))
+    prompt = f"Type: {answer}+0"
+    return SingleLineCodeQuestion(prompt=prompt, answer=answer, languauge="Python", add_body=False,
+                             author=author, public=is_public,
+                             enabled=is_enabled)
+
 def random_multiple_choice(author, is_public, is_enabled):
     options = []
     options.append(AnswerOption(text="Good answer", correct=True))
@@ -360,9 +368,15 @@ def seed_short_answer():
 
 @tests.route('/seed/question/auto-check', methods=['POST'])
 def seed_auto_check():
-    """ Creates randomized short answer (auto-graded) questions. """
+    """ Creates randomized short answer (auto-graded) questions."""
     new_questions = create_questions(random_auto_check)
     return jsonify(AutoCheckQuestionSchema().dump(new_questions, many=True))
+
+@tests.route('/seed/question/single-line-code', methods=['POST'])
+def seed_single_line_code():
+    """ Creates randomized single line code questions. """
+    new_questions = create_questions(random_single_line_code)
+    return jsonify(SingleLineCodeQuestionSchema().dump(new_questions, many=True))
 
 
 @tests.route('/seed/question/multiple-choice', methods=['POST'])
