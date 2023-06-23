@@ -18,11 +18,11 @@ from wtforms.validators import (
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
-import os, csv, re
+import os, csv, re, ast
 
-from app import db
+from app import db, ast_solver
 from app.user_views import (
-    ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm,
+    ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm, SingleLineCodeForm,
     MultipleChoiceForm, MultipleSelectionForm
 )
 from app.auth import AuthorizationError, check_authorization
@@ -142,6 +142,14 @@ def preview_question(question_id):
 
     elif question.type == QuestionType.AUTO_CHECK:
         form = AutoCheckForm(question_id=question.id)
+        return render_template("test_short_answer.html",
+                               page_title=page_title,
+                               preview_mode=True,
+                               form=form,
+                               prompt=Markup(prompt_html))
+
+    elif question.type == QuestionType.SINGLE_LINE_CODE_QUESTION:
+        form = SingleLineCodeForm(question_id=question.id)
         return render_template("test_short_answer.html",
                                page_title=page_title,
                                preview_mode=True,
@@ -513,6 +521,9 @@ def edit_question(question_id):
     elif question.type == QuestionType.AUTO_CHECK:
         form = NewAutoCheckQuestionForm(formdata=form_data, obj=question)
         template = "create_new_auto_check.html"
+    elif question.type == QuestionType.SINGLE_LINE_CODE_QUESTION:
+        form = NewSingleLineCodeQuestionForm(formdata=form_data, obj=question)
+        template = "create_new_single_line_code.html"
     elif question.type == QuestionType.MULTIPLE_CHOICE:
         form = NewMultipleChoiceQuestionForm(formdata=form_data, obj=question)
         template = "create_new_multiple_choice.html"
@@ -613,6 +624,10 @@ def create_new_question(question_type):
         form = NewAutoCheckQuestionForm(request.form)
         template = "create_new_auto_check.html"
         new_q = AutoCheckQuestion()
+    elif question_type == 'single-line-code':
+        form = NewSingleLineCodeQuestionForm(request.form)
+        template = "create_new_single_line_code.html"
+        new_q = SingleLineCodeQuestion()
     elif question_type == 'multiple-choice':
         form = NewMultipleChoiceQuestionForm(request.form)
         template = "create_new_multiple_choice.html"
@@ -914,6 +929,46 @@ class NewAutoCheckQuestionForm(FlaskForm):
     regex = BooleanField("Regex")
     submit = SubmitField("Continue...")
 
+class NewSingleLineCodeQuestionForm(FlaskForm):
+    prompt = TextAreaField("Question Prompt", [DataRequired()])
+    answer = StringField("Question Answer", [DataRequired()])
+    add_body = BooleanField("Add Body")
+    language = SelectField("Language",
+                           validators=[InputRequired()],
+                           choices=[('python', "Python")])
+    submit = SubmitField("Continue...")
+
+    def validate(self):
+        actual = self.answer.data.strip()
+
+        if self.add_body.data:
+            actual+= "\n\tpass"
+            
+        try:
+            ast.parse(actual)
+            ast_solver.same_ast_tree(actual, actual)
+            return True
+        except SyntaxError:
+            self.answer.errors = list(self.answer.errors)
+            self.add_body.errors = list(self.add_body.errors)
+    
+            try:
+                if not self.add_body.data:
+                    ast.parse(actual+"\n\tpass")
+                    self.add_body.errors.append('Empty body needs to be appended')
+                else:
+                    ast.parse(self.answer.data.strip())
+                    self.add_body.errors.append('Empty body does not need to be appended')
+                return False
+            except SyntaxError:
+                pass
+
+            self.answer.errors.append('Invalid line of Code')
+            return False
+        except ast_solver.UnsupportedSyntaxError:
+            self.answer.errors = list(self.answer.errors)
+            self.answer.errors.append('Line of code is not supported yet by the program.')
+            return False
 
 class McOptionForm(FlaskForm):
     text = StringField('Text', [DataRequired()])
@@ -988,7 +1043,7 @@ class RosterUploadForm(FlaskForm):
 
 from app.db_models import (
     AnswerOption, CodeJumbleQuestion, JumbleBlock, Course,
-    ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, 
+    ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, SingleLineCodeQuestion,
     MultipleSelectionQuestion, Question,
     QuestionType, User, Objective, Textbook, Assessment, Topic
 )

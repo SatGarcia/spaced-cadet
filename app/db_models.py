@@ -98,6 +98,7 @@ class QuestionType(enum.Enum):
     MULTIPLE_SELECTION = "multiple-selection"
     CODE_JUMBLE = "code-jumble"
     AUTO_CHECK = "auto-check"
+    SINGLE_LINE_CODE_QUESTION = "single-line-code"
 
 class ResponseType(enum.Enum):
     GENERIC = 0
@@ -360,6 +361,36 @@ class AutoCheckQuestionSchema(QuestionSchema):
         super().update_obj(question, data)
 
         for field in ['answer', 'regex']:
+            if field in data:
+                setattr(question, field, data[field])
+
+class SingleLineCodeQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+
+    answer = db.Column(db.String, nullable=False)
+    add_body = db.Column(db.Boolean, default=False, nullable=False)
+    language = db.Column(db.String, nullable=False)
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.SINGLE_LINE_CODE_QUESTION,
+    }
+
+    def get_answer(self):
+        return markdown_to_html(self.answer)
+
+
+class SingleLineCodeQuestionSchema(QuestionSchema):
+    answer = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
+    add_body = fields.Boolean(required=True)
+    language = fields.Str(required=True)
+
+    def make_obj(self, data):
+        return SingleLineCodeQuestion(**data)
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        for field in ['answer', 'add_body', 'language']:
             if field in data:
                 setattr(question, field, data[field])
 
