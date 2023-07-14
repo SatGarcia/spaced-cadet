@@ -913,7 +913,7 @@ class CourseDetailsForm(FlaskForm):
 
 
 class LearningObjectiveForm(FlaskForm):
-    description = TextAreaField("Question Prompt", [DataRequired()])
+    description = TextAreaField("Description", [DataRequired()])
     public = BooleanField("Public", default="checked")
     submit = SubmitField("Submit")
 
