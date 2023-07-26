@@ -125,8 +125,17 @@
                         <div class="col-8">
                             <h5>
                                 <i class="bi-list-task"></i>
-                                All Objectives of Selected Topics:
+                                Available Learning Objectives:
                             </h5>
+
+                            <div class="ms-1 my-3">
+								<keep-alive>
+									<filter-control class="ms-2"
+									  :filters="topic_filters"
+										@selected-filter="f => (lo_topic_filter = f)">
+									</component>
+								</keep-alive>
+							</div>
 
                             <div class="ms-1 my-3">
                                 <strong>Key: </strong>
@@ -134,7 +143,7 @@
                                 <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
                             </div>
 
-                            <div class="list-group" v-if="all_objectives.length !== 0">
+                            <div class="list-group" v-if="filtered_objectives.length !== 0">
                                 <button type="button" class="list-group-item list-group-item-action"
                                                       v-for="(lo, index) in displayed_objectives" :key="lo.id"
                                                       @click="toggleItemSelect(lo, selected_objectives)">
@@ -155,7 +164,7 @@
                                 <pagination-control
                                     class="mt-2"
                                     description="Page navigation for objectives"
-                                    :num_items="all_objectives.length"
+                                    :num_items="filtered_objectives.length"
                                     :items_per_page="objectives_per_page"
                                     @selected-page-num="page_num => (current_objectives_page = page_num)">
                                 </pagination-control>
@@ -305,6 +314,7 @@
 		import * as CadetApi from "{{ url_for('static', filename='js/cadet-api.js') }}";
 		import { useFilterableList, usePagination } from "{{ url_for('static', filename='js/filterable-lists.js') }}";
 		import PaginationControl from "{{ url_for('static', filename='js/pagination-control.js') }}";
+		import FilterControl from "{{ url_for('static', filename='js/filter-control.js') }}";
 
         const converter = new showdown.Converter();
         const refresh_url = "{{ url_for('auth.refresh_jwts') }}";
@@ -313,18 +323,24 @@
 			setup() {
 				const course_id = ref({{ course.id }});
 
+				// variables for topic selection tab
 				const course_topics = ref([]);
                 const selected_topics = ref([]);
 				const topics_per_page = ref(25);
 				const current_topics_page = ref(0);
 				const { current_page: displayed_topics } = usePagination(course_topics, topics_per_page, current_topics_page);
 
-				const all_objectives = ref([]);
+				// variables for learning objective selection tab
+				const lo_topic_filter = ref(() => true);
+				const { all_data: all_objectives,
+						filtered_data: filtered_objectives,
+						error: lo_fetch_errors } = useFilterableList(Flask.url_for('objectives_api', {'topics': '1,2'}), "learning_objectives", lo_topic_filter);
                 const selected_objectives = ref([]);
 				const objectives_per_page = ref(10);
 				const current_objectives_page = ref(0);
-				const { current_page: displayed_objectives } = usePagination(all_objectives, objectives_per_page, current_objectives_page);
+				const { current_page: displayed_objectives } = usePagination(filtered_objectives, objectives_per_page, current_objectives_page);
 
+				// variables for question selection tab
 				const all_questions = ref([]);
                 const selected_questions = ref([]);
 				const questions_per_page = ref(10);
@@ -334,7 +350,8 @@
                 return { course_id,
                             course_topics, selected_topics, topics_per_page,
                             current_topics_page, displayed_topics,
-                            all_objectives, selected_objectives, objectives_per_page,
+                            all_objectives, filtered_objectives, lo_topic_filter,
+							selected_objectives, objectives_per_page,
                             current_objectives_page, displayed_objectives,
                             all_questions, selected_questions, questions_per_page,
                             current_questions_page, displayed_questions
@@ -343,16 +360,10 @@
 
             components: {
 				PaginationControl,
+				FilterControl,
 			},
 
             watch: {
-                selected_topics: {
-                    handler(newSelectedTopics, oldSelecedTopics) {
-                        this.getObjectives();
-                    },
-                    deep: true,
-                },
-
                 selected_objectives: {
                     handler(newSelectedObjectives, oldSelecedObjectives) {
                         this.getQuestions();
@@ -376,6 +387,12 @@
                     return this.displayed_questions.map(q => 
                         Flask.url_for('instructor.preview_question', {'question_id': q.id}))
                 },
+
+				topic_filters() {
+					const all_topics_filter = [{name: 'All', func: () => true}];
+					const individual_filters = this.selected_topics.map(t => ({name: t.text, func: lo => lo.topic.text === t.text}));
+					return all_topics_filter.concat(individual_filters);
+				},
             },
 
             methods: {
@@ -409,21 +426,6 @@
                         .catch(e => showSnackbarMessage("Error retrieving topics."));
                 },
 
-                async getObjectives() {
-                    if (this.selected_topics.length > 0) {
-                        const topic_ids = this.selected_topics.map(t => t.id);
-
-                        try {
-                            this.all_objectives = await CadetApi.getObjectivesForTopics(topic_ids);
-                        } catch (e) {
-                            this.all_objectives = [];
-                            showSnackbarMessage("Error retrieving learning objectives.");
-                        }
-                    }
-                    else {
-                        this.all_objectives = [];
-                    }
-                },
 
                 async getQuestions() {
                     if (this.selected_objectives.length > 0) {
