@@ -41,7 +41,7 @@ export default {
 
   template: `
   <div>
-      Show:
+      <slot>Show:</slot>
       <span v-for="(filter, index) in filters" :key="index" class="ms-2 pb-2" :class="div_style[index]">
           <button role="button" class="btn btn-link text-decoration-none link-secondary"
                   :class="filter.name === selected_filter.name ?  'link-dark' : 'link-secondary'"

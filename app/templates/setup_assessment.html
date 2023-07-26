@@ -130,9 +130,10 @@
 
                             <div class="ms-1 my-3">
 								<keep-alive>
-									<filter-control class="ms-2"
+									<filter-control 
 									  :filters="topic_filters"
 										@selected-filter="f => (lo_topic_filter = f)">
+										<strong>Topic:</strong>
 									</component>
 								</keep-alive>
 							</div>
