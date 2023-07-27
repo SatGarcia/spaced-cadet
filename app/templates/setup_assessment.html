@@ -211,6 +211,16 @@
                             </h5>
 
                             <div class="ms-1 my-3">
+								<keep-alive>
+									<filter-control :filters="objective_filters"
+								 		:dropdown="true"
+										@selected-filter="f => (q_objective_filter = f)">
+										<strong>Learning Objective:</strong>
+									</component>
+								</keep-alive>
+							</div>
+
+                            <div class="ms-1 my-3">
                                 <strong>Key: </strong>
                                 <i class="bi-check-circle ms-2 text-primary"></i> Selected 
                                 <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
@@ -333,7 +343,6 @@
 				// variables for learning objective selection tab
 				const lo_topic_filter = ref(() => true);
 				const objectives_fetch_url = ref(Flask.url_for('objectives_api'));
-				//const objectives_fetch_url = ref("");
 				const { all_data: all_objectives,
 						filtered_data: filtered_objectives,
 						error: lo_fetch_errors } = useFilterableList(objectives_fetch_url, "learning_objectives", lo_topic_filter);
@@ -343,20 +352,27 @@
 				const { current_page: displayed_objectives } = usePagination(filtered_objectives, objectives_per_page, current_objectives_page);
 
 				// variables for question selection tab
-				const all_questions = ref([]);
+				const q_objective_filter = ref(() => true);
+
+				const questions_fetch_url = ref(Flask.url_for('questions_api'));
+				const { all_data: all_questions,
+						filtered_data: filtered_questions,
+						error: q_fetch_errors } = useFilterableList(questions_fetch_url, "questions", q_objective_filter);
+
                 const selected_questions = ref([]);
 				const questions_per_page = ref(10);
 				const current_questions_page = ref(0);
-				const { current_page: displayed_questions } = usePagination(all_questions, questions_per_page, current_questions_page);
+				const { current_page: displayed_questions } = usePagination(filtered_questions, questions_per_page, current_questions_page);
 
                 return { course_id,
                             course_topics, selected_topics, topics_per_page,
                             current_topics_page, displayed_topics,
-							objectives_fetch_url,
+							objectives_fetch_url, questions_fetch_url,
                             all_objectives, filtered_objectives, lo_topic_filter,
 							selected_objectives, objectives_per_page,
                             current_objectives_page, displayed_objectives,
-                            all_questions, selected_questions, questions_per_page,
+                            all_questions, filtered_questions, q_objective_filter,
+							selected_questions, questions_per_page,
                             current_questions_page, displayed_questions
                             }
             },
@@ -369,7 +385,13 @@
             watch: {
                 selected_objectives: {
                     handler(newSelectedObjectives, oldSelecedObjectives) {
-                        this.getQuestions();
+						if (this.selected_objectives.length === 0) {
+							this.questions_fetch_url = Flask.url_for('questions_api');
+						}
+						else {
+							const lo_ids = this.selected_objectives.map(lo => lo.id);
+							this.questions_fetch_url = Flask.url_for('questions_api', {objectives: lo_ids.join()});
+						}
                     },
                     deep: true,
                 },
@@ -409,6 +431,12 @@
 					const individual_filters = this.selected_topics.map(t => ({name: t.text, func: lo => lo.topic.text === t.text}));
 					return all_topics_filter.concat(individual_filters);
 				},
+
+				objective_filters() {
+					const all_objectives_filter = [{name: 'All', func: () => true}];
+					const individual_filters = this.selected_objectives.map(lo => ({name: lo.description, func: q => q.objective.id === lo.id}));
+					return all_objectives_filter.concat(individual_filters);
+				},
             },
 
             methods: {
@@ -442,22 +470,6 @@
                         .catch(e => showSnackbarMessage("Error retrieving topics."));
                 },
 
-
-                async getQuestions() {
-                    if (this.selected_objectives.length > 0) {
-                        const objective_ids = this.selected_objectives.map(t => t.id);
-
-                        try {
-                            this.all_questions = await CadetApi.getQuestionsForObjectives(objective_ids);
-                        } catch (e) {
-                            this.all_questions = [];
-                            showSnackbarMessage("Error retrieving questions.");
-                        }
-                    }
-                    else {
-                        this.all_questions = [];
-                    }
-                },
 
                 submitSelected() {
                     const selected_topic_ids = this.selected_topics.map(t => t.id);
