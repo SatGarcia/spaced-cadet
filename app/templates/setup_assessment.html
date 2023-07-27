@@ -130,8 +130,7 @@
 
                             <div class="ms-1 my-3">
 								<keep-alive>
-									<filter-control 
-									  :filters="topic_filters"
+									<filter-control :filters="topic_filters"
 										@selected-filter="f => (lo_topic_filter = f)">
 										<strong>Topic:</strong>
 									</component>
@@ -208,7 +207,7 @@
                         <div class="col-8">
                             <h5>
                                 <i class="bi-list-task"></i>
-                                All Questions of Selected Objectives:
+                                Available Questions:
                             </h5>
 
                             <div class="ms-1 my-3">
@@ -333,9 +332,11 @@
 
 				// variables for learning objective selection tab
 				const lo_topic_filter = ref(() => true);
+				const objectives_fetch_url = ref(Flask.url_for('objectives_api'));
+				//const objectives_fetch_url = ref("");
 				const { all_data: all_objectives,
 						filtered_data: filtered_objectives,
-						error: lo_fetch_errors } = useFilterableList(Flask.url_for('objectives_api', {'topics': '1,2'}), "learning_objectives", lo_topic_filter);
+						error: lo_fetch_errors } = useFilterableList(objectives_fetch_url, "learning_objectives", lo_topic_filter);
                 const selected_objectives = ref([]);
 				const objectives_per_page = ref(10);
 				const current_objectives_page = ref(0);
@@ -351,6 +352,7 @@
                 return { course_id,
                             course_topics, selected_topics, topics_per_page,
                             current_topics_page, displayed_topics,
+							objectives_fetch_url,
                             all_objectives, filtered_objectives, lo_topic_filter,
 							selected_objectives, objectives_per_page,
                             current_objectives_page, displayed_objectives,
@@ -368,6 +370,19 @@
                 selected_objectives: {
                     handler(newSelectedObjectives, oldSelecedObjectives) {
                         this.getQuestions();
+                    },
+                    deep: true,
+                },
+
+                selected_topics: {
+                    handler(newSelectedTopics, oldSelecedTopics) {
+						if (this.selected_topics.length === 0) {
+							this.objectives_fetch_url = Flask.url_for('objectives_api');
+						}
+						else {
+							const topic_ids = this.selected_topics.map(t => t.id);
+							this.objectives_fetch_url = Flask.url_for('objectives_api', {topics: topic_ids.join()});
+						}
                     },
                     deep: true,
                 },
