@@ -9,6 +9,12 @@
             <h4>Create New Learning Objective</h4>
         {% endif %}
 
+        {% if topic %}
+            <div class="my-1">
+                <strong>Topic:</strong> {{ topic }}
+            </div>
+        {% endif %}
+
 		<div class="row">
 			<form method="POST" action="">
 				{{ form.csrf_token }}

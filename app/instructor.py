@@ -560,22 +560,31 @@ def create_new_objective():
         abort(401)
 
     form = LearningObjectiveForm()
+    topic = request.args.get("topic")
 
     if form.validate_on_submit():
         new_objective = Objective()
         form.populate_obj(new_objective)
 
+        if topic:
+            new_objective.topic = Topic.query.filter_by(text=topic).one_or_none()
+
         current_user.authored_objectives.append(new_objective)
         db.session.commit()
 
         flash("Successfully created new learning objective.", "success")
-        return redirect(url_for("instructor.user_objectives",
-                                user_id=current_user.id))
+
+        next_url = request.args.get("next",
+                                    url_for("instructor.user_objectives",
+                                            user_id=current_user.id))
+
+        return redirect(next_url)
 
 
     return render_template("edit_learning_objective.html",
                            page_title="Cadet: Create New Learning Objective",
-                           form=form)
+                           form=form,
+                           topic=topic)
 
 
 @instructor.route('/lo/<int:objective_id>/edit', methods=['GET', 'POST'])
