@@ -8,6 +8,10 @@ export default {
       type: Array,
       required: true,
     },
+    dropdown: {
+      type: Boolean,
+      default: false,
+    },
   },
 
   emits: ['selected-filter'],
@@ -40,7 +44,16 @@ export default {
   },
 
   template: `
-  <div>
+  <div v-if="dropdown">
+      <slot>Show:</slot>
+      <select class="form-select">
+	  	<option disabled value="">Please select one</option>
+		<option v-for="(filter, index) in filters" :key="index" value="index" @click="setFilter(index)">
+			[[filter.name]]
+		</option>
+	  </select>
+  </div>
+  <div v-else>
       <slot>Show:</slot>
       <span v-for="(filter, index) in filters" :key="index" class="ms-2 pb-2" :class="div_style[index]">
           <button role="button" class="btn btn-link text-decoration-none link-secondary"
