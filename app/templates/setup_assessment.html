@@ -342,7 +342,8 @@
 
 				// variables for learning objective selection tab
 				const lo_topic_filter = ref(() => true);
-				const objectives_fetch_url = ref(Flask.url_for('objectives_api'));
+				const lo_topic_filter_name = ref("All");
+				const objectives_fetch_url = ref("");
 				const { all_data: all_objectives,
 						filtered_data: filtered_objectives,
 						error: lo_fetch_errors } = useFilterableList(objectives_fetch_url, "learning_objectives", lo_topic_filter);
@@ -354,7 +355,7 @@
 				// variables for question selection tab
 				const q_objective_filter = ref(() => true);
 
-				const questions_fetch_url = ref(Flask.url_for('questions_api'));
+				const questions_fetch_url = ref("");
 				const { all_data: all_questions,
 						filtered_data: filtered_questions,
 						error: q_fetch_errors } = useFilterableList(questions_fetch_url, "questions", q_objective_filter);
