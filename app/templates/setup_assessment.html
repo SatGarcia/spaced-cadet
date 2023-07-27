@@ -128,49 +128,63 @@
                                 Available Learning Objectives:
                             </h5>
 
-                            <div class="ms-1 my-3">
-								<keep-alive>
-									<filter-control :filters="topic_filters"
-										@selected-filter="f => (lo_topic_filter = f)">
-										<strong>Topic:</strong>
-									</component>
-								</keep-alive>
-							</div>
+                            <div v-if="selected_topics.length !== 0">
+                                <div class="ms-1 my-3">
+                                    <keep-alive>
+                                        <filter-control :filters="topic_filters"
+                                            @selected-filter="f => (lo_topic_filter = f)"
+                                            @selected-filter-name="n => (lo_topic_filter_name = n)">
+                                            <strong>Topic:</strong>
+                                        </component>
+                                    </keep-alive>
+                                </div>
 
-                            <div class="ms-1 my-3">
-                                <strong>Key: </strong>
-                                <i class="bi-check-circle ms-2 text-primary"></i> Selected 
-                                <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
-                            </div>
 
-                            <div class="list-group" v-if="filtered_objectives.length !== 0">
-                                <button type="button" class="list-group-item list-group-item-action"
-                                                      v-for="(lo, index) in displayed_objectives" :key="lo.id"
-                                                      @click="toggleItemSelect(lo, selected_objectives)">
-                                    <span class="text-primary" v-if="objective_is_selected[index]">
-                                        <i class="bi-check-circle"></i>
-                                    </span>
-                                    <span class="text-secondary" v-else>
-                                        <i class="bi-dash-circle"></i>
-                                    </span>
+                                <div class="list-group" v-if="filtered_objectives.length !== 0">
+                                    <button type="button" class="list-group-item list-group-item-action"
+                                                          v-for="(lo, index) in displayed_objectives" :key="lo.id"
+                                                          @click="toggleItemSelect(lo, selected_objectives)">
+                                        <span class="text-primary" v-if="objective_is_selected[index]">
+                                            <i class="bi-check-circle"></i>
+                                        </span>
+                                        <span class="text-secondary" v-else>
+                                            <i class="bi-dash-circle"></i>
+                                        </span>
 
-                                    <span class="ms-2" v-html="convertToHtml(lo.description)"></span>
+                                        <span class="ms-2" v-html="convertToHtml(lo.description)"></span>
 
-                                    <span class="badge bg-light text-dark border m-1">
-                                        [[ lo.topic.text ]]
-                                    </span>
-                                </button>
+                                        <span class="badge bg-light text-dark border m-1">
+                                            [[ lo.topic.text ]]
+                                        </span>
+                                    </button>
 
-                                <pagination-control
-                                    class="mt-2"
-                                    description="Page navigation for objectives"
-                                    :num_items="filtered_objectives.length"
-                                    :items_per_page="objectives_per_page"
-                                    @selected-page-num="page_num => (current_objectives_page = page_num)">
-                                </pagination-control>
+                                    <pagination-control
+                                        class="mt-2"
+                                        description="Page navigation for objectives"
+                                        :num_items="filtered_objectives.length"
+                                        :items_per_page="objectives_per_page"
+                                        @selected-page-num="page_num => (current_objectives_page = page_num)">
+                                    </pagination-control>
+                                </div>
+                                <div v-else>
+                                    None found.
+                                </div>
+
+                                <div class="ms-1 my-3" v-if="lo_topic_filter_name !== 'All'">
+                                    <em>
+                                        <a :href="new_learning_objective_url"
+                                            class="text-decoration-none">Create a New Learning Objective for the [[ lo_topic_filter_name ]] topic</a>.
+                                    </em>
+                                </div>
+
+                                <div class="ms-1 my-3">
+                                    <strong>Key: </strong>
+                                    <i class="bi-check-circle ms-2 text-primary"></i> Selected 
+                                    <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
+                                </div>
                             </div>
                             <div v-else>
-                                None found.
+                                <em>Select at least one topic to unlock learning objectives.</em>
                             </div>
                         </div>
 
@@ -369,7 +383,8 @@
                             course_topics, selected_topics, topics_per_page,
                             current_topics_page, displayed_topics,
 							objectives_fetch_url, questions_fetch_url,
-                            all_objectives, filtered_objectives, lo_topic_filter,
+                            all_objectives, filtered_objectives,
+                            lo_topic_filter, lo_topic_filter_name,
 							selected_objectives, objectives_per_page,
                             current_objectives_page, displayed_objectives,
                             all_questions, filtered_questions, q_objective_filter,
@@ -438,6 +453,10 @@
 					const individual_filters = this.selected_objectives.map(lo => ({name: lo.description, func: q => q.objective.id === lo.id}));
 					return all_objectives_filter.concat(individual_filters);
 				},
+
+                new_learning_objective_url() {
+                    return Flask.url_for('instructor.create_new_objective', { 'topic': this.lo_topic_filter_name, 'next': window.location.pathname });
+                },
             },
 
             methods: {

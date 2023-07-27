@@ -14,7 +14,7 @@ export default {
     },
   },
 
-  emits: ['selected-filter'],
+  emits: ['selected-filter', 'selected-filter-name'],
 
   computed: {
     div_style() {
@@ -36,6 +36,7 @@ export default {
     setFilter(index) {
       this.selected_filter = this.filters[index];
       this.$emit('selected-filter', this.selected_filter.func);
+      this.$emit('selected-filter-name', this.selected_filter.name);
     },
   },
 
