@@ -107,9 +107,13 @@ def review_new_question(question_id):
         # Only allow a question's creator (and admins) to review a question
         abort(401)
 
+    next_url = request.args.get('next',
+                                url_for('.user_questions', user_id=current_user.id))
+
     return render_template("review_question.html",
                            page_title="Cadet: Review Question",
-                           question=question)
+                           question=question,
+                           next_url=next_url)
 
 
 
@@ -652,13 +656,32 @@ def create_new_question(question_type):
     else:
         abort(400)
 
+
     if form.validate_on_submit():
         form.populate_obj(new_q)
+
+        # add learning objective if we got one's ID as an argument
+        lo = request.args.get('lo')
+        if lo:
+            try:
+                lo_id = int(lo)
+            except:
+                abort(400)
+
+            new_q.objective = Objective.query.filter_by(id=lo_id).one_or_none()
+
 
         current_user.authored_questions.append(new_q)
         db.session.commit()
 
-        return redirect(url_for(".review_new_question", question_id=new_q.id))
+        # pass along the next url if one was given
+        additional_url_args = {}
+        next_url = request.args.get('next')
+        if next_url:
+            additional_url_args['next'] = next_url
+
+        return redirect(url_for(".review_new_question", question_id=new_q.id,
+                                **additional_url_args))
 
 
     return render_template(template,

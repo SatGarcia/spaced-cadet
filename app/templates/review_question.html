@@ -101,7 +101,7 @@
 
         <div class="mt-3 ms-3">
             <button role="button" class="btn btn-sm btn-primary"
-                                  onclick="window.open('{{ url_for('instructor.user_questions', user_id=current_user.id) }}', '_self')">
+                                  onclick="window.open('{{ next_url }}', '_self')">
                 Finish Review
             </button>
         </div>
