@@ -74,7 +74,7 @@
 							<keep-alive>
 								<filter-control v-if="selected_indices.length === 0" class="ms-2"
 								  :filters="[{name: 'All', func: () => true}, {name: 'Missing Topic', func: lo => lo.topic === null}, {name: 'Private', func: lo => lo.public === false}, {name: 'Public', func: lo => lo.public}]"
-									@selected-filter="f => (current_filter = f)">
+									@selected-filter="filter => (current_filter = filter.func)">
 								</component>
 							</keep-alive>
 

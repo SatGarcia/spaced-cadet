@@ -132,8 +132,7 @@
                                 <div class="ms-1 my-3">
                                     <keep-alive>
                                         <filter-control :filters="topic_filters"
-                                            @selected-filter="f => (lo_topic_filter = f)"
-                                            @selected-filter-name="n => (lo_topic_filter_name = n)">
+                                            @selected-filter="filter => {lo_topic_filter = filter.func; lo_topic_filter_name = filter.name}">
                                             <strong>Topic:</strong>
                                         </component>
                                     </keep-alive>
@@ -228,7 +227,7 @@
 								<keep-alive>
 									<filter-control :filters="objective_filters"
 								 		:dropdown="true"
-										@selected-filter="f => (q_objective_filter = f)">
+										@selected-filter="filter => {q_objective_filter = filter.func; q_objective_filter_id = filter.id}">
 										<strong>Learning Objective:</strong>
 									</component>
 								</keep-alive>
@@ -299,6 +298,13 @@
                                 :items_per_page="questions_per_page"
                                 @selected-page-num="page_num => (current_questions_page = page_num)">
                             </pagination-control>
+
+                            <div class="ms-1 my-3" v-if="q_objective_filter_id !== null">
+                                <em>
+                                    <a :href="new_question_url"
+                                        class="text-decoration-none">Create a new question for this learning objective.</a>
+                                </em>
+                            </div>
                         </div>
 
                         <!-- area for selected questions -->
@@ -368,6 +374,7 @@
 
 				// variables for question selection tab
 				const q_objective_filter = ref(() => true);
+				const q_objective_filter_id = ref(null);
 
 				const questions_fetch_url = ref("");
 				const { all_data: all_questions,
@@ -387,7 +394,8 @@
                             lo_topic_filter, lo_topic_filter_name,
 							selected_objectives, objectives_per_page,
                             current_objectives_page, displayed_objectives,
-                            all_questions, filtered_questions, q_objective_filter,
+                            all_questions, filtered_questions,
+                            q_objective_filter, q_objective_filter_id,
 							selected_questions, questions_per_page,
                             current_questions_page, displayed_questions
                             }
@@ -443,19 +451,28 @@
                 },
 
 				topic_filters() {
-					const all_topics_filter = [{name: 'All', func: () => true}];
-					const individual_filters = this.selected_topics.map(t => ({name: t.text, func: lo => lo.topic.text === t.text}));
+					const all_topics_filter = [{name: 'All', id: null, func: () => true}];
+					const individual_filters = this.selected_topics.map(t => ({name: t.text, id: t.id, func: lo => lo.topic.text === t.text}));
 					return all_topics_filter.concat(individual_filters);
 				},
 
 				objective_filters() {
-					const all_objectives_filter = [{name: 'All', func: () => true}];
-					const individual_filters = this.selected_objectives.map(lo => ({name: lo.description, func: q => q.objective.id === lo.id}));
+					const all_objectives_filter = [{name: 'All', index: null, func: () => true}];
+					const individual_filters = this.selected_objectives.map(lo => ({name: lo.description, id: lo.id, func: q => q.objective.id === lo.id}));
 					return all_objectives_filter.concat(individual_filters);
 				},
 
                 new_learning_objective_url() {
                     return Flask.url_for('instructor.create_new_objective', { 'topic': this.lo_topic_filter_name, 'next': window.location.pathname });
+                },
+
+                new_question_url() {
+                    if (this.q_objective_filter_id !== null) {
+                        return Flask.url_for('instructor.create_new_question', { 'question_type': 'short-answer', 'lo': this.q_objective_filter_id, 'next': window.location.pathname });
+                    }
+                    else {
+                        return "";
+                    }
                 },
             },
 
