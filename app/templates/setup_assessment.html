@@ -263,7 +263,7 @@
                                                 <tbody>
                                                     <tr>
                                                         <th scope="row" class="col-1">Type:</th>
-                                                        <td>[[ q.type ]]</td>
+                                                        <td>[[ getTypeDescription(q.type) ]]</td>
                                                     </tr>
                                                     <tr>
                                                         <th scope="row">Prompt:</th>
@@ -300,10 +300,17 @@
                             </pagination-control>
 
                             <div class="ms-1 my-3" v-if="q_objective_filter_id !== null">
-                                <em>
-                                    <a :href="new_question_url"
-                                        class="text-decoration-none">Create a new question for this learning objective.</a>
-                                </em>
+                                <span class="dropdown">
+                                    <button class="btn btn-link dropdown-toggle text-decoration-none" type="button" id="newQuestionButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi-plus-circle"></i>
+                                        Create New Question
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="newQuestionButton">
+                                        <div v-for="qt in question_types">
+                                            <li><a class="dropdown-item" :href="getQuestionLink(qt.name)">[[qt.description]]</a></li>
+                                        </div>
+                                    </ul>
+                                </span>
                             </div>
                         </div>
 
@@ -353,6 +360,8 @@
 			setup() {
 				const course_id = ref({{ course.id }});
 
+                const question_types = ref(null);
+
 				// variables for topic selection tab
 				const course_topics = ref([]);
                 const selected_topics = ref([]);
@@ -386,7 +395,7 @@
 				const current_questions_page = ref(0);
 				const { current_page: displayed_questions } = usePagination(filtered_questions, questions_per_page, current_questions_page);
 
-                return { course_id,
+                return { course_id, question_types,
                             course_topics, selected_topics, topics_per_page,
                             current_topics_page, displayed_topics,
 							objectives_fetch_url, questions_fetch_url,
@@ -501,6 +510,31 @@
                     }
                 },
 
+                getQuestionLink(question_type) {
+                    return Flask.url_for('instructor.create_new_question', { 'question_type': question_type, 'lo': this.q_objective_filter_id, 'next': window.location.pathname });
+                },
+
+                getQuestionTypes() {
+                    CadetApi.getQuestionTypes()
+                        .then(q_types => this.question_types = q_types)
+                        .catch(e => showSnackbarMessage("Error retrieving question types."));
+                },
+
+                getTypeDescription(type_string) {
+                    if (this.question_types === null) {
+                        return type_string;
+                    }
+                    else {
+                        const qt = this.question_types.find(e => type_string === e.name);
+                        if (qt !== undefined) {
+                            return qt.description;
+                        }
+                        else {
+                            return type_string;
+                        }
+                    }
+                },
+
                 getTopics() {
                     CadetApi.getCourseTopics({{ course.id }})
                         .then(topics => this.course_topics = topics)
@@ -535,6 +569,7 @@
 
             created() {
                 this.getTopics();
+                this.getQuestionTypes();
             },
 
             compilerOptions: {
