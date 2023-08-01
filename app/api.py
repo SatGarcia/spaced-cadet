@@ -219,6 +219,8 @@ def init_app(flask_app):
                         endpoint='question_api')
     rf_api.add_resource(QuestionsApi, '/api/questions',
                         endpoint='questions_api')
+    rf_api.add_resource(QuestionTypesApi, '/api/question/types',
+                        endpoint="question_types_api")
 
     rf_api.add_resource(ObjectiveApi, '/api/objective/<int:objective_id>',
                         endpoint='objective_api')
@@ -232,6 +234,7 @@ def init_app(flask_app):
 
     rf_api.add_resource(AssessmentApi, '/api/assessment/<int:assessment_id>',
                         endpoint="assessment_api")
+
 
 
 
@@ -1294,4 +1297,9 @@ class AssessmentApi(Resource):
         else:
             return {'message': f"Assessment {assessment_id} not found."}, 404
 
+
+class QuestionTypesApi(Resource):
+    @jwt_required()
+    def get(self):
+        return QuestionType.descriptions()
 

@@ -220,3 +220,9 @@ export async function asyncCallForAllItems(asyncFunc, items, buildParams, postPr
 
     return failures;
 }
+
+export async function getQuestionTypes() {
+    const url = Flask.url_for('question_types_api');
+    const response = await authenticatedFetch(url);
+    return response;
+}

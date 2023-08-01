@@ -100,6 +100,18 @@ class QuestionType(enum.Enum):
     AUTO_CHECK = "auto-check"
     SINGLE_LINE_CODE_QUESTION = "single-line-code"
 
+    @classmethod
+    def descriptions(cls):
+        """ Returns dictionary mapping value to human readable description.  """
+        return [
+            {'name': 'short-answer', 'description': "Short Answer (Self Graded)"},
+            {'name': 'multiple-choice', 'description': "Multiple Choice"},
+            {'name': 'multiple-selection', 'description': "Multiple Selection"},
+            {'name': 'code-jumble', 'description': "Parsons Problem"},
+            {'name': 'auto-check', 'description': "Short Answer (Auto Graded)"},
+            {'name': 'single-line-code', 'description': "Single Line of Code"}
+        ]
+
 class ResponseType(enum.Enum):
     GENERIC = 0
     TEXT = 1
