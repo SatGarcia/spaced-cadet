@@ -25,18 +25,11 @@
                     <button type="button" class="btn btn-lg btn-primary"
                                           tabIndex="0"
                                           :disabled="!changes_made"
-                                          @click="submitSelected"
-                                          @keydown.enter="submitSelected">
+                                          @click="saveSelections"
+                                          @keydown.enter="saveSelections">
                         <i class="bi-save"></i>
                         Save Selections
                     </button>
-
-                    <form method="POST" action="" id="setupAssessmentForm">
-                        {{ form.csrf_token }}
-                        {{ form.selected_topics }}
-                        {{ form.selected_objectives }}
-                        {{ form.selected_questions }}
-                    </form>
                 </div>
             </div>
 
@@ -47,12 +40,6 @@
                     <li>[[selected_objectives.length]] selected objective(s)</li>
                     <li>[[selected_questions.length]] selected question(s)</li>
                 </ul>
-            </div>
-
-            <div>
-                <button type="button" class="btn" @click="saveSelections">
-                    Update Everything
-                </button>
             </div>
 
             <hr/>
@@ -551,38 +538,19 @@
                 },
 
                 saveSelections() {
+                    const assessment_id = {{ assessment.id }};
                     const selected_topic_ids = this.selected_topics.map(t => t.id);
                     const selected_objective_ids = this.selected_objectives.map(lo => lo.id);
                     const selected_question_ids = this.selected_questions.map(q => q.id);
 
-                    CadetApi.setAssessmentTopics({{ course.id }}, {{ assessment.id }}, selected_topic_ids)
-                        .then(response => this.changes_made = false)
-                        .catch(e => showSnackbarMessage("Error saving topics."));
-
-                    CadetApi.setAssessmentObjectives({{ course.id }}, {{ assessment.id }}, selected_objective_ids)
-                        .then(response => this.changes_made = false)
-                        .catch(e => showSnackbarMessage("Error saving learning objectives."));
-
-                    CadetApi.setAssessmentQuestions({{ course.id }}, {{ assessment.id }}, selected_question_ids)
-                        .then(response => this.changes_made = false)
-                        .catch(e => showSnackbarMessage("Error saving questions."));
-                },
-
-
-                submitSelected() {
-                    const selected_topic_ids = this.selected_topics.map(t => t.id);
-                    const topics_str = selected_topic_ids.join();
-                    document.getElementById("selected_topics").value = topics_str;
-
-                    const selected_objective_ids = this.selected_objectives.map(o => o.id);
-                    const objectives_str = selected_objective_ids.join();
-                    document.getElementById("selected_objectives").value = objectives_str;
-
-                    const selected_question_ids = this.selected_questions.map(q => q.id);
-                    const questions_str = selected_question_ids.join();
-                    document.getElementById("selected_questions").value = questions_str;
-
-                    document.getElementById("setupAssessmentForm").submit();
+                    CadetApi.setAssessmentTopics(this.course_id, assessment_id, selected_topic_ids)
+                        .then(response => CadetApi.setAssessmentObjectives(this.course_id, assessment_id, selected_objective_ids))
+                        .then(response => CadetApi.setAssessmentQuestions(this.course_id, assessment_id, selected_question_ids))
+                        .then(response => {
+                                            this.changes_made = false;
+                                            showSnackbarMessage("Selections successfully saved!.");
+                                          })
+                        .catch(e => showSnackbarMessage("Error saving selections. Please try again."));
                 },
 
                 convertToHtml(md_text, unwrap_p=true) {

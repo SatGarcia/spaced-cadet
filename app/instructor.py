@@ -444,7 +444,7 @@ def setup_topics(course_name):
                            course=course)
 
 
-@instructor.route('/c/<course_name>/assessment/<int:assessment_id>/setup', methods=['GET', 'POST'])
+@instructor.route('/c/<course_name>/assessment/<int:assessment_id>/setup')
 def setup_assessment(course_name, assessment_id):
     course = Course.query.filter_by(name=course_name).first()
     assessment = Assessment.query.filter_by(id=assessment_id).first()
@@ -457,53 +457,13 @@ def setup_assessment(course_name, assessment_id):
     except AuthorizationError:
         abort(401)
 
-    form = SetupAssessmentForm()
-
-    if form.validate_on_submit():
-        topic_ids = [] if len(form.selected_topics.data) == 0\
-                    else [int(i) for i in form.selected_topics.data.split(',')]
-        objective_ids = [] if len(form.selected_objectives.data) == 0\
-                    else [int(i) for i in form.selected_objectives.data.split(',')]
-        question_ids = [] if len(form.selected_questions.data) == 0\
-                    else [int(i) for i in form.selected_questions.data.split(',')]
-
-        topics = Topic.query.filter(Topic.id.in_(topic_ids))
-        objectives = Objective.query.filter(Objective.id.in_(objective_ids))
-        questions = Question.query.filter(Question.id.in_(question_ids))
-
-        #if None in questions:
-        if topics.count() != len(topic_ids)\
-                or objectives.count() != len(objective_ids)\
-                or questions.count() != len(question_ids):
-            flash("An error occurred during assessment setup. Please try again.", "danger")
-        else:
-            assessment.topics = topics
-            assessment.objectives = objectives
-
-            # check that all questions are either public or have current user
-            # as the author
-            correct_permissions = [(q.public or q.author == current_user) for q in questions]
-            if False in correct_permissions:
-                flash("ERROR: Cannot add other user's private questions.",
-                      "danger")
-
-            else:
-                assessment.questions = questions
-
-                db.session.commit()
-                flash(f"Successfully updated assessment with {topics.count()} topics, {objectives.count()} learning objectives, and {questions.count()} questions",
-                      "success")
-
-        return redirect(url_for(f'.manage_assessments', course_name=course_name))
-
     from app.db_models import AssessmentSchema
     a = AssessmentSchema().dump(assessment)
 
     return render_template("setup_assessment.html",
                            page_title="Cadet: Assessment Setup",
                            course=course,
-                           assessment=a,
-                           form=form)
+                           assessment=a)
 
 
 @instructor.route('/q/<int:question_id>/edit', methods=['GET', 'POST'])
@@ -902,16 +862,6 @@ class DataRequiredIf(DataRequired):
         if bool(other_field.data):
             super(DataRequiredIf, self).__call__(form, field)
 
-
-class SetupAssessmentForm(FlaskForm):
-    selected_topics = HiddenField("Selected Topic IDs",
-                                  [Regexp("(^\d+(,\d+)*$|^$)")])
-    selected_objectives = HiddenField("Selected Objective IDs",
-                                      [Regexp("(^\d+(,\d+)*$|^$)")])
-    selected_questions = HiddenField("Selected Question IDs",
-                                     [Regexp("(^\d+(,\d+)*$|^$)")])
-    submit = SubmitField("Set Topics, Objectives, and Questions")
-    #[Regexp("^\d+(,\d+)*$")])
 
 
 class AssessmentForm(FlaskForm):
