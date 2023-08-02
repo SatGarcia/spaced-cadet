@@ -49,6 +49,12 @@
                 </ul>
             </div>
 
+            <div>
+                <button type="button" class="btn" @click="saveSelections">
+                    Update Everything
+                </button>
+            </div>
+
             <hr/>
 
             <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
@@ -542,6 +548,24 @@
                     CadetApi.getCourseTopics({{ course.id }})
                         .then(topics => this.course_topics = topics)
                         .catch(e => showSnackbarMessage("Error retrieving topics."));
+                },
+
+                saveSelections() {
+                    const selected_topic_ids = this.selected_topics.map(t => t.id);
+                    const selected_objective_ids = this.selected_objectives.map(lo => lo.id);
+                    const selected_question_ids = this.selected_questions.map(q => q.id);
+
+                    CadetApi.setAssessmentTopics({{ course.id }}, {{ assessment.id }}, selected_topic_ids)
+                        .then(response => this.changes_made = false)
+                        .catch(e => showSnackbarMessage("Error saving topics."));
+
+                    CadetApi.setAssessmentObjectives({{ course.id }}, {{ assessment.id }}, selected_objective_ids)
+                        .then(response => this.changes_made = false)
+                        .catch(e => showSnackbarMessage("Error saving learning objectives."));
+
+                    CadetApi.setAssessmentQuestions({{ course.id }}, {{ assessment.id }}, selected_question_ids)
+                        .then(response => this.changes_made = false)
+                        .catch(e => showSnackbarMessage("Error saving questions."));
                 },
 
 
