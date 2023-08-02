@@ -40,7 +40,7 @@
 
                     <button type="button" class="btn btn-lg btn-primary"
                                           tabIndex="0"
-                                          :disabled="!changes_made"
+                                          :disabled="!unsaved_changes"
                                           @click="saveSelections"
                                           @keydown.enter="saveSelections">
                         <i class="bi-save"></i>
@@ -367,7 +367,7 @@
         const app = createApp({
 			setup() {
 				const course_id = ref({{ course.id }});
-                const changes_made = ref(false);
+                const unsaved_changes = ref(false);
 
                 const question_types = ref(null);
 
@@ -404,7 +404,7 @@
 				const current_questions_page = ref(0);
 				const { current_page: displayed_questions } = usePagination(filtered_questions, questions_per_page, current_questions_page);
 
-                return { course_id, changes_made, question_types,
+                return { course_id, unsaved_changes, question_types,
                             course_topics, selected_topics, topics_per_page,
                             current_topics_page, displayed_topics,
 							objectives_fetch_url, questions_fetch_url,
@@ -510,12 +510,12 @@
                         selected_items.splice(found_index, 1);
                     }
 
-                    this.changes_made = true;
+                    this.unsaved_changes = true;
                 },
 
                 removeSelectedItem(selected_items, index) {
                     selected_items.splice(index,1)
-                    this.changes_made = true;
+                    this.unsaved_changes = true;
                 },
 
                 getQuestionLink(question_type) {
@@ -559,7 +559,7 @@
                         .then(response => CadetApi.setAssessmentObjectives(this.course_id, assessment_id, selected_objective_ids))
                         .then(response => CadetApi.setAssessmentQuestions(this.course_id, assessment_id, selected_question_ids))
                         .then(response => {
-                                            this.changes_made = false;
+                                            this.unsaved_changes = false;
                                             showSnackbarMessage("Selections successfully saved!.");
                                           })
                         .catch(e => showSnackbarMessage("Error saving selections. Please try again."));
@@ -588,5 +588,12 @@
         vm.selected_topics = {{ assessment.topics|tojson }};
         vm.selected_objectives = {{ assessment.objectives|tojson }};
         vm.selected_questions = {{ assessment.questions|tojson }};
+
+        window.addEventListener('beforeunload', (e) => {
+                                                        if (vm.unsaved_changes) {
+                                                            e.preventDefault();
+                                                            e.returnValue = '';
+                                                        }
+                                                       });
 	</script>
 {% endblock %}
