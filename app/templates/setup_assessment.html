@@ -471,7 +471,7 @@
 				},
 
 				objective_filters() {
-					const all_objectives_filter = [{name: 'All', index: null, func: () => true}];
+					const all_objectives_filter = [{name: 'All', id: null, func: () => true}];
 					const individual_filters = this.selected_objectives.map(lo => ({name: lo.description, id: lo.id, func: q => q.objective.id === lo.id}));
 					return all_objectives_filter.concat(individual_filters);
 				},
