@@ -14,14 +14,30 @@
 
 		<div id="assessmentSetup">
             <div class="d-flex">
-                <div class="me-auto">
-                    <h5>Assessment Setup: {{assessment.title}}</h5>
+                <div class="me-auto mb-2">
+                    <h5>Assessment Setup</h5>
                     <div>
-                        <em>{{assessment.description|mdown|safe}}</em>
+                        <strong>Assessment Title:</strong> {{ assessment.title }}
                     </div>
+                    <p class="mt-2">
+                        Select the topics, learning objectives, and questions
+                        for this assignment.
+                        Save your selections using the "Save Selections"
+                        button.
+                    </p>
                 </div>
 
                 <div>
+
+                    <div class="mb-2">
+                        <strong>Summary:</strong>
+                        <ul class="list-group">
+                            <li class="list-group-item">[[selected_topics.length]] selected topic(s)</li>
+                            <li class="list-group-item">[[selected_objectives.length]] selected objective(s)</li>
+                            <li class="list-group-item">[[selected_questions.length]] selected question(s)</li>
+                        </ul>
+                    </div>
+
                     <button type="button" class="btn btn-lg btn-primary"
                                           tabIndex="0"
                                           :disabled="!changes_made"
@@ -33,14 +49,6 @@
                 </div>
             </div>
 
-            <div>
-                <strong>Summary:</strong>
-                <ul>
-                    <li>[[selected_topics.length]] selected topic(s)</li>
-                    <li>[[selected_objectives.length]] selected objective(s)</li>
-                    <li>[[selected_questions.length]] selected question(s)</li>
-                </ul>
-            </div>
 
             <hr/>
 
