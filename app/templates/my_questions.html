@@ -24,7 +24,7 @@
 			<confirmation-dialog name="confirmationModal"
 				 @confirmed="resolveConfirmation(true)"
 				 @cancelled="resolveConfirmation(false)">
-				Are you sure you want to delete these questions.
+				Are you sure you want to delete these questions?
 				<strong>This action cannot be undone.</strong>
 			</confirmation-dialog>
 
@@ -215,6 +215,8 @@
 
         const app = createApp({
 			setup() {
+				const question_types = ref(null);
+
 				const target_user = ref("{{ target_author }}");
 
 				const current_filter = ref(() => true);
@@ -397,6 +399,13 @@
                     return converter.makeHtml(md_text);
 				},
 
+                getQuestionTypes() {
+                    CadetApi.getQuestionTypes()
+                        .then(q_types => this.question_types = q_types)
+                        .catch(e => showSnackbarMessage("Error retrieving question types."));
+                },
+
+
 				getTypeString(q) {
 					switch (q.type) {
 						case 'short-answer':
@@ -414,6 +423,11 @@
 					}
 				},
             },
+
+            created() {
+                this.getQuestionTypes();
+            },
+
 
             compilerOptions: {
                 delimiters: ["[[", "]]"]
