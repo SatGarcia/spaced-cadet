@@ -416,7 +416,7 @@
                 selected_objectives: {
                     handler(newSelectedObjectives, oldSelecedObjectives) {
 						if (this.selected_objectives.length === 0) {
-							this.questions_fetch_url = Flask.url_for('questions_api');
+							this.questions_fetch_url = "";
 						}
 						else {
 							const lo_ids = this.selected_objectives.map(lo => lo.id);
@@ -429,7 +429,7 @@
                 selected_topics: {
                     handler(newSelectedTopics, oldSelecedTopics) {
 						if (this.selected_topics.length === 0) {
-							this.objectives_fetch_url = Flask.url_for('objectives_api');
+							this.objectives_fetch_url = "";
 						}
 						else {
 							const topic_ids = this.selected_topics.map(t => t.id);
