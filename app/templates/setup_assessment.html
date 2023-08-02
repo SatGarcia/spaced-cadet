@@ -105,7 +105,7 @@
                                 <i class="bi-list-check"></i>
                                 Selected Topics:
                             </h5>
-                            <ol class="list-group list-group-numbered">
+                            <ol class="list-group list-group-numbered" v-if="selected_topics.length !== 0">
                                 <li type="button" class="list-group-item d-flex"
                                                   v-for="(t, index) in selected_topics" :key="t.id">
                                     <div class="ms-2 me-auto">
@@ -119,6 +119,9 @@
                                     </div>
                                 </li>
                             </ol>
+                            <div class="ms-2" v-else>
+                                <em>No topics selected.</em>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -133,6 +136,10 @@
                             </h5>
 
                             <div v-if="selected_topics.length !== 0">
+                                <div>
+                                    Select the learning objectives that will
+                                    be associated with this assessment.
+                                </div>
                                 <div class="ms-1 my-3">
                                     <keep-alive>
                                         <filter-control :filters="topic_filters"
@@ -169,8 +176,12 @@
                                         @selected-page-num="page_num => (current_objectives_page = page_num)">
                                     </pagination-control>
                                 </div>
-                                <div v-else>
-                                    None found.
+                                <div class="ms-1" v-else>
+                                    No learning objectives found.
+
+                                    <span v-if="lo_topic_filter_name === 'All'">
+                                        To create a new learning objective, select one of the topics above.
+                                    </span>
                                 </div>
 
                                 <div class="ms-1 my-3" v-if="lo_topic_filter_name !== 'All'">
@@ -198,7 +209,7 @@
                                 Selected Objectives:
                             </h5>
 
-                            <ol class="list-group list-group-numbered">
+                            <ol class="list-group list-group-numbered" v-if="selected_objectives.length !== 0">
                                 <li type="button" class="list-group-item d-flex"
                                                   v-for="(lo, index) in selected_objectives" :key="lo.id">
                                     <div class="ms-2 me-auto">
@@ -214,6 +225,9 @@
                                     <span class="visually-hidden">Remove</span>
                                 </li>
                             </ol>
+                            <div class="ms-2" v-else>
+                                <em>No learning objectives selected.</em>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -227,6 +241,10 @@
                                 Available Questions:
                             </h5>
                             <div v-if="selected_objectives.length !== 0">
+                                <div>
+                                    Select the questions objectives that will
+                                    be associated with this assessment.
+                                </div>
                                 <div class="ms-1 my-3">
                                     <keep-alive>
                                         <filter-control :filters="objective_filters"
@@ -237,71 +255,80 @@
                                     </keep-alive>
                                 </div>
 
-                                <div class="ms-1 my-3">
-                                    <strong>Key: </strong>
-                                    <i class="bi-check-circle ms-2 text-primary"></i> Selected 
-                                    <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
+                                <div v-if="filtered_questions.length !== 0">
+                                    <div class="ms-1 my-3">
+                                        <strong>Key: </strong>
+                                        <i class="bi-check-circle ms-2 text-primary"></i> Selected 
+                                        <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
 
-                                    <div class="visually-hidden">
-                                        You may preview a question by selecting it and pressing the 'p' key.
+                                        <div class="visually-hidden">
+                                            You may preview a question by selecting it and pressing the 'p' key.
+                                        </div>
+                                    </div>
+
+                                    <div class="list-group">
+                                        <button type="button" class="list-group-item list-group-item-action"
+                                                              v-for="(q, index) in displayed_questions" :key="q.id"
+                                                              @click="toggleItemSelect(q, selected_questions)"
+                                                              @keydown="previewQuestion(q, $event)">
+                                            <div class="d-flex">
+                                                <div class="mt-1">
+                                                    <span class="text-primary" v-if="question_is_selected[index]">
+                                                        <i class="bi-check-circle"></i>
+                                                    </span>
+                                                    <span class="text-secondary" v-else="!question_is_selected[index]">
+                                                        <i class="bi-dash-circle"></i>
+                                                    </span>
+                                                </div>
+
+                                                <div class="ms-2 flex-grow-1">
+                                                    <table class="table table-borderless table-sm mb-0">
+                                                        <tbody>
+                                                            <tr>
+                                                                <th scope="row" class="col-1">Type:</th>
+                                                                <td>[[ getTypeDescription(q.type) ]]</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th scope="row">Prompt:</th>
+                                                                <td>
+                                                                    <div class="clippy" v-html="convertToHtml(q.prompt)"></div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <th scope="row">Objective:</th>
+                                                                <td v-html="convertToHtml(q.objective.description)"></td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                <div class="ms-1" style="white-space: nowrap">
+                                                    <i class="bi-eye"></i>
+                                                    <a :href="preview_url[index]" target="_blank"
+                                                        class="link-secondary text-decoration-none">
+                                                        Preview
+                                                    </a>
+                                                </div>
+                                            </div>
+
+                                        </button>
+
+                                        <pagination-control
+                                            class="mt-2"
+                                            description="Page navigation for questions"
+                                            :num_items="all_questions.length"
+                                            :items_per_page="questions_per_page"
+                                            @selected-page-num="page_num => (current_questions_page = page_num)">
+                                        </pagination-control>
                                     </div>
                                 </div>
+                                <div class="ms-1" v-else>
+                                    No questions found.
 
-                                <div class="list-group" v-if="all_questions.length !== 0">
-                                    <button type="button" class="list-group-item list-group-item-action"
-                                                          v-for="(q, index) in displayed_questions" :key="q.id"
-                                                          @click="toggleItemSelect(q, selected_questions)"
-                                                          @keydown="previewQuestion(q, $event)">
-                                        <div class="d-flex">
-                                            <div class="mt-1">
-                                                <span class="text-primary" v-if="question_is_selected[index]">
-                                                    <i class="bi-check-circle"></i>
-                                                </span>
-                                                <span class="text-secondary" v-else="!question_is_selected[index]">
-                                                    <i class="bi-dash-circle"></i>
-                                                </span>
-                                            </div>
-
-                                            <div class="ms-2 flex-grow-1">
-                                                <table class="table table-borderless table-sm mb-0">
-                                                    <tbody>
-                                                        <tr>
-                                                            <th scope="row" class="col-1">Type:</th>
-                                                            <td>[[ getTypeDescription(q.type) ]]</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <th scope="row">Prompt:</th>
-                                                            <td>
-                                                                <div class="clippy" v-html="convertToHtml(q.prompt)"></div>
-                                                            </td>
-                                                        </tr>
-                                                        <tr>
-                                                            <th scope="row">Objective:</th>
-                                                            <td v-html="convertToHtml(q.objective.description)"></td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-
-                                            <div class="ms-1" style="white-space: nowrap">
-                                                <i class="bi-eye"></i>
-                                                <a :href="preview_url[index]" target="_blank"
-                                                    class="link-secondary text-decoration-none">
-                                                    Preview
-                                                </a>
-                                            </div>
-                                        </div>
-
-                                    </button>
+                                    <span v-if="q_objective_filter_id === null">
+                                        To create a new question, select one of the questions above.
+                                    </span>
                                 </div>
-
-                                <pagination-control
-                                    class="mt-2"
-                                    description="Page navigation for questions"
-                                    :num_items="all_questions.length"
-                                    :items_per_page="questions_per_page"
-                                    @selected-page-num="page_num => (current_questions_page = page_num)">
-                                </pagination-control>
 
                                 <div class="ms-1 my-3" v-if="q_objective_filter_id !== null">
                                     <span class="dropdown">
@@ -329,7 +356,7 @@
                                 Selected Questions:
                             </h5>
 
-                            <ol class="list-group list-group-numbered">
+                            <ol class="list-group list-group-numbered" v-if="selected_questions.length !== 0">
                                 <li class="list-group-item d-flex"
                                     v-for="(question, index) in selected_questions" :key="question.id">
 
@@ -340,6 +367,9 @@
                                     <span class="visually-hidden">Remove</span>
                                 </li>
                             </ol>
+                            <div class="ms-2" v-else>
+                                <em>No questions selected.</em>
+                            </div>
                         </div>
                     </div>
                 </div>
