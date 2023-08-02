@@ -226,95 +226,99 @@
                                 <i class="bi-list-task"></i>
                                 Available Questions:
                             </h5>
+                            <div v-if="selected_objectives.length !== 0">
+                                <div class="ms-1 my-3">
+                                    <keep-alive>
+                                        <filter-control :filters="objective_filters"
+                                            :dropdown="true"
+                                            @selected-filter="filter => {q_objective_filter = filter.func; q_objective_filter_id = filter.id}">
+                                            <strong>Learning Objective:</strong>
+                                        </component>
+                                    </keep-alive>
+                                </div>
 
-                            <div class="ms-1 my-3">
-								<keep-alive>
-									<filter-control :filters="objective_filters"
-								 		:dropdown="true"
-										@selected-filter="filter => {q_objective_filter = filter.func; q_objective_filter_id = filter.id}">
-										<strong>Learning Objective:</strong>
-									</component>
-								</keep-alive>
-							</div>
+                                <div class="ms-1 my-3">
+                                    <strong>Key: </strong>
+                                    <i class="bi-check-circle ms-2 text-primary"></i> Selected 
+                                    <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
 
-                            <div class="ms-1 my-3">
-                                <strong>Key: </strong>
-                                <i class="bi-check-circle ms-2 text-primary"></i> Selected 
-                                <i class="bi-dash-circle ms-2 text-secondary"></i> Unselected
+                                    <div class="visually-hidden">
+                                        You may preview a question by selecting it and pressing the 'p' key.
+                                    </div>
+                                </div>
 
-                                <div class="visually-hidden">
-                                    You may preview a question by selecting it and pressing the 'p' key.
+                                <div class="list-group" v-if="all_questions.length !== 0">
+                                    <button type="button" class="list-group-item list-group-item-action"
+                                                          v-for="(q, index) in displayed_questions" :key="q.id"
+                                                          @click="toggleItemSelect(q, selected_questions)"
+                                                          @keydown="previewQuestion(q, $event)">
+                                        <div class="d-flex">
+                                            <div class="mt-1">
+                                                <span class="text-primary" v-if="question_is_selected[index]">
+                                                    <i class="bi-check-circle"></i>
+                                                </span>
+                                                <span class="text-secondary" v-else="!question_is_selected[index]">
+                                                    <i class="bi-dash-circle"></i>
+                                                </span>
+                                            </div>
+
+                                            <div class="ms-2 flex-grow-1">
+                                                <table class="table table-borderless table-sm mb-0">
+                                                    <tbody>
+                                                        <tr>
+                                                            <th scope="row" class="col-1">Type:</th>
+                                                            <td>[[ getTypeDescription(q.type) ]]</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th scope="row">Prompt:</th>
+                                                            <td>
+                                                                <div class="clippy" v-html="convertToHtml(q.prompt)"></div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <th scope="row">Objective:</th>
+                                                            <td v-html="convertToHtml(q.objective.description)"></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            <div class="ms-1" style="white-space: nowrap">
+                                                <i class="bi-eye"></i>
+                                                <a :href="preview_url[index]" target="_blank"
+                                                    class="link-secondary text-decoration-none">
+                                                    Preview
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                    </button>
+                                </div>
+
+                                <pagination-control
+                                    class="mt-2"
+                                    description="Page navigation for questions"
+                                    :num_items="all_questions.length"
+                                    :items_per_page="questions_per_page"
+                                    @selected-page-num="page_num => (current_questions_page = page_num)">
+                                </pagination-control>
+
+                                <div class="ms-1 my-3" v-if="q_objective_filter_id !== null">
+                                    <span class="dropdown">
+                                        <button class="btn btn-link dropdown-toggle text-decoration-none" type="button" id="newQuestionButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi-plus-circle"></i>
+                                            Create New Question
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="newQuestionButton">
+                                            <div v-for="qt in question_types">
+                                                <li><a class="dropdown-item" :href="getQuestionLink(qt.name)">[[qt.description]]</a></li>
+                                            </div>
+                                        </ul>
+                                    </span>
                                 </div>
                             </div>
-
-                            <div class="list-group" v-if="all_questions.length !== 0">
-                                <button type="button" class="list-group-item list-group-item-action"
-                                                      v-for="(q, index) in displayed_questions" :key="q.id"
-                                                      @click="toggleItemSelect(q, selected_questions)"
-                                                      @keydown="previewQuestion(q, $event)">
-                                    <div class="d-flex">
-                                        <div class="mt-1">
-                                            <span class="text-primary" v-if="question_is_selected[index]">
-                                                <i class="bi-check-circle"></i>
-                                            </span>
-                                            <span class="text-secondary" v-else="!question_is_selected[index]">
-                                                <i class="bi-dash-circle"></i>
-                                            </span>
-                                        </div>
-
-                                        <div class="ms-2 flex-grow-1">
-                                            <table class="table table-borderless table-sm mb-0">
-                                                <tbody>
-                                                    <tr>
-                                                        <th scope="row" class="col-1">Type:</th>
-                                                        <td>[[ getTypeDescription(q.type) ]]</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <th scope="row">Prompt:</th>
-                                                        <td>
-                                                            <div class="clippy" v-html="convertToHtml(q.prompt)"></div>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <th scope="row">Objective:</th>
-                                                        <td v-html="convertToHtml(q.objective.description)"></td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        <div class="ms-1" style="white-space: nowrap">
-                                            <i class="bi-eye"></i>
-                                            <a :href="preview_url[index]" target="_blank"
-                                                class="link-secondary text-decoration-none">
-                                                Preview
-                                            </a>
-                                        </div>
-                                    </div>
-
-                                </button>
-                            </div>
-
-                            <pagination-control
-                                class="mt-2"
-                                description="Page navigation for questions"
-                                :num_items="all_questions.length"
-                                :items_per_page="questions_per_page"
-                                @selected-page-num="page_num => (current_questions_page = page_num)">
-                            </pagination-control>
-
-                            <div class="ms-1 my-3" v-if="q_objective_filter_id !== null">
-                                <span class="dropdown">
-                                    <button class="btn btn-link dropdown-toggle text-decoration-none" type="button" id="newQuestionButton" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi-plus-circle"></i>
-                                        Create New Question
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="newQuestionButton">
-                                        <div v-for="qt in question_types">
-                                            <li><a class="dropdown-item" :href="getQuestionLink(qt.name)">[[qt.description]]</a></li>
-                                        </div>
-                                    </ul>
-                                </span>
+                            <div v-else>
+                                <em>Select at least one learning objective to unlock learning objectives.</em>
                             </div>
                         </div>
 
