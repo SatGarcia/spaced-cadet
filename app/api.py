@@ -74,9 +74,24 @@ def item_collection_getter(item_type, item_id, schema, collection_name,
 
 
 def item_collection_poster(item_type, item_id, schema, collection_name,
-                            collection_type, authorization_checker):
-    # NOTE: collection_type is the type of item in collection (e.g. User or
-    # Question)
+                            collection_type, authorization_checker, patch=False):
+    """ Adds all the items with the IDs listed in the request's 'ids' field to
+    the collection contained in the specified item.
+
+    Parameters:
+        item_type (Model): The class representing the item to which the new items will be added.
+        item_id (int): The database ID of the item we are adding to.
+        schema (Schema): The schema class for the item we are adding to.
+        collection_name (str): The name of the collection within the item that will be added to.
+        collection_type (Model): The type of item that will be added to the specified collection.
+        authorization_checker (Callable[[Model], boolean]): Boolean function to check that the user has permissions to add to the given item.
+
+    Returns:
+        (dict[str, list[int]]) A dictionary representing which IDs were successfully added and
+        were not part of the collection before (key: 'added'), those that were
+        already part of the collection (key: 'previously-added'), and those
+        that were not valid so could not be added (key: 'invalid-ids').
+    """
     item = item_type.query.filter_by(id=item_id).one_or_none()
     if not item:
         return {'message': f"{item_type.__name__} with id {item_id} not found."}, 404
@@ -100,6 +115,7 @@ def item_collection_poster(item_type, item_id, schema, collection_name,
 
     ignored = []
     added = []
+    removed = []
     invalid_ids = []
 
     collection = getattr(item, collection_name)
@@ -117,11 +133,19 @@ def item_collection_poster(item_type, item_id, schema, collection_name,
         else:
             invalid_ids.append(new_item_id)
 
+    if patch:
+        # remove any items not specified by the user
+        for ci in collection:
+            if ci.id not in data['ids']:
+                removed.append(ci)
+                collection.remove(ci)
+
     db.session.commit()
 
     return {
         "added": schema.dump(added, many=True),
         "previously-added": schema.dump(ignored, many=True),
+        "removed": schema.dump(removed, many=True),
         "invalid-ids": invalid_ids
     }
 
@@ -167,9 +191,9 @@ def init_app(flask_app):
     rf_api.add_resource(EnrolledStudentApi,
                         '/api/course/<int:course_id>/student/<int:student_id>',
                         endpoint="enrolled_student")
-    rf_api.add_resource(CourseAssessmentQuestionsApi,
-                        '/api/course/<int:course_id>/assessment/<int:assessment_id>/questions',
-                        endpoint='course_assessment_questions')
+    rf_api.add_resource(CourseAssessmentCollectionApi,
+                        '/api/course/<int:course_id>/assessment/<int:assessment_id>/<collection_name>',
+                        endpoint='course_assessment_collection')
     rf_api.add_resource(CourseAssessmentQuestionApi,
                         '/api/course/<int:course_id>/assessment/<int:assessment_id>/question/<int:question_id>',
                         endpoint='course_assessment_question')
@@ -821,30 +845,51 @@ class EnrolledStudentApi(Resource):
         return {"removed": removed_student}
 
 
-class CourseAssessmentQuestionsApi(Resource):
+class CourseAssessmentCollectionApi(Resource):
     @jwt_required()
-    def get(self, course_id, assessment_id):
+    def get(self, course_id, assessment_id, collection_name):
         course = Course.query.filter_by(id=course_id).first()
         if not course:
             return {'message': f"Course with id {course_id} not found."}, 404
         elif not course.assessments.filter_by(id=assessment_id).first():
             return {'message': f"Assessment with id {assessment_id} not found in Course {course_id}."}, 404
+        elif collection_name not in ['topics', 'objectives', 'questions']:
+            return {'message': f"Assessment has no item named {collection_name}."}, 404
 
-        schema = QuestionSchema(only=('id','prompt'))
-        return item_collection_getter(Assessment, assessment_id, schema, 'questions',
+        if collection_name == 'topics':
+            schema = TopicSchema(only=('id','text'))
+        elif collection_name == 'objectives':
+            schema = LearningObjectiveSchema(only=('id','description'))
+        else:
+            schema = QuestionSchema(only=('id','prompt'))
+
+        return item_collection_getter(Assessment, assessment_id, schema, collection_name,
                                       admin_or_course_instructor_nested)
 
     @jwt_required()
-    def post(self, course_id, assessment_id):
+    def patch(self, course_id, assessment_id, collection_name):
         course = Course.query.filter_by(id=course_id).first()
         if not course:
             return {'message': f"Course with id {course_id} not found."}, 404
         elif not course.assessments.filter_by(id=assessment_id).first():
             return {'message': f"Assessment with id {assessment_id} not found in Course {course_id}."}, 404
+        elif collection_name not in ['topics', 'objectives', 'questions']:
+            return {'message': f"Assessment has no item named {collection_name}."}, 404
 
-        schema = QuestionSchema(only=('id','prompt'))
-        return item_collection_poster(Assessment, assessment_id, schema, 'questions',
-                                         Question, admin_or_course_instructor_nested)
+        if collection_name == 'topics':
+            schema = TopicSchema(only=('id','text'))
+            collection_type = Topic
+        elif collection_name == 'objectives':
+            schema = LearningObjectiveSchema(only=('id','description'))
+            collection_type = Objective
+        else:
+            schema = QuestionSchema(only=('id','prompt'))
+            collection_type = Question
+
+        return item_collection_poster(Assessment, assessment_id, schema,
+                                      collection_name, collection_type,
+                                      admin_or_course_instructor_nested,
+                                      patch=True)
 
 class TextbookSectionTopicsApi(Resource):
     @jwt_required()

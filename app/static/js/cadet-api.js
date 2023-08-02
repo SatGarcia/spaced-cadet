@@ -162,6 +162,20 @@ async function addToCollection(url, item_ids) {
     return await fetchOrRefresh(url, 'PUT', refresh_url, config);
 }
 
+async function updateCollection(url, item_ids) {
+    const config = {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: {
+            "Content-Type": "application/json",
+            'X-CSRF-TOKEN': getCookie('csrf_access_token'),
+        },
+        body: JSON.stringify({'ids': item_ids})
+    };
+
+    return await fetchOrRefresh(url, 'PATCH', refresh_url, config);
+}
+
 export async function addCourseTextbook(course_id, textbook_id) {
     const url = Flask.url_for('course_textbooks', {"course_id": course_id});
     return await addToCollection(url, [textbook_id]);
@@ -225,4 +239,19 @@ export async function getQuestionTypes() {
     const url = Flask.url_for('question_types_api');
     const response = await authenticatedFetch(url);
     return response;
+}
+
+export async function setAssessmentTopics(course_id, assessment_id, topic_ids) {
+    const url = Flask.url_for("course_assessment_collection", { "course_id": course_id, "assessment_id": assessment_id, "collection_name": "topics" });
+    return await updateCollection(url, topic_ids);
+}
+
+export async function setAssessmentObjectives(course_id, assessment_id, objective_ids) {
+    const url = Flask.url_for("course_assessment_collection", { "course_id": course_id, "assessment_id": assessment_id, "collection_name": "objectives" });
+    return await updateCollection(url, objective_ids);
+}
+
+export async function setAssessmentQuestions(course_id, assessment_id, question_ids) {
+    const url = Flask.url_for("course_assessment_collection", { "course_id": course_id, "assessment_id": assessment_id, "collection_name": "questions" });
+    return await updateCollection(url, question_ids);
 }
