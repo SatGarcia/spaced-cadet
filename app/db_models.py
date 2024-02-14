@@ -6,6 +6,7 @@ from math import ceil
 from marshmallow import (
     Schema, fields, ValidationError, validates, pre_load
 )
+from zoneinfo import ZoneInfo
 
 from app import db
 from app.search import add_to_index, remove_from_index, query_index, clear_index
@@ -615,6 +616,14 @@ class JumbleBlockSchema(Schema):
     correct_indent = fields.Int(required=True, data_key='correct-indent')
 
 
+def current_timezone_date() -> datetime.date:
+    """ Returns date for current timezone.
+
+    FIXME: Make this based on class, not always US/Pacific
+    """
+    return datetime.now(ZoneInfo('US/Pacific')).date()
+
+
 class Attempt(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.Enum(ResponseType), nullable=False)
@@ -626,7 +635,7 @@ class Attempt(db.Model):
     correct = db.Column(db.Boolean)
 
     # entries for SM-2 Algorithm
-    next_attempt = db.Column(db.Date, default=datetime.today, nullable=False)
+    next_attempt = db.Column(db.Date, default=current_timezone_date, nullable=False)
     e_factor = db.Column(db.Float, default=2.5, nullable=False)
     interval = db.Column(db.Integer, default=1, nullable=False)
     quality = db.Column(db.Integer, default=-1, nullable=False)
@@ -666,8 +675,9 @@ class Attempt(db.Model):
                 self.interval = 6 if self.interval == 1 else ceil(self.interval *
                                                                   self.e_factor)
 
-            # next attempt will be interval days from today
-            self.next_attempt = date.today() + timedelta(days=self.interval)
+            # next attempt will be self.interval days from today
+            current_day = current_timezone_date()
+            self.next_attempt = current_day + timedelta(days=self.interval)
 
 
 class TextAttempt(Attempt):
