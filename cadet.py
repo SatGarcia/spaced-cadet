@@ -6,4 +6,3 @@ config_class = environ.get('APP_CONFIG_CLASS', 'config.DevelopmentConfig')
 app = create_app(config_class)
 
 
-
