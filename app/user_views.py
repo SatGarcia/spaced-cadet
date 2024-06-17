@@ -401,6 +401,9 @@ def get_form(question, use_existing):
 
     elif question.type == QuestionType.CODE_JUMBLE:
         return CodeJumbleForm(response="", **kwargs)
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        return FillInTheBlankForm(**kwargs)
 
     else:
         # TODO: log error
@@ -438,6 +441,9 @@ def render_question(question, is_fresh, form, mission):
         #form = CodeJumbleForm(question_id=question.id, response="")
         template_filename = "test_code_jumble.html"
         extra_kw_args['code_blocks'] = [(b.id, Markup(b.html())) for b in question.blocks]
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        template_filename = "test_Fill_in_the_blank.html"
 
     else:
         # TODO: log error
@@ -539,6 +545,11 @@ def test(course_name, mission_id):
                 correct_answers = question.options.filter_by(correct=True).order_by(AnswerOption.id).all()
                 user_response = attempt.responses.order_by(AnswerOption.id).all()
                 attempt.correct = user_response == correct_answers
+            
+            elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+                redirect(url_for('.self_review',
+                                        course_name=course_name, mission_id=mission_id,
+                                        attempt=attempt.id))
 
             elif question.type == QuestionType.CODE_JUMBLE:
                 try:
@@ -624,6 +635,9 @@ class AutoCheckForm(TextResponseForm):
 
 class SingleLineCodeForm(TextResponseForm):
     response = StringField('answer', validators=[DataRequiredIf('submit')])
+
+class FillInTheBlankForm(FlaskForm):
+    response = StringField('Enter a fill in the blank question. Put "^" around where you want the fill in the blank text book to be', validators=[DataRequiredIf('submit')])
 
 class CodeJumbleForm(TextResponseForm):
     response = HiddenField("Ordered Code")

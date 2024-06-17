@@ -100,6 +100,7 @@ class QuestionType(enum.Enum):
     CODE_JUMBLE = "code-jumble"
     AUTO_CHECK = "auto-check"
     SINGLE_LINE_CODE_QUESTION = "single-line-code"
+    FILL_IN_THE_BLANK_QUESTION = "fill-in-the-blank"
 
     @classmethod
     def descriptions(cls):
@@ -110,7 +111,8 @@ class QuestionType(enum.Enum):
             {'name': 'multiple-selection', 'description': "Multiple Selection"},
             {'name': 'code-jumble', 'description': "Parsons Problem"},
             {'name': 'auto-check', 'description': "Short Answer (Auto Graded)"},
-            {'name': 'single-line-code', 'description': "Single Line of Code"}
+            {'name': 'single-line-code', 'description': "Single Line of Code"},
+            {'name': 'fill-in-the-blank','description': "Fill in the blank"}
         ]
 
 class ResponseType(enum.Enum):
@@ -344,6 +346,64 @@ class ShortAnswerQuestionSchema(QuestionSchema):
         for field in ['answer']:
             if field in data:
                 setattr(question, field, data[field])
+
+class FillInTheBlankQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+
+    question_text = db.Column(db.String, nullable=False)
+
+    answer = db.Column(db.String, nullable=False)
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,
+    }
+
+    def get_answer(self):
+        return markdown_to_html(self.answer)
+    
+    def make_question(question_text):
+        answers = {} # dictionary of all the answers and their corresponding text boxes
+        blank = False #determines if the words are the fill in the blank part
+        temp_answer = "" #keeps track of the fill in the blank answer
+
+        new_question = ""
+
+        textbox_number = 1
+
+        for char in question_text:
+            if blank == True:
+                if char == "^":
+                    blank = False
+                    answers[f"TextBox + {textbox_number}"] = temp_answer
+                    temp_answer = ""
+                    new_question += f'<input type="text" class="fill-in-the-blank" placeholder="Enter answer" data-answer="{answers[f"TextBox + {textbox_number}"]}">'
+                    textbox_number +=1
+
+                else:
+                    temp_answer += char
+            else:
+                if char == "^":
+                    blank = True
+                else:
+                    new_question += char
+        return new_question, answers
+            
+
+
+
+class FillInTheBlankQuestionSchema(QuestionSchema):
+    answer = fields.Str(required=True)
+    
+    def make_obj(self, data):
+        return FillInTheBlankQuestion(**data)
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        for field in ['answer']:
+            if field in data:
+                setattr(question, field, data[field])
+
 
 
 class AutoCheckQuestion(Question):
