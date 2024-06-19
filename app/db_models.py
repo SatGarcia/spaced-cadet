@@ -367,7 +367,7 @@ class FillInTheBlankQuestion(Question):
 
         Returns:
         1) markdown_to_html(self.answers[index]): The Answer, marked down to html format
-        """"
+        """
         index = textbox_number - 1
 
         return markdown_to_html(self.answers[index])
