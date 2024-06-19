@@ -13,6 +13,7 @@ from app.db_models import (
     AnswerOption, SelectionAttempt, CodeJumbleQuestion, JumbleBlock,
     selected_answers
 )
+from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
 
 
 class TrainingTests(unittest.TestCase):

@@ -1,6 +1,8 @@
 
 import unittest
 from app.ast_solver import same_ast_tree
+from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
+
 
 class TestASTSolver(unittest.TestCase):
     def test_basics(self):

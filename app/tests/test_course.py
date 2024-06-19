@@ -2,6 +2,7 @@ import unittest
 from app import create_app, db
 from app.db_models import Course, Assessment, ClassMeeting, User, ShortAnswerQuestion, TextAttempt, Objective
 from datetime import date, timedelta, datetime
+from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
 
 class CourseModelCase(unittest.TestCase):
     def setUp(self):
