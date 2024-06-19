@@ -6,7 +6,6 @@ from flask import url_for
 from app import create_app, db
 from app.db_models import User, Course, ShortAnswerQuestion, TextAttempt
 from datetime import date, datetime, timedelta
-from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
 
 class AuthenticationTests(unittest.TestCase):
     def setUp(self):

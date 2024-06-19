@@ -19,7 +19,6 @@ from app.db_models import (
     CodeJumbleQuestion, CodeJumbleQuestionSchema, JumbleBlock, Topic,
     TopicSchema, Textbook, TextbookSchema, TextbookSection, TextAttempt
 )
-from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
 
 
 Faker.seed(0)
