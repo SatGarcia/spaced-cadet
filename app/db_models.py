@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from app import db
 from app.search import add_to_index, remove_from_index, query_index, clear_index
+from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list
 
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
@@ -350,46 +351,62 @@ class ShortAnswerQuestionSchema(QuestionSchema):
 class FillInTheBlankQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
 
-    question_text = db.Column(db.String, nullable=False)
-
-    answer = db.Column(db.String, nullable=False)
+    answers = db.Column(ScalarListType(str)) #this is supposed to allow a list
 
     __mapper_args__ = {
         'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,
     }
 
-    def get_answer(self):
-        return markdown_to_html(self.answer)
+    def get_answer(self, textbox_number):
+        """"
+        Description: Given the textbox number, this function will return the
+        correct answer for that textbox
+
+        Parameters:
+        1) textbox_number(int): The number of the textbox that the answer is for
+
+        Returns:
+        1) markdown_to_html(self.answers[index]): The Answer, marked down to html format
+        """"
+        index = textbox_number - 1
+
+        return markdown_to_html(self.answers[index])
     
-    def make_question(question_text):
-        answers = {} # dictionary of all the answers and their corresponding text boxes
-        blank = False #determines if the words are the fill in the blank part
-        temp_answer = "" #keeps track of the fill in the blank answer
+    def make_question(self,question_text):
+        """
+        Description: This function will take the data from the form where the User
+        will write the fill in the blank question and indicate where the blanks will be.
+        Then it will return the question with the blanks replacing the answers.
 
-        new_question = ""
+        Parameters:
+        1) question_text(Str): The string that is the entire question with the '^^^'
+        symbols indicating that there will need to be blank text boxes replacing those
+        words
 
-        textbox_number = 1
+        Returns:
+        1) current_version(Str): The new question with the blank text boxes replacing all
+        the answers to the fill in the blank question
+        """
+        
+        current_version = question_text 
+        while "^^^" in current_version: #continues as long as there is the blank indicator and remakes the question over and over until all the answers are replaced with blank textboxes
+            new_q = ""
 
-        for char in question_text:
-            if blank == True:
-                if char == "^":
-                    blank = False
-                    answers[f"TextBox + {textbox_number}"] = temp_answer
-                    temp_answer = ""
-                    new_question += f'<input type="text" class="fill-in-the-blank" placeholder="Enter answer" data-answer="{answers[f"TextBox + {textbox_number}"]}">'
-                    textbox_number +=1
+            start = "^^^"
 
-                else:
-                    temp_answer += char
-            else:
-                if char == "^":
-                    blank = True
-                else:
-                    new_question += char
-        return new_question, answers
-            
+            end = "^^^"
 
+            start_index = current_version.find(start)
 
+            end_index = current_version.find(end,start_index + 2)
+
+            answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
+
+            new_q = current_version.replace(f"^^^{answer}^^^", "<input type='text placeholder='enter answer' required>") #replacing the answer with the text box blank.
+            self.answers.append(answer) #adding the answers in the order that the textboxes are in
+            current_version  = new_q
+        
+        return current_version #returning the finalzied question with all blanks in place 
 
 class FillInTheBlankQuestionSchema(QuestionSchema):
     answer = fields.Str(required=True)
