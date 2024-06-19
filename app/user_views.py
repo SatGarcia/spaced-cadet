@@ -547,7 +547,7 @@ def test(course_name, mission_id):
                 attempt.correct = user_response == correct_answers
             
             elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-                redirect(url_for('.self_review',
+                redirect(url_for('.self_review', #Just a placeholder for now
                                         course_name=course_name, mission_id=mission_id,
                                         attempt=attempt.id))
 
