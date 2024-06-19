@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 from app import db
 from app.search import add_to_index, remove_from_index, query_index, clear_index
-from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list
+from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
 
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
@@ -357,7 +357,7 @@ class FillInTheBlankQuestion(Question):
         'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,
     }
 
-    def get_answer(self, textbox_number):
+    def get_answer(self, textbox_number): #changed this function
         """"
         Description: Given the textbox number, this function will return the
         correct answer for that textbox
@@ -372,7 +372,7 @@ class FillInTheBlankQuestion(Question):
 
         return markdown_to_html(self.answers[index])
     
-    def make_question(self,question_text):
+    def make_question(self,question_text): #changed this funtion
         """
         Description: This function will take the data from the form where the User
         will write the fill in the blank question and indicate where the blanks will be.

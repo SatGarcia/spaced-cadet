@@ -637,7 +637,7 @@ class SingleLineCodeForm(TextResponseForm):
     response = StringField('answer', validators=[DataRequiredIf('submit')])
 
 class FillInTheBlankForm(FlaskForm):
-    #plan on putting a label above this form stating the instructions for the user
+    #plan on putting a label above this form stating the instructions for the user.
     response = StringField('Enter question', validators=[DataRequiredIf('submit')])
 
 class CodeJumbleForm(TextResponseForm):
