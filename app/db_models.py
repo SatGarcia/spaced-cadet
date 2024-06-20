@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 from app import db
 from app.search import add_to_index, remove_from_index, query_index, clear_index
-from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
+#from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
 
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
@@ -350,8 +350,8 @@ class ShortAnswerQuestionSchema(QuestionSchema):
 
 class FillInTheBlankQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
-
-    answers = db.Column(ScalarListType(str)) #this is supposed to allow a list
+    answer = db.Column(db.String, nullable=False)
+    #answers = db.Column(ScalarListType(str)) #this is supposed to allow a list
 
     __mapper_args__ = {
         'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,
