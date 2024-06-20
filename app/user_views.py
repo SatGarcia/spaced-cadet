@@ -403,7 +403,7 @@ def get_form(question, use_existing):
         return CodeJumbleForm(response="", **kwargs)
     
     elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-        return FillInTheBlankForm(**kwargs)
+        return FillInTheBlankForm(**kwargs) #Might need to add more lines here
 
     else:
         # TODO: log error
@@ -636,9 +636,10 @@ class AutoCheckForm(TextResponseForm):
 class SingleLineCodeForm(TextResponseForm):
     response = StringField('answer', validators=[DataRequiredIf('submit')])
 
-class FillInTheBlankForm(FlaskForm):
+class FillInTheBlankForm(TextResponseForm):
     #plan on putting a label above this form stating the instructions for the user.
-    response = StringField('Enter question', validators=[DataRequiredIf('submit')])
+    Response = StringField('Enter the question. Use ^^^ around the answers that are to be replaced with blanks.', validators=[DataRequiredIf('submit')])
+    submit = SubmitField('Submit')
 
 class CodeJumbleForm(TextResponseForm):
     response = HiddenField("Ordered Code")

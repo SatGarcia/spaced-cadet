@@ -921,9 +921,8 @@ class NewShortAnswerQuestionForm(FlaskForm):
     submit = SubmitField("Continue...")
 
 class NewFillInTheBlankForm(FlaskForm):
-    #Plan to have this work the same way as the original fill in the blank form. Just a text field and then call make_question on it after the submit.
-    #also plan on having a label shown above this form with instructions for the user.
-    prompt = TextAreaField("Enter new Fill in the blank question", [DataRequired()])
+    #plan on having a label shown above this form with an example for the user
+    prompt = TextAreaField("Enter new Fill in the blank question. Use ^^^ around the answers that are to be replaced by blanks.", [DataRequired()])
     answer = TextAreaField("Question Answer", [DataRequired()]) #keeping this just so the tests pass for now i think
     submit = SubmitField("Continue...")
 

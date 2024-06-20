@@ -357,7 +357,7 @@ class FillInTheBlankQuestion(Question):
         'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,
     }
 
-    def get_answer(self, textbox_number): #changed this function
+    def get_answer(self, textbox_number): #changed this function. Could need some more work
         """"
         Description: Given the textbox number, this function will return the
         correct answer for that textbox
@@ -381,14 +381,14 @@ class FillInTheBlankQuestion(Question):
         Parameters:
         1) question_text(Str): The string that is the entire question with the '^^^'
         symbols indicating that there will need to be blank text boxes replacing those
-        words
+        words. This would be the reponse from the fill in the blank question form.
 
         Returns:
         1) current_version(Str): The new question with the blank text boxes replacing all
         the answers to the fill in the blank question
         """
         
-        current_version = question_text 
+        current_version = question_text
         while "^^^" in current_version: #continues as long as there is the blank indicator and remakes the question over and over until all the answers are replaced with blank textboxes
             new_q = ""
 
@@ -409,7 +409,7 @@ class FillInTheBlankQuestion(Question):
         return current_version #returning the finalzied question with all blanks in place 
 
 class FillInTheBlankQuestionSchema(QuestionSchema):
-    answer = fields.Str(required=True)
+    answers = fields.List(fields.Str(), required=True)
     
     def make_obj(self, data):
         return FillInTheBlankQuestion(**data)
@@ -417,7 +417,7 @@ class FillInTheBlankQuestionSchema(QuestionSchema):
     def update_obj(self, question, data):
         super().update_obj(question, data)
 
-        for field in ['answer']:
+        for field in ['answers']:
             if field in data:
                 setattr(question, field, data[field])
 
