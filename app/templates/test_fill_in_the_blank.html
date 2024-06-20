@@ -1,2 +1,14 @@
 {% extends "question.html" %}
 {% import 'forms.html' as forms %}
+
+{% block instructions %}
+    <div class="row">
+        <div class="col">
+            <strong>Instructions:</strong> Fill in the blank instructions
+        </div>
+    </div>
+{% endblock %}
+
+{% block response_area %}
+    <h2>Fill in the blank response area</h2>
+{% endblock %}
