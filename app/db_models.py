@@ -402,7 +402,7 @@ class FillInTheBlankQuestion(Question):
 
             answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
 
-            new_q = current_version.replace(f"^^^{answer}^^^", "<input type='text placeholder='enter answer'>") #replacing the answer with the text box blank.
+            new_q = current_version.replace(f"^^^{answer}^^^", "<input type='text placeholder='enter answer' pattern='{answer}'>") #replacing the answer with the text box blank.
             self.answers.append(answer) #adding the answers in the order that the textboxes are in
             current_version  = new_q
         
