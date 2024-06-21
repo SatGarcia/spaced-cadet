@@ -638,7 +638,7 @@ class SingleLineCodeForm(TextResponseForm):
 
 class FillInTheBlankForm(TextResponseForm):
     #plan on putting a label above this form stating the instructions for the user.
-    Response = StringField('Enter the question. Use ^^^ around the answers that are to be replaced with blanks.', validators=[DataRequiredIf('submit')])
+    Response = StringField('Enter a fill in the blank question. Use ^^^ around the answers that are to be replaced with blanks.', validators=[DataRequired()])
     submit = SubmitField('Submit')
 
 class CodeJumbleForm(TextResponseForm):
