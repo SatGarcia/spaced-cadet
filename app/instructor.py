@@ -23,7 +23,7 @@ import os, csv, re, ast
 from app import db, ast_solver
 from app.user_views import (
     ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm, SingleLineCodeForm,
-    MultipleChoiceForm, MultipleSelectionForm
+    MultipleChoiceForm, MultipleSelectionForm, FillInTheBlankForm
 )
 from app.auth import AuthorizationError, check_authorization
 
@@ -191,6 +191,15 @@ def preview_question(question_id):
                                preview_mode=True,
                                form=form,
                                prompt=Markup(prompt_html))
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        form = FillInTheBlankForm(question_id = question.id)
+        return render_template("test_fill_in_the_blank.html",
+                               page_title=page_title,
+                               preview_mode=True,
+                               form=form,
+                               prompt=Markup(prompt_html))
+
 
     else:
         abort(500)
@@ -497,6 +506,9 @@ def edit_question(question_id):
     elif question.type == QuestionType.CODE_JUMBLE:
         form = NewJumbleQuestionForm(formdata=form_data, obj=question)
         template = "create_new_code_jumble.html"
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        form = NewFillInTheBlankForm(formdata = form, obj=question)
+        template = "create_new_fill_in_the_blank.html"
     else:
         abort(400)
 
@@ -613,6 +625,10 @@ def create_new_question(question_type):
         form = NewJumbleQuestionForm(request.form)
         template = "create_new_code_jumble.html"
         new_q = CodeJumbleQuestion()
+    elif question_type == 'fill-in-the-blank':
+        form = NewFillInTheBlankForm(request.form)
+        template = "create_new_fill_in_the_blank.html"
+        new_q = FillInTheBlankForm()
     else:
         abort(400)
 
@@ -902,6 +918,12 @@ class LearningObjectiveForm(FlaskForm):
 class NewShortAnswerQuestionForm(FlaskForm):
     prompt = TextAreaField("Question Prompt", [DataRequired()])
     answer = TextAreaField("Question Answer", [DataRequired()])
+    submit = SubmitField("Continue...")
+
+class NewFillInTheBlankForm(FlaskForm):
+    #plan on having a label shown above this form with an example for the user
+    prompt = TextAreaField("Enter new Fill in the blank question. Use ^^^ around the answers that are to be replaced by blanks.", [DataRequired()])
+    answer = TextAreaField("Question Answer", [DataRequired()]) #keeping this just so the tests pass for now i think
     submit = SubmitField("Continue...")
 
 

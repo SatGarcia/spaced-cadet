@@ -2,6 +2,7 @@
 import unittest
 from app.ast_solver import same_ast_tree
 
+
 class TestASTSolver(unittest.TestCase):
     def test_basics(self):
         self.assertEqual(True, same_ast_tree("7", "7"))

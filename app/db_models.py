@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from app import db
 from app.search import add_to_index, remove_from_index, query_index, clear_index
+#from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
 
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
@@ -100,6 +101,7 @@ class QuestionType(enum.Enum):
     CODE_JUMBLE = "code-jumble"
     AUTO_CHECK = "auto-check"
     SINGLE_LINE_CODE_QUESTION = "single-line-code"
+    FILL_IN_THE_BLANK_QUESTION = "fill-in-the-blank"
 
     @classmethod
     def descriptions(cls):
@@ -110,7 +112,8 @@ class QuestionType(enum.Enum):
             {'name': 'multiple-selection', 'description': "Multiple Selection"},
             {'name': 'code-jumble', 'description': "Parsons Problem"},
             {'name': 'auto-check', 'description': "Short Answer (Auto Graded)"},
-            {'name': 'single-line-code', 'description': "Single Line of Code"}
+            {'name': 'single-line-code', 'description': "Single Line of Code"},
+            {'name': 'fill-in-the-blank','description': "Fill in the blank"}
         ]
 
 class ResponseType(enum.Enum):
@@ -344,6 +347,96 @@ class ShortAnswerQuestionSchema(QuestionSchema):
         for field in ['answer']:
             if field in data:
                 setattr(question, field, data[field])
+
+class FillInTheBlankQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+    answers = db.relationship('FITBAnswers', back_populates='Question')
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,
+    }
+
+    def get_answers(self): #changed this function. Could need some more work
+        """"
+        Description: Given the textbox number, this function will return the
+        correct answer for that textbox
+
+        Parameters:
+        None
+
+        Returns:
+        1) answer: The Answers, marked down to html format in order of which the textboxes are
+        """
+        FITBanswers = self.answers.order_by(self.answers.textbox_number).all() #NEED HELP
+        answer = ""
+        for a in FITBanswers:
+            answer+=markdown_to_html(a.text)
+        return answer
+    
+    def make_question(self,question_text): #changed this funtion
+        """
+        Description: This function will take the data from the form where the User
+        will write the fill in the blank question and indicate where the blanks will be.
+        Then it will return the question with the blanks replacing the answers.
+
+        Parameters:
+        1) question_text(Str): The string that is the entire question with the '^^^'
+        symbols indicating that there will need to be blank text boxes replacing those
+        words. This would be the reponse from the fill in the blank question form.
+
+        Returns:
+        1) current_version(Str): The new question with the blank text boxes replacing all
+        the answers to the fill in the blank question
+        """
+        textbox_number = 1
+        current_version = question_text
+        while "^^^" in current_version: #continues as long as there is the blank indicator and remakes the question over and over until all the answers are replaced with blank textboxes
+            new_q = ""
+
+            start = "^^^"
+
+            end = "^^^"
+
+            start_index = current_version.find(start)
+
+            end_index = current_version.find(end,start_index + 2)
+
+            answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
+
+            new_q = current_version.replace(f"^^^{answer}^^^", "<input type='text placeholder='enter answer' pattern='{answer}'>") #replacing the answer with the text box blank.
+            
+            new_answer = FITBAnswers(text = answer, textbox_number = textbox_number)
+            self.answers.add(new_answer) #adding the answers in the order that the textboxes are in
+            textbox_number +=1
+            current_version  = new_q
+        
+        return current_version #returning the finalzied question with all blanks in place 
+
+class FITBAnswers(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+    text = db.Column(db.String)
+    Question = db.relationship('FillInTheBlankQuestion', back_populates='answers')
+    textbox_number = db.Column(db.Integer)
+    
+
+class FITBAnswersSchema(Schema):
+    id = fields.Int(dump_only=True)
+    text = fields.Str(required=True)
+
+class FillInTheBlankQuestionSchema(QuestionSchema):
+    answers = fields.List(fields.Str(), required=True) #NEED HELP
+    
+    def make_obj(self, data):
+        return FillInTheBlankQuestion(**data)
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        for field in ['answers']:
+            if field in data:
+                setattr(question, field, data[field])
+
 
 
 class AutoCheckQuestion(Question):

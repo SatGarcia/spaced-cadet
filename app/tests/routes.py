@@ -20,6 +20,7 @@ from app.db_models import (
     TopicSchema, Textbook, TextbookSchema, TextbookSection, TextAttempt
 )
 
+
 Faker.seed(0)
 fake = Faker()
 
