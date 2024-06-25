@@ -628,7 +628,10 @@ def create_new_question(question_type):
     elif question_type == 'fill-in-the-blank':
         form = NewFillInTheBlankForm(request.form)
         template = "create_new_fill_in_the_blank.html"
-        new_q = FillInTheBlankForm()
+        temp_q = FillInTheBlankQuestion()
+        new_q = temp_q.make_question(form.data)
+
+
     else:
         abort(400)
 
@@ -920,10 +923,12 @@ class NewShortAnswerQuestionForm(FlaskForm):
     answer = TextAreaField("Question Answer", [DataRequired()])
     submit = SubmitField("Continue...")
 
+class QuestionBlankForm(FlaskForm):
+    text = StringField('Text', [DataRequired()])
+
 class NewFillInTheBlankForm(FlaskForm):
-    #plan on having a label shown above this form with an example for the user
-    prompt = TextAreaField("Enter new Fill in the blank question. Use ^^^ around the answers that are to be replaced by blanks.", [DataRequired()])
-    answer = TextAreaField("Question Answer", [DataRequired()]) #keeping this just so the tests pass for now i think
+    prompt = TextAreaField("Enter prompt", [DataRequired()])
+    answer = StringField("Fill In The Blank answers in order", [DataRequired()])
     submit = SubmitField("Continue...")
 
 
@@ -1048,6 +1053,6 @@ class RosterUploadForm(FlaskForm):
 from app.db_models import (
     AnswerOption, CodeJumbleQuestion, JumbleBlock, Course,
     ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, SingleLineCodeQuestion,
-    MultipleSelectionQuestion, Question,
+    MultipleSelectionQuestion, Question, FillInTheBlankQuestion,
     QuestionType, User, Objective, Textbook, Assessment, Topic
 )

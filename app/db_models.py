@@ -350,28 +350,12 @@ class ShortAnswerQuestionSchema(QuestionSchema):
 
 class FillInTheBlankQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
-    answers = db.relationship('FITBAnswers', back_populates='Question')
+    answers = db.Column(db.String, nullable=False)
+
 
     __mapper_args__ = {
         'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,
     }
-
-    def get_answers(self): #changed this function. Could need some more work
-        """"
-        Description: Given the textbox number, this function will return the
-        correct answer for that textbox
-
-        Parameters:
-        None
-
-        Returns:
-        1) answer: The Answers, marked down to html format in order of which the textboxes are
-        """
-        FITBanswers = self.answers.order_by(self.answers.textbox_number).all() #NEED HELP
-        answer = ""
-        for a in FITBanswers:
-            answer+=markdown_to_html(a.text)
-        return answer
     
     def make_question(self,question_text): #changed this funtion
         """
@@ -388,8 +372,8 @@ class FillInTheBlankQuestion(Question):
         1) current_version(Str): The new question with the blank text boxes replacing all
         the answers to the fill in the blank question
         """
-        textbox_number = 1
         current_version = question_text
+        all_answers = ""
         while "^^^" in current_version: #continues as long as there is the blank indicator and remakes the question over and over until all the answers are replaced with blank textboxes
             new_q = ""
 
@@ -403,29 +387,19 @@ class FillInTheBlankQuestion(Question):
 
             answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
 
-            new_q = current_version.replace(f"^^^{answer}^^^", "<input type='text placeholder='enter answer' pattern='{answer}'>") #replacing the answer with the text box blank.
+            new_q = current_version.replace(f"^^^{answer}^^^", "~") #replacing the answer with the text box blank.
             
-            new_answer = FITBAnswers(text = answer, textbox_number = textbox_number)
-            self.answers.add(new_answer) #adding the answers in the order that the textboxes are in
-            textbox_number +=1
+            all_answers += f"{answer}, "
             current_version  = new_q
         
-        return current_version #returning the finalzied question with all blanks in place 
-
-class FITBAnswers(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    question_id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
-    text = db.Column(db.String)
-    Question = db.relationship('FillInTheBlankQuestion', back_populates='answers')
-    textbox_number = db.Column(db.Integer)
+        self.answers = all_answers #assigning all the answers once the fill in the blank question is made
+        return current_version #returning the finalzied question with all blanks in place
     
-
-class FITBAnswersSchema(Schema):
-    id = fields.Int(dump_only=True)
-    text = fields.Str(required=True)
+    def get_answer(self):
+            return markdown_to_html(self.answers)
 
 class FillInTheBlankQuestionSchema(QuestionSchema):
-    answers = fields.List(fields.Str(), required=True) #NEED HELP
+    answers = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
     
     def make_obj(self, data):
         return FillInTheBlankQuestion(**data)

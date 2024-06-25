@@ -636,8 +636,7 @@ class AutoCheckForm(TextResponseForm):
 class SingleLineCodeForm(TextResponseForm):
     response = StringField('answer', validators=[DataRequiredIf('submit')])
 
-class FillInTheBlankForm(TextResponseForm):
-    #plan on putting a label above this form stating the instructions for the user.
+class FillInTheBlankForm(TextResponseForm): #where user answers question
     Response = StringField('Enter a fill in the blank question. Use ^^^ around the answers that are to be replaced with blanks.', validators=[DataRequired()])
     submit = SubmitField('Submit')
 
