@@ -351,6 +351,7 @@ class ShortAnswerQuestionSchema(QuestionSchema):
 class FillInTheBlankQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
     answers = db.Column(db.String, nullable=False)
+    
 
 
     __mapper_args__ = {

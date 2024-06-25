@@ -628,8 +628,8 @@ def create_new_question(question_type):
     elif question_type == 'fill-in-the-blank':
         form = NewFillInTheBlankForm(request.form)
         template = "create_new_fill_in_the_blank.html"
-        temp_q = FillInTheBlankQuestion()
-        new_q = temp_q.make_question(form.data)
+        new_q = FillInTheBlankQuestion() #Havent called make_question yet
+        
 
 
     else:

@@ -637,8 +637,8 @@ class SingleLineCodeForm(TextResponseForm):
     response = StringField('answer', validators=[DataRequiredIf('submit')])
 
 class FillInTheBlankForm(TextResponseForm): #where user answers question
-    Response = StringField('Enter a fill in the blank question. Use ^^^ around the answers that are to be replaced with blanks.', validators=[DataRequired()])
-    submit = SubmitField('Submit')
+    response = StringField('answer', validators=[DataRequiredIf('submit')])
+
 
 class CodeJumbleForm(TextResponseForm):
     response = HiddenField("Ordered Code")

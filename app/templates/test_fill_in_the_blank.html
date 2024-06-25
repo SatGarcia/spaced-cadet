@@ -11,5 +11,24 @@
 {% endblock %}
 
 {% block response_area %}
-    <h2>Fill in the blank response area</h2>
+<div class="row pt-2" id="response_area">
+    <form method="POST"
+          action="{% if not preview_mode %}{{ post_url }}{% endif %}">
+        {{ form.csrf_token }}
+        {{ form.question_id }}
+
+        {% set class_str = "form-control " + forms.get_valid_class(form.response) %}
+        {{ form.response(class_=class_str, placeholder="Enter the answer(s) of the blanks in the order of the question", required=False) }}
+        {% if form.response.errors %} 
+            <div class="ms-1 invalid-feedback">
+                Enter an answer or click "I Don't Know".
+            </div>
+        {% endif %}
+
+        <p class="pt-2">
+            {{ form.no_answer(class_="btn btn-secondary btn-sm") }}
+            {{ form.submit(class_="btn btn-primary btn-sm") }}
+        </p>
+    </form>
+</div>
 {% endblock %}
