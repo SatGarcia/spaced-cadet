@@ -43,3 +43,15 @@ function add_jumble_block() {
     blocks_list.appendChild(new_block);
 
 }
+
+function remove_jumble_block() {
+    let blocks_list = document.getElementById('jumble-blocks');
+    
+    let last_block = blocks_list.lastElementChild;
+    //console.log(last_block);
+    if (last_block.previousElementSibling !== blocks_list.firstElementChild){
+
+            blocks_list.removeChild(last_block);
+    }
+
+}
