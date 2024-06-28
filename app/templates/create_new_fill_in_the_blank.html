@@ -14,7 +14,7 @@
             {{ form.csrf_token }}
 
             {{ forms.input(form.prompt, placeholder="Enter the prompt. Use '^^^' around the answers. Example: The capital of France is ^^^Paris^^^.") }}
-            {{ forms.input(form.answer, placeholder="Enter the correct answers in the order that the blanks are. Separate each answer by comma. Markdown formatting is allowed.") }}
+            {{ forms.input(form.answers, placeholder="Enter the correct answers in the order that the blanks are. Separate each answer by comma. Markdown formatting is allowed.") }}
 
             {{ form.submit(class_="btn btn-primary btn-sm") }}
         </form>

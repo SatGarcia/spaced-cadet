@@ -4,8 +4,8 @@
 {% block instructions %}
     <div class="row">
         <div class="col">
-            <strong>Instructions:</strong> Fill in the blanks with the correct answer(s).
-            All textboxes must be filled.
+            <strong>Instructions:</strong> Fill in the blank(s) with the correct answer(s) in the order that they appear. Separate each answer by comma.
+            All blanks must be answered.
         </div>
     </div>
 {% endblock %}
@@ -18,8 +18,8 @@
         {{ form.question_id }}
 
         {% set class_str = "form-control " + forms.get_valid_class(form.response) %}
-        {{ form.response(class_=class_str, placeholder="Enter the answer(s) of the blanks in the order of the question", required=False) }}
-        {% if form.response.errors %} 
+        {{ form.response }}
+        {% if form.response.errors %}
             <div class="ms-1 invalid-feedback">
                 Enter an answer or click "I Don't Know".
             </div>
@@ -31,4 +31,13 @@
         </p>
     </form>
 </div>
+{% endblock %}
+
+{% block js %}
+    <script src="{{ url_for('static', filename='fill-in-the-blank.js') }}"></script>
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            update_user_response();
+        });
+    </script>
 {% endblock %}

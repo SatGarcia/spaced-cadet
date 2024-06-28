@@ -547,10 +547,21 @@ def test(course_name, mission_id):
                 attempt.correct = user_response == correct_answers
             
             elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-                redirect(url_for('.self_review', #Just a placeholder for now
-                                        course_name=course_name, mission_id=mission_id,
-                                        attempt=attempt.id))
+                correct_list = []
+                users_list = []
+                for word in attempt.response.split(","):
+                    cleaned_word = word.strip()
+                    lowered_word = cleaned_word.lower()
+                    users_list.append(lowered_word)
+                
+                for answer in question.answers.split(","):
+                    cleaned_word = answer.strip()
+                    lowered_word = cleaned_word.lower()
+                    correct_list.append(lowered_word)
 
+                attempt.correct = correct_list == users_list
+                #user_response = attempt.response.strip()
+                #attempt.correct = attempt.response.strip() == question.answers
             elif question.type == QuestionType.CODE_JUMBLE:
                 try:
                     user_response = ast.literal_eval(attempt.response)
@@ -637,7 +648,7 @@ class SingleLineCodeForm(TextResponseForm):
     response = StringField('answer', validators=[DataRequiredIf('submit')])
 
 class FillInTheBlankForm(TextResponseForm): #where user answers question
-    response = StringField('answer', validators=[DataRequiredIf('submit')])
+    response = HiddenField('answer')
 
 
 class CodeJumbleForm(TextResponseForm):

@@ -358,44 +358,6 @@ class FillInTheBlankQuestion(Question):
         'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,
     }
     
-    def make_question(self,question_text): #changed this funtion
-        """
-        Description: This function will take the data from the form where the User
-        will write the fill in the blank question and indicate where the blanks will be.
-        Then it will return the question with the blanks replacing the answers.
-
-        Parameters:
-        1) question_text(Str): The string that is the entire question with the '^^^'
-        symbols indicating that there will need to be blank text boxes replacing those
-        words. This would be the reponse from the fill in the blank question form.
-
-        Returns:
-        1) current_version(Str): The new question with the blank text boxes replacing all
-        the answers to the fill in the blank question
-        """
-        current_version = question_text
-        all_answers = ""
-        while "^^^" in current_version: #continues as long as there is the blank indicator and remakes the question over and over until all the answers are replaced with blank textboxes
-            new_q = ""
-
-            start = "^^^"
-
-            end = "^^^"
-
-            start_index = current_version.find(start)
-
-            end_index = current_version.find(end,start_index + 2)
-
-            answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
-
-            new_q = current_version.replace(f"^^^{answer}^^^", "~") #replacing the answer with the text box blank.
-            
-            all_answers += f"{answer}, "
-            current_version  = new_q
-        
-        self.answers = all_answers #assigning all the answers once the fill in the blank question is made
-        return current_version #returning the finalzied question with all blanks in place
-    
     def get_answer(self):
             return markdown_to_html(self.answers)
 
@@ -411,6 +373,42 @@ class FillInTheBlankQuestionSchema(QuestionSchema):
         for field in ['answers']:
             if field in data:
                 setattr(question, field, data[field])
+
+def make_question(question_text): #changed this funtion
+        """
+        Description: This function will take the data from the form where the User
+        will write the fill in the blank question and indicate where the blanks will be.
+        Then it will return the question with the blanks replacing the answers.
+
+        Parameters:
+        1) question_text(Str): The string that is the entire question with the '^^^'
+        symbols indicating that there will need to be blank text boxes replacing those
+        words. This would be the reponse from the fill in the blank question form.
+
+        Returns:
+        1) current_version(Str): The new question with the blank text boxes replacing all
+        the answers to the fill in the blank question
+        """
+        current_version = str(question_text)
+        textbox_number = 0
+        while "^^^" in current_version: #continues as long as there is the blank indicator and remakes the question over and over until all the answers are replaced with blank textboxes
+            new_q = ""
+
+            start = "^^^"
+
+            end = "^^^"
+
+            start_index = current_version.find(start)
+
+            end_index = current_version.find(end,start_index + 2)
+
+            answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
+
+            new_q = current_version.replace(f"^^^{answer}^^^", f"<input type='text' id='FITB{textbox_number}' onchange='update_user_response()' >") #replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
+            textbox_number += 1
+            current_version  = new_q
+        
+        return current_version #returning the finalzied question with all blanks in place
 
 
 

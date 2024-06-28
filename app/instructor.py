@@ -26,6 +26,7 @@ from app.user_views import (
     MultipleChoiceForm, MultipleSelectionForm, FillInTheBlankForm
 )
 from app.auth import AuthorizationError, check_authorization
+from app.db_models import make_question
 
 instructor = Blueprint('instructor', __name__)
 
@@ -507,7 +508,7 @@ def edit_question(question_id):
         form = NewJumbleQuestionForm(formdata=form_data, obj=question)
         template = "create_new_code_jumble.html"
     elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-        form = NewFillInTheBlankForm(formdata = form, obj=question)
+        form = NewFillInTheBlankForm(formdata = form_data, obj=question)
         template = "create_new_fill_in_the_blank.html"
     else:
         abort(400)
@@ -628,7 +629,9 @@ def create_new_question(question_type):
     elif question_type == 'fill-in-the-blank':
         form = NewFillInTheBlankForm(request.form)
         template = "create_new_fill_in_the_blank.html"
-        new_q = FillInTheBlankQuestion() #Havent called make_question yet
+        modified_prompt = make_question(form.prompt.data)
+        form.prompt.data = modified_prompt
+        new_q = FillInTheBlankQuestion()
         
 
 
@@ -928,7 +931,7 @@ class QuestionBlankForm(FlaskForm):
 
 class NewFillInTheBlankForm(FlaskForm):
     prompt = TextAreaField("Enter prompt", [DataRequired()])
-    answer = StringField("Fill In The Blank answers in order", [DataRequired()])
+    answers = StringField("Fill In The Blank answers in order", [DataRequired()])
     submit = SubmitField("Continue...")
 
 
