@@ -390,7 +390,7 @@ def make_question(question_text): #changed this funtion
         the answers to the fill in the blank question
         """
         current_version = str(question_text)
-        textbox_number = 0
+        textbox_number = 1
         while "^^^" in current_version: #continues as long as there is the blank indicator and remakes the question over and over until all the answers are replaced with blank textboxes
             new_q = ""
 
@@ -403,8 +403,8 @@ def make_question(question_text): #changed this funtion
             end_index = current_version.find(end,start_index + 2)
 
             answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
-
-            new_q = current_version.replace(f"^^^{answer}^^^", f"<input type='text' id='FITB{textbox_number}' onchange='update_user_response()' >") #replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
+            
+            new_q = current_version.replace(f"^^^{answer}^^^", f'<input type="text" id="FITB{textbox_number}">') #replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
             textbox_number += 1
             current_version  = new_q
         

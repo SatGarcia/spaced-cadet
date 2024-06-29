@@ -1,5 +1,5 @@
 function update_user_response() {
-    let textbox_num = 0;
+    let textbox_num = 1;
     let response_list = [];
     while (document.getElementById(`FITB${textbox_num}`) != null){ //adding all the textboxes to the repsonse list until they dont exist by ID
         let FITBResponse = document.getElementById(`FITB${textbox_num}`);

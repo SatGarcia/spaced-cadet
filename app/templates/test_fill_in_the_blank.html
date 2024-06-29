@@ -24,20 +24,48 @@
                 Enter an answer or click "I Don't Know".
             </div>
         {% endif %}
-
         <p class="pt-2">
             {{ form.no_answer(class_="btn btn-secondary btn-sm") }}
             {{ form.submit(class_="btn btn-primary btn-sm") }}
         </p>
+<script>
+
+    let blank_box_num = 1;
+    while (document.getElementById(`FITB${blank_box_num}`) != null){ //adding event listeners for every textbox
+        document.getElementById(`FITB${blank_box_num}`).addEventListener("change", update_user_response)
+        blank_box_num++;
+        }
+
+    function update_user_response() {
+        let textbox_num = 1;
+        let response_list = [];
+        while (document.getElementById(`FITB${textbox_num}`) != null){ //adding all the textboxes to the repsonse list until they dont exist by ID
+            let FITBResponse = document.getElementById(`FITB${textbox_num}`);
+            response_list.push(FITBResponse.value);
+            textbox_num ++;
+        }
+	
+	    // Build the response string based on the order of the items in the
+	    // list.
+	    let response_str = "";
+
+	    for (let item of response_list) { // loop through every textbox in the question
+		    response_str = response_str + item+",";
+	    }
+
+        let lastComma = response_str.length -1;
+        response_str = response_str.slice(0, lastComma); //removing the extra comma at the end
+
+
+        
+
+	    // update value of response form field
+	    response_field = document.getElementById("response");
+	    response_field.value = response_str;
+    }
+    </script>
     </form>
 </div>
 {% endblock %}
 
-{% block js %}
-    <script src="{{ url_for('static', filename='fill-in-the-blank.js') }}"></script>
-    <script>
-        window.addEventListener("DOMContentLoaded", () => {
-            update_user_response();
-        });
-    </script>
-{% endblock %}
+
