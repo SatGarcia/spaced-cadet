@@ -10,7 +10,7 @@ from app import create_app, db
 from app.db_models import (
     User, Course, ShortAnswerQuestion, Assessment, Attempt, TextAttempt,
     AutoCheckQuestion, MultipleChoiceQuestion, MultipleSelectionQuestion,
-    AnswerOption, SelectionAttempt, CodeJumbleQuestion, JumbleBlock,
+    AnswerOption, SelectionAttempt, CodeJumbleQuestion, FillInTheBlankQuestion, JumbleBlock,
     selected_answers
 )
 
@@ -80,6 +80,9 @@ class TrainingTests(unittest.TestCase):
                          correct_index=-1, correct_indent=-1)
         self.cj_question.blocks = [b1, b2, b3, b4, b5]
         a.questions.append(self.cj_question)
+
+        self.fitb_question = FillInTheBlankQuestion(prompt = "Fill In The Blank Question", answers = "Answer1, Answer2")
+        a.questions.append(self.fitb_question)
 
         # create two example users, one enrolled in the course, another not
         self.u1 = User(email="user1@example.com", first_name="User", last_name="Uno")
@@ -648,6 +651,97 @@ class TrainingTests(unittest.TestCase):
 
                 # should not create any new attempts
                 self.assertEqual(Attempt.query.count(), 1)
+    
+    def test_correct_fill_in_the_blank_question_submission(self):
+        self.course.users.append(self.u2)
+        db.session.commit()
+
+        for user in [self.u1, self.u2]:
+            client = self.app.test_client(user=user)
+            response = client.post(url_for('user_views.test',
+                                                course_name="test-course",
+                                                mission_id=1),
+                                        data={
+                                            "question_id": str(self.fitb_question.id),
+                                            "response": "Answer1, Answer2",
+                                            "booger": "MEOW",
+                                            "submit": "y"
+                                        })
+
+            # check that user was sent to the difficulty page
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(urlparse(response.location).path,
+                                      url_for('user_views.difficulty',
+                                              course_name="test-course",
+                                              mission_id=1,
+                                              _external=False))
+
+            # check that there is now a single (text) attempt
+            self.check_text_attempt(self.fitb_question.id, user.id, "Answer1, Answer2")
+
+            attempt = TextAttempt.query.first()
+            self.assertTrue(attempt.correct)
+
+            # clear out attempts for next user test
+            Attempt.query.delete()
+            TextAttempt.query.delete()
+
+    def test_incorrect_fill_in_the_blank_question_submission(self):
+        client = self.app.test_client(user=self.u1)
+        response = client.post(url_for('user_views.test',
+                                            course_name="test-course",
+                                            mission_id=1),
+                                    data={
+                                        "question_id": str(self.fitb_question.id),
+                                        "response": "Wrong Answer",
+                                        "submit": "y"
+                                    })
+
+        # check that user was sent to the review correct answer page
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(urlparse(response.location).path,
+                                  url_for('user_views.review_answer',
+                                          course_name="test-course",
+                                          mission_id=1,
+                                          _external=False))
+
+        attempt = TextAttempt.query.first()
+        self.assertFalse(attempt.correct)
+    
+        #Testing that the answer is not case sensitive and considered correct with different casing
+    def test_correct_fill_in_the_blank_question_Different_Casing_submission(self):
+        self.course.users.append(self.u2)
+        db.session.commit()
+
+        for user in [self.u1, self.u2]:
+            client = self.app.test_client(user=user)
+            response = client.post(url_for('user_views.test',
+                                                course_name="test-course",
+                                                mission_id=1),
+                                        data={
+                                            "question_id": str(self.fitb_question.id),
+                                            "response": "AnsWEr1, ANSweR2",
+                                            "booger": "MEOW",
+                                            "submit": "y"
+                                        })
+
+            # check that user was sent to the difficulty page
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(urlparse(response.location).path,
+                                      url_for('user_views.difficulty',
+                                              course_name="test-course",
+                                              mission_id=1,
+                                              _external=False))
+
+            # check that there is now a single (text) attempt
+            self.check_text_attempt(self.fitb_question.id, user.id, "AnsWEr1, ANSweR2")
+
+            attempt = TextAttempt.query.first()
+            self.assertTrue(attempt.correct)
+
+            # clear out attempts for next user test
+            Attempt.query.delete()
+            TextAttempt.query.delete()
 
 
 if __name__ == '__main__':
