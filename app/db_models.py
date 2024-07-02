@@ -374,7 +374,7 @@ class FillInTheBlankQuestionSchema(QuestionSchema):
             if field in data:
                 setattr(question, field, data[field])
 
-def Text_to_FITB_format(question_text):
+def text_to_FITB_format(question_text):
         """
         Description: This function will take the data from the form where the User
         will write the fill in the blank question and indicate where the blanks will be.
@@ -404,7 +404,7 @@ def Text_to_FITB_format(question_text):
 
             answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
             
-            new_q = current_version.replace(f"^^^{answer}^^^", f'<input type="text" id="FITB{textbox_number}">') #replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
+            new_q = current_version.replace(f"^^^{answer}^^^", f'<input type="text" class="form-control-sm rounded" id="FITB{textbox_number}" w=25>') #replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
             textbox_number += 1
             current_version  = new_q
         
