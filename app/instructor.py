@@ -929,7 +929,7 @@ class NewShortAnswerQuestionForm(FlaskForm):
 
 class NewFillInTheBlankForm(FlaskForm):
     prompt = TextAreaField("Enter prompt", [DataRequired()])
-    answers = StringField("Fill In The Blank answers in order", [DataRequired()])
+    answers = HiddenField()
     submit = SubmitField("Continue...")
 
 
