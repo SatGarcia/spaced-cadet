@@ -407,7 +407,7 @@ def text_to_FITB_format(question_text):
 
             answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
             
-            new_q = current_version.replace(f"^^^{answer}^^^", f'<input type="text" class="form-control-sm rounded" id="FITB{textbox_number}" w=25>') #replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
+            new_q = current_version.replace(f"^^^{answer}^^^", f'<input type="text" class="form-control-sm rounded" id="FITB{textbox_number}" placeholder= "Enter Answer" w=25>') #replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
             stringified_answers += json.dumps(answer) +','
             textbox_number += 1
             current_version  = new_q
