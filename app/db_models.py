@@ -374,7 +374,7 @@ class FillInTheBlankQuestionSchema(QuestionSchema):
             if field in data:
                 setattr(question, field, data[field])
 
-def make_question(question_text): #changed this funtion
+def Text_to_FITB_format(question_text):
         """
         Description: This function will take the data from the form where the User
         will write the fill in the blank question and indicate where the blanks will be.

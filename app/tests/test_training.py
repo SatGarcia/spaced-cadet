@@ -664,7 +664,6 @@ class TrainingTests(unittest.TestCase):
                                         data={
                                             "question_id": str(self.fitb_question.id),
                                             "response": "Answer1, Answer2",
-                                            "booger": "MEOW",
                                             "submit": "y"
                                         })
 
@@ -693,7 +692,7 @@ class TrainingTests(unittest.TestCase):
                                             mission_id=1),
                                     data={
                                         "question_id": str(self.fitb_question.id),
-                                        "response": "Wrong Answer",
+                                        "response": "WrongAnswer1, Answer2",
                                         "submit": "y"
                                     })
 
@@ -707,8 +706,28 @@ class TrainingTests(unittest.TestCase):
 
         attempt = TextAttempt.query.first()
         self.assertFalse(attempt.correct)
+
+        secondResponse = client.post(url_for('user_views.test',
+                                            course_name="test-course",
+                                            mission_id=1),
+                                    data={
+                                        "question_id": str(self.fitb_question.id),
+                                        "response": "Answer1, WrongAnswer2",
+                                        "submit": "y"
+                                    })
+
+        # check that user was sent to the review correct answer page
+        self.assertEqual(secondResponse.status_code, 302)
+        self.assertEqual(urlparse(secondResponse.location).path,
+                                  url_for('user_views.review_answer',
+                                          course_name="test-course",
+                                          mission_id=1,
+                                          _external=False))
+
+        secondAttempt = TextAttempt.query.first()
+        self.assertFalse(secondAttempt.correct)
     
-        #Testing that the answer is not case sensitive and considered correct with different casing
+    #Testing that the answer is not case sensitive and considered correct with different casing
     def test_correct_fill_in_the_blank_question_Different_Casing_submission(self):
         self.course.users.append(self.u2)
         db.session.commit()
@@ -721,7 +740,6 @@ class TrainingTests(unittest.TestCase):
                                         data={
                                             "question_id": str(self.fitb_question.id),
                                             "response": "AnsWEr1, ANSweR2",
-                                            "booger": "MEOW",
                                             "submit": "y"
                                         })
 

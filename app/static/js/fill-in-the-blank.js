@@ -1,7 +1,13 @@
-function update_user_response() {
+
+
+/** Updates the hidden response field in a Fill In The Blank Question form
+ *  based on user input.*/
+function Update_FITB_Response_Field() {
     let textbox_num = 1;
     let response_list = [];
-    while (document.getElementById(`FITB${textbox_num}`) != null){ //adding all the textboxes to the repsonse list until they dont exist by ID
+        
+    //adding all the textboxes to the repsonse list until they dont exist by ID
+    while (document.getElementById(`FITB${textbox_num}`) != null){
         let FITBResponse = document.getElementById(`FITB${textbox_num}`);
         response_list.push(FITBResponse.value);
         textbox_num ++;
@@ -11,11 +17,16 @@ function update_user_response() {
 	// list.
 	let response_str = "";
 
-	for (let item of response_list) { // loop through every textbox in the question
+	// loop through every textbox in the question
+    for (let item of response_list) {
 		response_str = response_str + item+",";
 	}
 
-	response_str = response_str;
+    //removing the extra comma at the end
+    let lastComma = response_str.length -1;
+    response_str = response_str.slice(0, lastComma);
+
+        
 
 	// update value of response form field
 	response_field = document.getElementById("response");

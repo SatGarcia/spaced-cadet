@@ -26,7 +26,7 @@ from app.user_views import (
     MultipleChoiceForm, MultipleSelectionForm, FillInTheBlankForm
 )
 from app.auth import AuthorizationError, check_authorization
-from app.db_models import make_question
+from app.db_models import Text_to_FITB_format
 
 instructor = Blueprint('instructor', __name__)
 
@@ -629,7 +629,7 @@ def create_new_question(question_type):
     elif question_type == 'fill-in-the-blank':
         form = NewFillInTheBlankForm(request.form)
         template = "create_new_fill_in_the_blank.html"
-        modified_prompt = make_question(form.prompt.data)
+        modified_prompt = Text_to_FITB_format(form.prompt.data)
         form.prompt.data = modified_prompt
         new_q = FillInTheBlankQuestion()
         
@@ -925,9 +925,6 @@ class NewShortAnswerQuestionForm(FlaskForm):
     prompt = TextAreaField("Question Prompt", [DataRequired()])
     answer = TextAreaField("Question Answer", [DataRequired()])
     submit = SubmitField("Continue...")
-
-class QuestionBlankForm(FlaskForm):
-    text = StringField('Text', [DataRequired()])
 
 class NewFillInTheBlankForm(FlaskForm):
     prompt = TextAreaField("Enter prompt", [DataRequired()])
