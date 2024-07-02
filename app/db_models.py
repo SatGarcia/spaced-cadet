@@ -10,8 +10,7 @@ from zoneinfo import ZoneInfo
 
 from app import db
 from app.search import add_to_index, remove_from_index, query_index, clear_index
-#from sqlalchemy_utils import ScalarListType #need this to make the FITB question answers field a list.
-
+import json
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
         raw_md = getattr(obj, attr_name)
@@ -391,7 +390,11 @@ def text_to_FITB_format(question_text):
         """
         current_version = str(question_text)
         textbox_number = 1
-        while "^^^" in current_version: #continues as long as there is the blank indicator and remakes the question over and over until all the answers are replaced with blank textboxes
+        stringified_answers =''
+        
+        #continues as long as there is the blank indicator and remakes the 
+        #question until all the answers are replaced with blank textboxes
+        while "^^^" in current_version: 
             new_q = ""
 
             start = "^^^"
@@ -405,10 +408,16 @@ def text_to_FITB_format(question_text):
             answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
             
             new_q = current_version.replace(f"^^^{answer}^^^", f'<input type="text" class="form-control-sm rounded" id="FITB{textbox_number}" w=25>') #replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
+            stringified_answers += json.dumps(answer) +','
             textbox_number += 1
             current_version  = new_q
         
-        return current_version #returning the finalzied question with all blanks in place
+        #removing the last comma from the stringified answers
+        stringified_answers = stringified_answers[:-1]
+        
+        #returning the finalzied question with all blanks in place
+        #and replacing the answers field to deal with commas and quotes
+        return current_version, stringified_answers 
 
 
 

@@ -8,8 +8,10 @@ function Update_FITB_Response_Field() {
         
     //adding all the textboxes to the repsonse list until they dont exist by ID
     while (document.getElementById(`FITB${textbox_num}`) != null){
-        let FITBResponse = document.getElementById(`FITB${textbox_num}`);
-        response_list.push(FITBResponse.value);
+        //The exact thing that the user put into the text box
+        let originalResponse = document.getElementById(`FITB${textbox_num}`).value;
+        let response_msg = JSON.stringify(document.getElementById(`FITB${textbox_num}`).value);
+        response_list.push(response_msg);
         textbox_num ++;
     }
 	

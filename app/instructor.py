@@ -629,8 +629,9 @@ def create_new_question(question_type):
     elif question_type == 'fill-in-the-blank':
         form = NewFillInTheBlankForm(request.form)
         template = "create_new_fill_in_the_blank.html"
-        modified_prompt = text_to_FITB_format(form.prompt.data)
+        modified_prompt,modified_answers = text_to_FITB_format(form.prompt.data)
         form.prompt.data = modified_prompt
+        form.answers.data = modified_answers
         new_q = FillInTheBlankQuestion()
         
 
