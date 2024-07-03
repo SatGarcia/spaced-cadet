@@ -26,7 +26,7 @@ from app.user_views import (
     MultipleChoiceForm, MultipleSelectionForm, FillInTheBlankForm
 )
 from app.auth import AuthorizationError, check_authorization
-from app.db_models import text_to_FITB_format
+from app.db_models import text_to_FITB_format, display_fitb_answer
 
 instructor = Blueprint('instructor', __name__)
 
@@ -107,14 +107,25 @@ def review_new_question(question_id):
     elif (question.author != current_user) and (not current_user.admin):
         # Only allow a question's creator (and admins) to review a question
         abort(401)
+   
 
     next_url = request.args.get('next',
                                 url_for('.user_questions', user_id=current_user.id))
+    
+    #Displaying a different type of answer for the user if it is a fill in the blank question
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        fitb_answer = display_fitb_answer(question.original_prompt_before_reformat)
+        return render_template("review_question.html",
+                            page_title="Cadet: Review Question",
+                            question=question,
+                            next_url=next_url,
+                            fitb_answer = fitb_answer)
+    else:
+        return render_template("review_question.html",
+                            page_title="Cadet: Review Question",
+                            question=question,
+                            next_url=next_url)
 
-    return render_template("review_question.html",
-                           page_title="Cadet: Review Question",
-                           question=question,
-                           next_url=next_url)
 
 
 
@@ -629,10 +640,13 @@ def create_new_question(question_type):
     elif question_type == 'fill-in-the-blank':
         form = NewFillInTheBlankForm(request.form)
         template = "create_new_fill_in_the_blank.html"
+        stored_orginal_prompt = form.prompt.data
         modified_prompt,modified_answers = text_to_FITB_format(form.prompt.data)
         form.prompt.data = modified_prompt
         form.answers.data = modified_answers
         new_q = FillInTheBlankQuestion()
+        #saving the original prompt, created by the user, with carrots in place
+        new_q.original_prompt_before_reformat = str(stored_orginal_prompt)
         
 
 

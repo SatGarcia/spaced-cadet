@@ -29,7 +29,11 @@
 		<div class="container mt-2">
 			<h5>Answer(s):</h5>
 			<div class="container">
-            {{ question.get_answer()|safe }}
+                {% if fitb_answer %}
+                {{fitb_answer|safe }}
+                {% else %}
+                {{ question.get_answer()|safe }}
+                {% endif %}
 			</div>
 		</div>
 

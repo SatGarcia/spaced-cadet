@@ -350,6 +350,8 @@ class ShortAnswerQuestionSchema(QuestionSchema):
 class FillInTheBlankQuestion(Question):
     id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
     answers = db.Column(db.String, nullable=False)
+
+    original_prompt_before_reformat = db.Column(db.String, nullable=True, default = "placeholder")
     
 
 
@@ -417,8 +419,47 @@ def text_to_FITB_format(question_text):
         
         #returning the finalzied question with all blanks in place
         #and replacing the answers field to deal with commas and quotes
-        return current_version, stringified_answers 
+        return current_version, stringified_answers
 
+def display_fitb_answer(question_prompt):
+    """
+        Description: This function will take the data from the fill in the blank
+        form, similarry to the "text_to_FITB_format" function and display the correct
+        answer by showing the complete prompt with the answer in bold.
+
+        Parameters:
+        1) question_prompt(Str): The string that is the entire question with the '^^^'
+        symbols indicating that there will need to be blank text boxes replacing those
+        words. This would be the reponse from the fill in the blank question form.
+
+        Returns:
+        1) current_version(Str): The new question with the blank text boxes replacing all
+        the answers to the fill in the blank question
+        """
+    current_version = str(question_prompt)
+        
+    #continues as long as there is the blank indicator and remakes the 
+    #question until all the answers are bolded, with the carrots removed
+    while "^^^" in current_version: 
+        new_q = ""
+
+        start = "^^^"
+
+        end = "^^^"
+
+        start_index = current_version.find(start)
+
+        end_index = current_version.find(end,start_index + 2)
+        
+        #taking the answer out of the ^^^
+        answer = current_version[start_index + 3 : end_index]
+            
+        #replacing the answer with the bolded version of it in the prompt, without ^^^
+        new_q = current_version.replace(f"^^^{answer}^^^", f'<b>{answer}</b>')
+        current_version  = new_q
+        
+        #returning the finalzied question with all the answers bolded
+    return current_version
 
 
 class AutoCheckQuestion(Question):
