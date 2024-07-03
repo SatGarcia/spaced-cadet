@@ -17,6 +17,7 @@ import ast, markdown
 from datetime import date, timedelta, datetime
 
 from app import db, ast_solver
+from app.db_models import display_fitb_answer
 
 
 user_views = Blueprint('user_views', __name__)
@@ -241,7 +242,10 @@ def review_answer(course_name, mission_id):
     question = attempt.question
 
     prompt_html = markdown_to_html(question.prompt)
-    answer_html = question.get_answer()
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        answer_html = display_fitb_answer(question.original_prompt_before_reformat)
+    else:
+        answer_html = question.get_answer()
 
     response_html = ""
 
@@ -560,8 +564,7 @@ def test(course_name, mission_id):
                     correct_list.append(lowered_word)
 
                 attempt.correct = correct_list == users_list
-                #user_response = attempt.response.strip()
-                #attempt.correct = attempt.response.strip() == question.answers
+
             elif question.type == QuestionType.CODE_JUMBLE:
                 try:
                     user_response = ast.literal_eval(attempt.response)
