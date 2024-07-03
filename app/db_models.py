@@ -421,7 +421,7 @@ def text_to_FITB_format(question_text):
         #and replacing the answers field to deal with commas and quotes
         return current_version, stringified_answers
 
-def display_fitb_answer(question_prompt):
+def display_correct_fitb_answer(question_prompt):
     """
         Description: This function will take the data from the fill in the blank
         form, similarry to the "text_to_FITB_format" function and display the correct
@@ -433,8 +433,8 @@ def display_fitb_answer(question_prompt):
         words. This would be the reponse from the fill in the blank question form.
 
         Returns:
-        1) current_version(Str): The new question with the blank text boxes replacing all
-        the answers to the fill in the blank question
+        1) current_version(Str): The new prompt, with the answers showing in bold
+        without the carrots
         """
     current_version = str(question_prompt)
         
@@ -456,6 +456,60 @@ def display_fitb_answer(question_prompt):
             
         #replacing the answer with the bolded version of it in the prompt, without ^^^
         new_q = current_version.replace(f"^^^{answer}^^^", f'<b>{answer}</b>')
+        current_version  = new_q
+        
+        #returning the finalzied question with all the answers bolded
+    return current_version
+
+def display_user_fitb_answer(question_prompt, list_of_user_response):
+    """
+        Description: This function will take the data from the fill in the blank
+        form, similarry to the "text_to_FITB_format" function and display the prompt
+        with the correct answers replaced with what the user entered into the form data.
+
+        Parameters:
+        1) question_prompt(Str): The string that is the entire question with the '^^^'
+        symbols indicating that there will need to be blank text boxes replacing those
+        words. This would be the reponse from the fill in the blank question form.
+
+        2) list_of_user_response(List): A list of all the inputs that the user entered
+        into the textboxes when answering the fill in the blank question
+
+        Returns:
+        1) current_version(Str): The new prompt, with the answers replaced with what the
+        user entered into each textbox. If the user got it correct, it will stay bold.
+        If the user got it wrong it will have a strikethrough.
+        """
+    current_version = str(question_prompt)
+    length_of_list = len(list_of_user_response)
+    current_index = 0
+        
+    #continues as long as there is the blank indicator and remakes the 
+    #question until all the answers are bolded, with the carrots removed
+    while ("^^^" in current_version) and current_index <= length_of_list: 
+        new_q = ""
+
+        start = "^^^"
+
+        end = "^^^"
+
+        start_index = current_version.find(start)
+
+        end_index = current_version.find(end,start_index + 2)
+        
+        #taking the answer out of the ^^^
+        answer = current_version[start_index + 3 : end_index]
+            
+        #replacing the answer with the bolded version of it in the prompt, without ^^^
+        
+        #if the answer is correct
+        if answer == list_of_user_response[current_index]:
+            new_q = current_version.replace(f"^^^{answer}^^^", f'<b style="color: green;">{answer}</b>')
+        #if the answer is incorrect, put a trikethrough what the user entered
+        else:
+            new_q = current_version.replace(f"^^^{answer}^^^", f'<s><b style="color: red;">{list_of_user_response[current_index]}</b></s>')
+
+        current_index += 1
         current_version  = new_q
         
         #returning the finalzied question with all the answers bolded
@@ -800,6 +854,8 @@ class TextAttempt(Attempt):
     id = db.Column(db.Integer, db.ForeignKey('attempt.id'), primary_key=True)
 
     response = db.Column(db.String, nullable=False)  # TODO: make no reesponse an option
+
+    original_user_input = db.Column(db.String, nullable=True, default = "placeholder")
 
     __mapper_args__ = {
         'polymorphic_identity': ResponseType.TEXT,

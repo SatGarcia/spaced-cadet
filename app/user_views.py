@@ -17,7 +17,8 @@ import ast, markdown
 from datetime import date, timedelta, datetime
 
 from app import db, ast_solver
-from app.db_models import display_fitb_answer
+from app.db_models import display_correct_fitb_answer, display_user_fitb_answer
+import json
 
 
 user_views = Blueprint('user_views', __name__)
@@ -243,7 +244,7 @@ def review_answer(course_name, mission_id):
 
     prompt_html = markdown_to_html(question.prompt)
     if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-        answer_html = display_fitb_answer(question.original_prompt_before_reformat)
+        answer_html = display_correct_fitb_answer(question.original_prompt_before_reformat)
     else:
         answer_html = question.get_answer()
 
@@ -272,6 +273,15 @@ def review_answer(course_name, mission_id):
             response_html = markdown_to_html(selected_answer.text)
         else:
             response_html = markdown_to_html("_No response given._")
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        #storing the user inputs
+        users_list = []
+        for word in attempt.original_user_input.split("\0"):
+            cleaned_word = word.strip()
+            users_list.append(cleaned_word)
+            #displaying the prompt with the user inputted answers
+        response_html = display_user_fitb_answer(question.original_prompt_before_reformat, users_list)
 
     else: #question.type = auto-check or single-line-code
         selected_answer = attempt.response.strip()
@@ -290,10 +300,32 @@ def review_answer(course_name, mission_id):
 def create_new_text_attempt(question, user, response, previous_attempt):
     """ Creates a new attempt and adds it to the database. If there was a
     previous attempt for the question, copy over the relevent data to the new
-    attempt. """
+    attempt. """  
     attempt = TextAttempt(question_id=question.id,
-                          user_id=user.id,
-                          response=response)
+                        user_id=user.id,
+                        response=response)
+
+    # if there was a previous attempt, copy over e_factor and interval
+    if previous_attempt:
+        attempt.e_factor = previous_attempt.e_factor
+        attempt.interval = previous_attempt.interval
+        attempt.next_attempt = previous_attempt.next_attempt
+
+    db.session.add(attempt)
+    db.session.commit()
+
+    return attempt
+
+def create_new_fitb_text_attempt(question, user, response, previous_attempt, original_user_input):
+    """ Creates a new fill in the blank attempt and adds it to the database. If there was a
+    previous attempt for the question, copy over the relevent data to the new
+    attempt. """
+
+    attempt = TextAttempt(question_id=question.id,
+                        user_id=user.id,
+                        response=response,
+                        original_user_input = original_user_input)
+    
 
     # if there was a previous attempt, copy over e_factor and interval
     if previous_attempt:
@@ -503,7 +535,10 @@ def test(course_name, mission_id):
         form = get_form(question, True)
 
         if form.validate_on_submit():
-            attempt = form.create_attempt(question, current_user,
+            if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+                attempt = form.create_fitb_attempt(question, current_user, previous_attempt)
+            else:
+                attempt = form.create_attempt(question, current_user,
                                           previous_attempt)
 
             if form.no_answer.data:
@@ -640,6 +675,13 @@ class TextResponseForm(FlaskForm):
                                           previous_attempt)
 
         return attempt
+    def create_fitb_attempt(self, question, user, previous_attempt):
+        attempt = create_new_fitb_text_attempt(question, user,
+                                          self.response.data,
+                                          previous_attempt,
+                                          self.original_user_input.data)
+
+        return attempt
 
 class ShortAnswerForm(TextResponseForm):
     response = TextAreaField('answer', validators=[DataRequiredIf('submit')])
@@ -652,6 +694,7 @@ class SingleLineCodeForm(TextResponseForm):
 
 class FillInTheBlankForm(TextResponseForm): #where user answers question
     response = HiddenField('answer')
+    original_user_input = HiddenField('user answer')
 
 
 class CodeJumbleForm(TextResponseForm):

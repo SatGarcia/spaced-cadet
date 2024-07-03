@@ -26,7 +26,7 @@ from app.user_views import (
     MultipleChoiceForm, MultipleSelectionForm, FillInTheBlankForm
 )
 from app.auth import AuthorizationError, check_authorization
-from app.db_models import text_to_FITB_format, display_fitb_answer
+from app.db_models import text_to_FITB_format, display_correct_fitb_answer
 
 instructor = Blueprint('instructor', __name__)
 
@@ -114,7 +114,7 @@ def review_new_question(question_id):
     
     #Displaying a different type of answer for the user if it is a fill in the blank question
     if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-        fitb_answer = display_fitb_answer(question.original_prompt_before_reformat)
+        fitb_answer = display_correct_fitb_answer(question.original_prompt_before_reformat)
         return render_template("review_question.html",
                             page_title="Cadet: Review Question",
                             question=question,
