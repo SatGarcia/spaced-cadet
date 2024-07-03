@@ -503,7 +503,7 @@ def display_user_fitb_answer(question_prompt, list_of_user_response):
         #replacing the answer with the bolded version of it in the prompt, without ^^^
         
         #if the answer is correct
-        if answer == list_of_user_response[current_index]:
+        if answer.lower() == list_of_user_response[current_index].lower():
             new_q = current_version.replace(f"^^^{answer}^^^", f'<b style="color: green;">{answer}</b>')
         #if the answer is incorrect, put a trikethrough what the user entered
         else:
