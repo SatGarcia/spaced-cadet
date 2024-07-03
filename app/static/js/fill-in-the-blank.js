@@ -34,7 +34,7 @@ function Update_FITB_Response_Field() {
 
     }
 
-    //removing the extra comma at the end
+    //removing the extra separator at the end
     let lastComma = response_str.length -1;
     response_str = response_str.slice(0, lastComma);
 
