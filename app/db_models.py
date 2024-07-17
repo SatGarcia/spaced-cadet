@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from app import db
 from app.search import add_to_index, remove_from_index, query_index, clear_index
 import json
+
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
         raw_md = getattr(obj, attr_name)
@@ -100,7 +101,6 @@ class QuestionType(enum.Enum):
     CODE_JUMBLE = "code-jumble"
     AUTO_CHECK = "auto-check"
     SINGLE_LINE_CODE_QUESTION = "single-line-code"
-    FILL_IN_THE_BLANK_QUESTION = "fill-in-the-blank"
 
     @classmethod
     def descriptions(cls):
@@ -111,8 +111,7 @@ class QuestionType(enum.Enum):
             {'name': 'multiple-selection', 'description': "Multiple Selection"},
             {'name': 'code-jumble', 'description': "Parsons Problem"},
             {'name': 'auto-check', 'description': "Short Answer (Auto Graded)"},
-            {'name': 'single-line-code', 'description': "Single Line of Code"},
-            {'name': 'fill-in-the-blank','description': "Fill in the blank"}
+            {'name': 'single-line-code', 'description': "Single Line of Code"}
         ]
 
 class ResponseType(enum.Enum):
@@ -352,8 +351,6 @@ class FillInTheBlankQuestion(Question):
     answers = db.Column(db.String, nullable=False)
 
     original_prompt_before_reformat = db.Column(db.String, nullable=True, default = "placeholder")
-    
-
 
     __mapper_args__ = {
         'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,

@@ -3,7 +3,6 @@ from app import create_app, db
 from app.db_models import User, Assessment, ShortAnswerQuestion, TextAttempt, Objective, Topic
 from datetime import date, timedelta, datetime
 
-
 class AssessmentModelCase(unittest.TestCase):
     def setUp(self):
         self.app = create_app('config.TestConfig')

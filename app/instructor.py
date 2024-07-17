@@ -23,7 +23,7 @@ import os, csv, re, ast
 from app import db, ast_solver
 from app.user_views import (
     ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm, SingleLineCodeForm,
-    MultipleChoiceForm, MultipleSelectionForm, FillInTheBlankForm
+    MultipleChoiceForm, MultipleSelectionForm
 )
 from app.auth import AuthorizationError, check_authorization
 from app.db_models import text_to_FITB_format, display_correct_fitb_answer
@@ -203,15 +203,6 @@ def preview_question(question_id):
                                preview_mode=True,
                                form=form,
                                prompt=Markup(prompt_html))
-    
-    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-        form = FillInTheBlankForm(question_id = question.id)
-        return render_template("test_fill_in_the_blank.html",
-                               page_title=page_title,
-                               preview_mode=True,
-                               form=form,
-                               prompt=Markup(prompt_html))
-
 
     else:
         abort(500)
@@ -945,7 +936,6 @@ class NewFillInTheBlankForm(FlaskForm):
     prompt = TextAreaField("Enter prompt", [DataRequired()])
     answers = HiddenField()
     submit = SubmitField("Continue...")
-
 
 class NewAutoCheckQuestionForm(FlaskForm):
     prompt = TextAreaField("Question Prompt", [DataRequired()])

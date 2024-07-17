@@ -437,9 +437,6 @@ def get_form(question, use_existing):
 
     elif question.type == QuestionType.CODE_JUMBLE:
         return CodeJumbleForm(response="", **kwargs)
-    
-    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-        return FillInTheBlankForm(**kwargs) #Might need to add more lines here
 
     else:
         # TODO: log error
@@ -477,9 +474,6 @@ def render_question(question, is_fresh, form, mission):
         #form = CodeJumbleForm(question_id=question.id, response="")
         template_filename = "test_code_jumble.html"
         extra_kw_args['code_blocks'] = [(b.id, Markup(b.html())) for b in question.blocks]
-    
-    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-        template_filename = "test_Fill_in_the_blank.html"
 
     else:
         # TODO: log error
@@ -695,7 +689,6 @@ class SingleLineCodeForm(TextResponseForm):
 class FillInTheBlankForm(TextResponseForm): #where user answers question
     response = HiddenField('answer')
     original_user_input = HiddenField('user answer')
-
 
 class CodeJumbleForm(TextResponseForm):
     response = HiddenField("Ordered Code")
