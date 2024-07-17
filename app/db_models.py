@@ -101,6 +101,7 @@ class QuestionType(enum.Enum):
     CODE_JUMBLE = "code-jumble"
     AUTO_CHECK = "auto-check"
     SINGLE_LINE_CODE_QUESTION = "single-line-code"
+    FILL_IN_THE_BLANK_QUESTION = "fill-in-the-blank"
 
     @classmethod
     def descriptions(cls):
