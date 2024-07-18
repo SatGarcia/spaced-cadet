@@ -23,7 +23,7 @@ import os, csv, re, ast
 from app import db, ast_solver
 from app.user_views import (
     ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm, SingleLineCodeForm,
-    MultipleChoiceForm, MultipleSelectionForm
+    MultipleChoiceForm, MultipleSelectionForm, FillInTheBlankForm
 )
 from app.auth import AuthorizationError, check_authorization
 from app.db_models import text_to_FITB_format, display_correct_fitb_answer
@@ -199,6 +199,14 @@ def preview_question(question_id):
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
 
         return render_template("test_multiple_choice.html",
+                               page_title=page_title,
+                               preview_mode=True,
+                               form=form,
+                               prompt=Markup(prompt_html))
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        form = FillInTheBlankForm(question_id = question.id)
+        return render_template("test_fill_in_the_blank.html",
                                page_title=page_title,
                                preview_mode=True,
                                form=form,
@@ -523,11 +531,11 @@ def edit_question(question_id):
         return redirect(url_for("instructor.user_questions",
                                 user_id=current_user.id))
 
-
+    
     return render_template(template,
-                           page_title="Cadet: Edit Question",
-                           edit_mode=True,
-                           form=form)
+                            page_title="Cadet: Edit Question",
+                            edit_mode=True,
+                            form=form)
 
 
 @instructor.route('/new-objective', methods=['GET', 'POST'])
@@ -936,6 +944,30 @@ class NewFillInTheBlankForm(FlaskForm):
     prompt = TextAreaField("Enter prompt", [DataRequired()])
     answers = HiddenField()
     submit = SubmitField("Continue...")
+
+    def validate_prompt(form, field):
+        prompt_text = field.data
+        carrot_count = prompt_text.count('^^^')
+        
+        #ensuring there is atleast one answer in the prompt
+        if carrot_count < 1:
+            raise ValidationError("There must be atleast one answer for this question")
+        
+        #ensuring that there is an even number of carrots, meaning all the answers are properly wrapped
+        if carrot_count % 2 != 0:
+            raise ValidationError("There must be an even number of '^^^' placed correctly around the answer(s)")
+
+        #ensuring there are 3 carrots at all times
+        while '^' in prompt_text:
+            start_carrot_index = prompt_text.find('^')
+            if not (prompt_text[start_carrot_index] == '^' and prompt_text[start_carrot_index + 1] == '^' and prompt_text[start_carrot_index + 2] == '^' and prompt_text[start_carrot_index+ 3]!= '^'):
+                raise ValidationError("There must be '^^^' to indicate an answer")
+            else:
+                #slicing that part of the prompt off and moving on
+                cut_text = prompt_text[start_carrot_index + 3:]
+                prompt_text = cut_text
+        
+        
 
 class NewAutoCheckQuestionForm(FlaskForm):
     prompt = TextAreaField("Question Prompt", [DataRequired()])

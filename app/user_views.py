@@ -437,6 +437,9 @@ def get_form(question, use_existing):
 
     elif question.type == QuestionType.CODE_JUMBLE:
         return CodeJumbleForm(response="", **kwargs)
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        return FillInTheBlankForm(**kwargs)
 
     else:
         # TODO: log error
@@ -474,6 +477,10 @@ def render_question(question, is_fresh, form, mission):
         #form = CodeJumbleForm(question_id=question.id, response="")
         template_filename = "test_code_jumble.html"
         extra_kw_args['code_blocks'] = [(b.id, Markup(b.html())) for b in question.blocks]
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        #form = FillInTheBlankForm(question_id=question.id)
+        template_filename = "test_fill_in_the_blank.html"
 
     else:
         # TODO: log error
