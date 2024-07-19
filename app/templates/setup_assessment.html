@@ -291,7 +291,7 @@
                                                             <tr>
                                                                 <th scope="row">Prompt:</th>
                                                                 <td>
-                                                                    <div class="clippy" v-html="convertToHtml(q.prompt)"></div>
+                                                                    <div class="clippy" v-html="formatPrompt(q)"></div>
                                                                 </td>
                                                             </tr>
                                                             <tr>
@@ -360,7 +360,7 @@
                                 <li class="list-group-item d-flex"
                                     v-for="(question, index) in selected_questions" :key="question.id">
 
-                                    <span class="ms-2 me-auto" v-html="convertToHtml(question.prompt)"></span>
+                                    <span class="ms-2 me-auto" v-html="formatPrompt(question)"></span>
                                     <i role="button" class="bi-x fs-6 text-danger"
                                                      @click="removeSelectedItem(selected_questions, index)"
                                                      @keydown.enter="removeSelectedItem(selected_questions, index)"></i>
@@ -602,6 +602,36 @@
                     }
                     return html_text;
 				},
+                formatPrompt(question) {
+        			const questionType = question.type;
+        			if (questionType === "fill-in-the-blank") {
+            			return this.convertToHtml(this.text_to_fitb_format(question.prompt));
+        			} else {
+            			return this.convertToHtml(question.prompt);
+        			}
+    			},
+
+    			text_to_fitb_format(text) {
+        			let currentVersion = text;
+					let textboxNumber = 1;
+
+					// continues as long as there is the blank indicator and remakes the
+					// question until all the answers are replaced with blank textboxes
+					while (currentVersion.includes("^^^")) {
+						let newQ = "";
+						const start = "^^^";
+						const end = "^^^";
+						const startIndex = currentVersion.indexOf(start);
+						const endIndex = currentVersion.indexOf(end, startIndex + 3);
+						const answer = currentVersion.substring(startIndex + 3, endIndex); // taking the answer out of the ^^^
+						newQ = currentVersion.replace(`^^^${answer}^^^`, `<input type="text" class="form-control-sm rounded" id="FITB${textboxNumber}" placeholder="Enter Answer">`); // replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
+						textboxNumber += 1;
+						currentVersion = newQ;
+					}
+
+					// returning the finalized question with all blanks in place
+					return currentVersion;
+    			},
             },
 
             created() {

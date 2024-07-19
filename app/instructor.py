@@ -142,9 +142,14 @@ def preview_question(question_id):
         # Only allow user to preview public questions or ones they have
         # created. Admins can view all questions though.
         abort(401)
-
+    
     page_title = "Cadet: Question Preview"
-    prompt_html = markdown_to_html(question.prompt)
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        modified_prompt = text_to_FITB_format(question.original_prompt_before_reformat)
+        
+        prompt_html = markdown_to_html(modified_prompt[0])
+    else:
+        prompt_html = markdown_to_html(question.prompt)
 
     # TODO: reduce code duplication in calling render_template with nearly the
     # same arguments for all cases in this chained condition
@@ -520,6 +525,9 @@ def edit_question(question_id):
     elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
         form = NewFillInTheBlankForm(formdata = form_data, obj=question)
         template = "create_new_fill_in_the_blank.html"
+        #updating the new answers of the edited question
+        question.original_prompt_before_reformat = form.prompt.data 
+
     else:
         abort(400)
 
@@ -641,7 +649,7 @@ def create_new_question(question_type):
         template = "create_new_fill_in_the_blank.html"
         stored_orginal_prompt = form.prompt.data
         modified_prompt,modified_answers = text_to_FITB_format(form.prompt.data)
-        form.prompt.data = modified_prompt
+        #form.prompt.data = modified_prompt
         form.answers.data = modified_answers
         new_q = FillInTheBlankQuestion()
         #saving the original prompt, created by the user, with carrots in place
@@ -940,34 +948,37 @@ class NewShortAnswerQuestionForm(FlaskForm):
     answer = TextAreaField("Question Answer", [DataRequired()])
     submit = SubmitField("Continue...")
 
-class NewFillInTheBlankForm(FlaskForm):
-    prompt = TextAreaField("Enter prompt", [DataRequired()])
-    answers = HiddenField()
-    submit = SubmitField("Continue...")
-
-    def validate_prompt(form, field):
+"""def validate_caret(form, field):
         prompt_text = field.data
         carrot_count = prompt_text.count('^^^')
+        Error = None
         
         #ensuring there is atleast one answer in the prompt
         if carrot_count < 1:
-            raise ValidationError("There must be atleast one answer for this question")
+            Error = "There must be atleast one answer for this question"
         
         #ensuring that there is an even number of carrots, meaning all the answers are properly wrapped
         if carrot_count % 2 != 0:
-            raise ValidationError("There must be an even number of '^^^' placed correctly around the answer(s)")
+            Error = "There must be an even number of '^^^' placed correctly around the answer(s)"
 
         #ensuring there are 3 carrots at all times
         while '^' in prompt_text:
             start_carrot_index = prompt_text.find('^')
             if not (prompt_text[start_carrot_index] == '^' and prompt_text[start_carrot_index + 1] == '^' and prompt_text[start_carrot_index + 2] == '^' and prompt_text[start_carrot_index+ 3]!= '^'):
-                raise ValidationError("There must be '^^^' to indicate an answer")
+                Error = "There must be '^^^' to indicate an answer"
             else:
                 #slicing that part of the prompt off and moving on
                 cut_text = prompt_text[start_carrot_index + 3:]
                 prompt_text = cut_text
         
-        
+        if Error is not None:
+            raise ValidationError(Error)"""
+
+
+class NewFillInTheBlankForm(FlaskForm):
+    prompt = TextAreaField("Enter prompt", [DataRequired()])
+    answers = HiddenField()
+    submit = SubmitField("Continue...")        
 
 class NewAutoCheckQuestionForm(FlaskForm):
     prompt = TextAreaField("Question Prompt", [DataRequired()])

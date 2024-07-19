@@ -17,7 +17,7 @@ import ast, markdown
 from datetime import date, timedelta, datetime
 
 from app import db, ast_solver
-from app.db_models import display_correct_fitb_answer, display_user_fitb_answer
+from app.db_models import display_correct_fitb_answer, display_user_fitb_answer, text_to_FITB_format
 import json
 
 
@@ -241,8 +241,13 @@ def review_answer(course_name, mission_id):
         abort(404)
 
     question = attempt.question
+    #specific format for fill in the blank questions
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        prompt_html = markdown_to_html(text_to_FITB_format(question.prompt)[0])
+    else:
+        prompt_html = markdown_to_html(question.prompt)
 
-    prompt_html = markdown_to_html(question.prompt)
+    #specific answer format for fill in the blank questions
     if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
         answer_html = display_correct_fitb_answer(question.original_prompt_before_reformat)
     else:
@@ -288,13 +293,13 @@ def review_answer(course_name, mission_id):
         response_html = markdown_to_html(selected_answer)
 
     return render_template("review_correct_answer.html",
-                           page_title="Cadet Test: Review Correct Answer",
-                           continue_url=url_for('.test',
-                                                course_name=course_name,
-                                                mission_id=mission_id),
-                           prompt=Markup(prompt_html),
-                           response=Markup(response_html),
-                           answer=Markup(answer_html))
+                        page_title="Cadet Test: Review Correct Answer",
+                        continue_url=url_for('.test',
+                                            course_name=course_name,
+                                            mission_id=mission_id),
+                        prompt=Markup(prompt_html),
+                        response=Markup(response_html),
+                        answer=Markup(answer_html))
 
 
 def create_new_text_attempt(question, user, response, previous_attempt):
@@ -447,7 +452,13 @@ def get_form(question, use_existing):
 
 
 def render_question(question, is_fresh, form, mission):
-    prompt_html = markdown_to_html(question.prompt)
+    
+    #Specific format for fill in the blank questions
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        modified_prompt = text_to_FITB_format(question.original_prompt_before_reformat)
+        prompt_html = markdown_to_html(modified_prompt[0])
+    else:
+        prompt_html = markdown_to_html(question.prompt)
 
     extra_kw_args = {}
 
