@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from app import db
 from app.search import add_to_index, remove_from_index, query_index, clear_index
+import json
 
 def markdown_field(attr_name):
     def markdown_or_html(obj, context):
@@ -100,6 +101,7 @@ class QuestionType(enum.Enum):
     CODE_JUMBLE = "code-jumble"
     AUTO_CHECK = "auto-check"
     SINGLE_LINE_CODE_QUESTION = "single-line-code"
+    FILL_IN_THE_BLANK_QUESTION = "fill-in-the-blank"
 
     @classmethod
     def descriptions(cls):
@@ -344,6 +346,172 @@ class ShortAnswerQuestionSchema(QuestionSchema):
         for field in ['answer']:
             if field in data:
                 setattr(question, field, data[field])
+
+class FillInTheBlankQuestion(Question):
+    id = db.Column(db.Integer, db.ForeignKey('question.id'), primary_key=True)
+    answers = db.Column(db.String, nullable=False)
+
+    original_prompt_before_reformat = db.Column(db.String, nullable=True, default = "placeholder")
+
+    __mapper_args__ = {
+        'polymorphic_identity': QuestionType.FILL_IN_THE_BLANK_QUESTION,
+    }
+    
+    def get_answer(self):
+            return markdown_to_html(self.answers)
+
+class FillInTheBlankQuestionSchema(QuestionSchema):
+    answers = fields.Str(required=True)  # CHANGE TO FUNCTION/METHOD
+    
+    def make_obj(self, data):
+        return FillInTheBlankQuestion(**data)
+
+    def update_obj(self, question, data):
+        super().update_obj(question, data)
+
+        for field in ['answers']:
+            if field in data:
+                setattr(question, field, data[field])
+
+def text_to_FITB_format(question_text):
+        """
+        Description: This function will take the data from the form where the User
+        will write the fill in the blank question and indicate where the blanks will be.
+        Then it will return the question with the blanks replacing the answers.
+
+        Parameters:
+        1) question_text(Str): The string that is the entire question with the '^^^'
+        symbols indicating that there will need to be blank text boxes replacing those
+        words. This would be the reponse from the fill in the blank question form.
+
+        Returns:
+        1) current_version(Str): The new question with the blank text boxes replacing all
+        the answers to the fill in the blank question
+        """
+        current_version = str(question_text)
+        textbox_number = 1
+        stringified_answers =''
+        
+        #continues as long as there is the blank indicator and remakes the 
+        #question until all the answers are replaced with blank textboxes
+        while "^^^" in current_version: 
+            new_q = ""
+
+            start = "^^^"
+
+            end = "^^^"
+
+            start_index = current_version.find(start)
+
+            end_index = current_version.find(end,start_index + 2)
+
+            answer = current_version[start_index + 3 : end_index] #taking the answer out of the ^^^
+            
+            new_q = current_version.replace(f"^^^{answer}^^^", f'<input type="text" class="form-control-sm rounded" id="FITB{textbox_number}" placeholder= "Enter Answer" w=25>') #replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
+            stringified_answers += json.dumps(answer) +','
+            textbox_number += 1
+            current_version  = new_q
+        
+        #removing the last comma from the stringified answers
+        stringified_answers = stringified_answers[:-1]
+        
+        #returning the finalzied question with all blanks in place
+        #and replacing the answers field to deal with commas and quotes
+        return current_version, stringified_answers
+
+def display_correct_fitb_answer(question_prompt):
+    """
+        Description: This function will take the data from the fill in the blank
+        form, similarry to the "text_to_FITB_format" function and display the correct
+        answer by showing the complete prompt with the answer in bold.
+
+        Parameters:
+        1) question_prompt(Str): The string that is the entire question with the '^^^'
+        symbols indicating that there will need to be blank text boxes replacing those
+        words. This would be the reponse from the fill in the blank question form.
+
+        Returns:
+        1) current_version(Str): The new prompt, with the answers showing in bold
+        without the carrots
+        """
+    current_version = str(question_prompt)
+        
+    #continues as long as there is the blank indicator and remakes the 
+    #question until all the answers are bolded, with the carrots removed
+    while "^^^" in current_version: 
+        new_q = ""
+
+        start = "^^^"
+
+        end = "^^^"
+
+        start_index = current_version.find(start)
+
+        end_index = current_version.find(end,start_index + 2)
+        
+        #taking the answer out of the ^^^
+        answer = current_version[start_index + 3 : end_index]
+            
+        #replacing the answer with the bolded version of it in the prompt, without ^^^
+        new_q = current_version.replace(f"^^^{answer}^^^", f'<b>{answer}</b>')
+        current_version  = new_q
+        
+        #returning the finalzied question with all the answers bolded
+    return current_version
+
+def display_user_fitb_answer(question_prompt, list_of_user_response):
+    """
+        Description: This function will take the data from the fill in the blank
+        form, similarry to the "text_to_FITB_format" function and display the prompt
+        with the correct answers replaced with what the user entered into the form data.
+
+        Parameters:
+        1) question_prompt(Str): The string that is the entire question with the '^^^'
+        symbols indicating that there will need to be blank text boxes replacing those
+        words. This would be the reponse from the fill in the blank question form.
+
+        2) list_of_user_response(List): A list of all the inputs that the user entered
+        into the textboxes when answering the fill in the blank question
+
+        Returns:
+        1) current_version(Str): The new prompt, with the answers replaced with what the
+        user entered into each textbox. If the user got it correct, it will stay bold.
+        If the user got it wrong it will have a strikethrough.
+        """
+    current_version = str(question_prompt)
+    length_of_list = len(list_of_user_response)
+    current_index = 0
+        
+    #continues as long as there is the blank indicator and remakes the 
+    #question until all the answers are bolded, with the carrots removed
+    while ("^^^" in current_version) and current_index <= length_of_list: 
+        new_q = ""
+
+        start = "^^^"
+
+        end = "^^^"
+
+        start_index = current_version.find(start)
+
+        end_index = current_version.find(end,start_index + 2)
+        
+        #taking the answer out of the ^^^
+        answer = current_version[start_index + 3 : end_index]
+            
+        #replacing the answer with the bolded version of it in the prompt, without ^^^
+        
+        #if the answer is correct
+        if answer.lower() == list_of_user_response[current_index].lower():
+            new_q = current_version.replace(f"^^^{answer}^^^", f'<b style="color: green;">{answer}</b>')
+        #if the answer is incorrect, put a trikethrough what the user entered
+        else:
+            new_q = current_version.replace(f"^^^{answer}^^^", f'<s><b style="color: red;">{list_of_user_response[current_index]}</b></s>')
+
+        current_index += 1
+        current_version  = new_q
+        
+        #returning the finalzied question with all the answers bolded
+    return current_version
 
 
 class AutoCheckQuestion(Question):
@@ -684,6 +852,8 @@ class TextAttempt(Attempt):
     id = db.Column(db.Integer, db.ForeignKey('attempt.id'), primary_key=True)
 
     response = db.Column(db.String, nullable=False)  # TODO: make no reesponse an option
+
+    original_user_input = db.Column(db.String, nullable=True, default = "placeholder")
 
     __mapper_args__ = {
         'polymorphic_identity': ResponseType.TEXT,

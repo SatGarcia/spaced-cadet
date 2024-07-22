@@ -16,6 +16,8 @@
 					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='multiple-selection')}}">Multiple Selection</a></li>
 					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='code-jumble')}}">Code Jumble</a></li>
 					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='single-line-code')}}">Single Line Code</a></li>
+					<li><a class="dropdown-item" href="{{url_for('instructor.create_new_question', question_type='fill-in-the-blank')}}">Fill In The Blank (Auto-Graded)</a></li>
+
 				</ul>
 			</span>
 		</div>
@@ -123,7 +125,7 @@
 									<tr>
 										<th scope="row">Prompt:</th>
 										<td>
-											<div class="clippy" v-html="convertToHtml(q.prompt)"></div>
+											<div class="clippy" v-html="formatPrompt(q)"></div>
 										</td>
 									</tr>
 									<tr>
@@ -399,6 +401,37 @@
                     return converter.makeHtml(md_text);
 				},
 
+				formatPrompt(question) {
+        			const questionType = this.getTypeString(question);
+        			if (questionType === "Fill In The Blank (Auto-Graded)") {
+            			return this.convertToHtml(this.text_to_fitb_format(question.prompt));
+        			} else {
+            			return this.convertToHtml(question.prompt);
+        			}
+    			},
+
+    			text_to_fitb_format(text) {
+        			let currentVersion = text;
+					let textboxNumber = 1;
+
+					// continues as long as there is the blank indicator and remakes the
+					// question until all the answers are replaced with blank textboxes
+					while (currentVersion.includes("^^^")) {
+						let newQ = "";
+						const start = "^^^";
+						const end = "^^^";
+						const startIndex = currentVersion.indexOf(start);
+						const endIndex = currentVersion.indexOf(end, startIndex + 3);
+						const answer = currentVersion.substring(startIndex + 3, endIndex); // taking the answer out of the ^^^
+						newQ = currentVersion.replace(`^^^${answer}^^^`, `<input type="text" class="form-control-sm rounded" id="FITB${textboxNumber}" placeholder="Enter Answer">`); // replacing the answer with a blank. This is a filler blank for now as a textbox will be there instead later
+						textboxNumber += 1;
+						currentVersion = newQ;
+					}
+
+					// returning the finalized question with all blanks in place
+					return currentVersion;
+    			},
+
                 getQuestionTypes() {
                     CadetApi.getQuestionTypes()
                         .then(q_types => this.question_types = q_types)
@@ -418,6 +451,8 @@
 							return "Multiple Choice";
 						case 'code-jumble':
 							return "Code Jumble";
+						case 'fill-in-the-blank':
+							return "Fill In The Blank (Auto-Graded)"
 						default:
 							return q.type;
 					}

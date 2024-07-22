@@ -1,0 +1,45 @@
+{% extends "question.html" %}
+{% import 'forms.html' as forms %}
+
+{% block instructions %}
+    <div class="row">
+        <div class="col">
+            <strong>Instructions:</strong> Fill in the blank(s) with the correct answer(s).
+        </div>
+    </div>
+{% endblock %}
+
+{% block response_area %}
+<div class="row pt-2" id="response_area">
+    <form method="POST"
+          action="{% if not preview_mode %}{{ post_url }}{% endif %}">
+        {{ form.csrf_token }}
+        {{ form.question_id }}
+
+        {% set class_str = "form-control " + forms.get_valid_class(form.response) %}
+        {{ form.response }}
+        {% if form.response.errors %}
+            <div class="ms-1 invalid-feedback">
+                Enter an answer or click "I Don't Know".
+            </div>
+        {% endif %}
+        <p class="pt-2">
+            {{ form.no_answer(class_="btn btn-secondary btn-sm") }}
+            {{ form.submit(class_="btn btn-primary btn-sm") }}
+        </p>
+        {{ form.original_user_input }}
+    </form>
+</div>
+{% endblock %}
+{% block js %}
+    <script src="{{ url_for('static', filename='js/fill-in-the-blank.js') }}"></script>
+    <script>
+        let blank_box_num = 1;
+    while (document.getElementById(`FITB${blank_box_num}`) != null){ //adding event listeners for every textbox
+        document.getElementById(`FITB${blank_box_num}`).addEventListener("change", Update_FITB_Response_Field)
+        blank_box_num++;
+        }
+    </script>
+
+{% endblock %}
+

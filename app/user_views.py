@@ -17,6 +17,8 @@ import ast, markdown
 from datetime import date, timedelta, datetime
 
 from app import db, ast_solver
+from app.db_models import display_correct_fitb_answer, display_user_fitb_answer, text_to_FITB_format
+import json
 
 
 user_views = Blueprint('user_views', __name__)
@@ -239,9 +241,17 @@ def review_answer(course_name, mission_id):
         abort(404)
 
     question = attempt.question
+    #specific format for fill in the blank questions
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        prompt_html = markdown_to_html(text_to_FITB_format(question.prompt)[0])
+    else:
+        prompt_html = markdown_to_html(question.prompt)
 
-    prompt_html = markdown_to_html(question.prompt)
-    answer_html = question.get_answer()
+    #specific answer format for fill in the blank questions
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        answer_html = display_correct_fitb_answer(question.prompt)
+    else:
+        answer_html = question.get_answer()
 
     response_html = ""
 
@@ -268,28 +278,59 @@ def review_answer(course_name, mission_id):
             response_html = markdown_to_html(selected_answer.text)
         else:
             response_html = markdown_to_html("_No response given._")
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        #storing the user inputs
+        users_list = []
+        for word in attempt.original_user_input.split("\0"):
+            cleaned_word = word.strip()
+            users_list.append(cleaned_word)
+            #displaying the prompt with the user inputted answers
+        response_html = display_user_fitb_answer(question.prompt, users_list)
 
     else: #question.type = auto-check or single-line-code
         selected_answer = attempt.response.strip()
         response_html = markdown_to_html(selected_answer)
 
     return render_template("review_correct_answer.html",
-                           page_title="Cadet Test: Review Correct Answer",
-                           continue_url=url_for('.test',
-                                                course_name=course_name,
-                                                mission_id=mission_id),
-                           prompt=Markup(prompt_html),
-                           response=Markup(response_html),
-                           answer=Markup(answer_html))
+                        page_title="Cadet Test: Review Correct Answer",
+                        continue_url=url_for('.test',
+                                            course_name=course_name,
+                                            mission_id=mission_id),
+                        prompt=Markup(prompt_html),
+                        response=Markup(response_html),
+                        answer=Markup(answer_html))
 
 
 def create_new_text_attempt(question, user, response, previous_attempt):
     """ Creates a new attempt and adds it to the database. If there was a
     previous attempt for the question, copy over the relevent data to the new
-    attempt. """
+    attempt. """  
     attempt = TextAttempt(question_id=question.id,
-                          user_id=user.id,
-                          response=response)
+                        user_id=user.id,
+                        response=response)
+
+    # if there was a previous attempt, copy over e_factor and interval
+    if previous_attempt:
+        attempt.e_factor = previous_attempt.e_factor
+        attempt.interval = previous_attempt.interval
+        attempt.next_attempt = previous_attempt.next_attempt
+
+    db.session.add(attempt)
+    db.session.commit()
+
+    return attempt
+
+def create_new_fitb_text_attempt(question, user, response, previous_attempt, original_user_input):
+    """ Creates a new fill in the blank attempt and adds it to the database. If there was a
+    previous attempt for the question, copy over the relevent data to the new
+    attempt. """
+
+    attempt = TextAttempt(question_id=question.id,
+                        user_id=user.id,
+                        response=response,
+                        original_user_input = original_user_input)
+    
 
     # if there was a previous attempt, copy over e_factor and interval
     if previous_attempt:
@@ -401,6 +442,9 @@ def get_form(question, use_existing):
 
     elif question.type == QuestionType.CODE_JUMBLE:
         return CodeJumbleForm(response="", **kwargs)
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        return FillInTheBlankForm(**kwargs)
 
     else:
         # TODO: log error
@@ -408,7 +452,13 @@ def get_form(question, use_existing):
 
 
 def render_question(question, is_fresh, form, mission):
-    prompt_html = markdown_to_html(question.prompt)
+    
+    #Specific format for fill in the blank questions
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        modified_prompt = text_to_FITB_format(question.prompt)
+        prompt_html = markdown_to_html(modified_prompt[0])
+    else:
+        prompt_html = markdown_to_html(question.prompt)
 
     extra_kw_args = {}
 
@@ -438,6 +488,10 @@ def render_question(question, is_fresh, form, mission):
         #form = CodeJumbleForm(question_id=question.id, response="")
         template_filename = "test_code_jumble.html"
         extra_kw_args['code_blocks'] = [(b.id, Markup(b.html())) for b in question.blocks]
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        #form = FillInTheBlankForm(question_id=question.id)
+        template_filename = "test_fill_in_the_blank.html"
 
     else:
         # TODO: log error
@@ -493,7 +547,10 @@ def test(course_name, mission_id):
         form = get_form(question, True)
 
         if form.validate_on_submit():
-            attempt = form.create_attempt(question, current_user,
+            if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+                attempt = form.create_fitb_attempt(question, current_user, previous_attempt)
+            else:
+                attempt = form.create_attempt(question, current_user,
                                           previous_attempt)
 
             if form.no_answer.data:
@@ -539,6 +596,21 @@ def test(course_name, mission_id):
                 correct_answers = question.options.filter_by(correct=True).order_by(AnswerOption.id).all()
                 user_response = attempt.responses.order_by(AnswerOption.id).all()
                 attempt.correct = user_response == correct_answers
+            
+            elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+                correct_list = []
+                users_list = []
+                for word in attempt.response.split(","):
+                    cleaned_word = word.strip()
+                    lowered_word = cleaned_word.lower()
+                    users_list.append(lowered_word)
+                
+                for answer in question.answers.split(","):
+                    cleaned_word = answer.strip()
+                    lowered_word = cleaned_word.lower()
+                    correct_list.append(lowered_word)
+
+                attempt.correct = correct_list == users_list
 
             elif question.type == QuestionType.CODE_JUMBLE:
                 try:
@@ -615,6 +687,13 @@ class TextResponseForm(FlaskForm):
                                           previous_attempt)
 
         return attempt
+    def create_fitb_attempt(self, question, user, previous_attempt):
+        attempt = create_new_fitb_text_attempt(question, user,
+                                          self.response.data,
+                                          previous_attempt,
+                                          self.original_user_input.data)
+
+        return attempt
 
 class ShortAnswerForm(TextResponseForm):
     response = TextAreaField('answer', validators=[DataRequiredIf('submit')])
@@ -624,6 +703,10 @@ class AutoCheckForm(TextResponseForm):
 
 class SingleLineCodeForm(TextResponseForm):
     response = StringField('answer', validators=[DataRequiredIf('submit')])
+
+class FillInTheBlankForm(TextResponseForm): #where user answers question
+    response = HiddenField('answer')
+    original_user_input = HiddenField('user answer')
 
 class CodeJumbleForm(TextResponseForm):
     response = HiddenField("Ordered Code")

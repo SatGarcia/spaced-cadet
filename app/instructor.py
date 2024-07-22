@@ -23,9 +23,10 @@ import os, csv, re, ast
 from app import db, ast_solver
 from app.user_views import (
     ShortAnswerForm, markdown_to_html, CodeJumbleForm, AutoCheckForm, SingleLineCodeForm,
-    MultipleChoiceForm, MultipleSelectionForm
+    MultipleChoiceForm, MultipleSelectionForm, FillInTheBlankForm
 )
 from app.auth import AuthorizationError, check_authorization
+from app.db_models import text_to_FITB_format, display_correct_fitb_answer
 
 instructor = Blueprint('instructor', __name__)
 
@@ -106,14 +107,25 @@ def review_new_question(question_id):
     elif (question.author != current_user) and (not current_user.admin):
         # Only allow a question's creator (and admins) to review a question
         abort(401)
+   
 
     next_url = request.args.get('next',
                                 url_for('.user_questions', user_id=current_user.id))
+    
+    #Displaying a different type of answer for the user if it is a fill in the blank question
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        fitb_answer = display_correct_fitb_answer(question.prompt)
+        return render_template("review_question.html",
+                            page_title="Cadet: Review Question",
+                            question=question,
+                            next_url=next_url,
+                            fitb_answer = fitb_answer)
+    else:
+        return render_template("review_question.html",
+                            page_title="Cadet: Review Question",
+                            question=question,
+                            next_url=next_url)
 
-    return render_template("review_question.html",
-                           page_title="Cadet: Review Question",
-                           question=question,
-                           next_url=next_url)
 
 
 
@@ -130,9 +142,14 @@ def preview_question(question_id):
         # Only allow user to preview public questions or ones they have
         # created. Admins can view all questions though.
         abort(401)
-
+    
     page_title = "Cadet: Question Preview"
-    prompt_html = markdown_to_html(question.prompt)
+    if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        modified_prompt = text_to_FITB_format(question.prompt)
+        
+        prompt_html = markdown_to_html(modified_prompt[0])
+    else:
+        prompt_html = markdown_to_html(question.prompt)
 
     # TODO: reduce code duplication in calling render_template with nearly the
     # same arguments for all cases in this chained condition
@@ -187,6 +204,14 @@ def preview_question(question_id):
         form.response.choices = [(option.id, Markup(markdown_to_html(option.text))) for option in question.options]
 
         return render_template("test_multiple_choice.html",
+                               page_title=page_title,
+                               preview_mode=True,
+                               form=form,
+                               prompt=Markup(prompt_html))
+    
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        form = FillInTheBlankForm(question_id = question.id)
+        return render_template("test_fill_in_the_blank.html",
                                page_title=page_title,
                                preview_mode=True,
                                form=form,
@@ -497,10 +522,19 @@ def edit_question(question_id):
     elif question.type == QuestionType.CODE_JUMBLE:
         form = NewJumbleQuestionForm(formdata=form_data, obj=question)
         template = "create_new_code_jumble.html"
+    elif question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+        form = NewFillInTheBlankForm(formdata = form_data, obj=question)
+        template = "create_new_fill_in_the_blank.html"
+        #updating the new answers of the edited question
+        question.prompt = form.prompt.data
+
     else:
         abort(400)
 
     if form.validate_on_submit():
+        if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
+            _, modified_answers = text_to_FITB_format(form.prompt.data)
+            form.answers.data = modified_answers
         form.populate_obj(question)
 
         db.session.commit()
@@ -508,11 +542,11 @@ def edit_question(question_id):
         return redirect(url_for("instructor.user_questions",
                                 user_id=current_user.id))
 
-
+    
     return render_template(template,
-                           page_title="Cadet: Edit Question",
-                           edit_mode=True,
-                           form=form)
+                            page_title="Cadet: Edit Question",
+                            edit_mode=True,
+                            form=form)
 
 
 @instructor.route('/new-objective', methods=['GET', 'POST'])
@@ -613,11 +647,24 @@ def create_new_question(question_type):
         form = NewJumbleQuestionForm(request.form)
         template = "create_new_code_jumble.html"
         new_q = CodeJumbleQuestion()
+    elif question_type == 'fill-in-the-blank':
+
+        form = NewFillInTheBlankForm(request.form)
+        template = "create_new_fill_in_the_blank.html"
+        new_q = FillInTheBlankQuestion()
+        #saving the original prompt, created by the user, with carrots in place
+        new_q.prompt = str(form.prompt.data)
+
+
+
     else:
         abort(400)
 
-
     if form.validate_on_submit():
+        if isinstance(new_q, FillInTheBlankQuestion):
+            _, modified_answers = text_to_FITB_format(form.prompt.data)
+            form.answers.data = modified_answers
+
         form.populate_obj(new_q)
 
         # add learning objective if we got one's ID as an argument
@@ -905,6 +952,60 @@ class NewShortAnswerQuestionForm(FlaskForm):
     submit = SubmitField("Continue...")
 
 
+def precee(form, field):
+        prompt_text = field.data
+        carrot_count = prompt_text.count('^^^')
+        Error = []
+        
+        #ensuring there is atleast one answer in the prompt
+        if carrot_count < 2:
+            Error.append("There must be atleast one answer for this question")
+        
+        #ensuring that there is an even number of carrots, meaning all the answers are properly wrapped
+        if carrot_count % 2 != 0:
+            Error.append("There must be an even number of '^^^' placed correctly around the answer(s)")
+
+        #ensuring there are 3 carrots at all times
+        while '^' in prompt_text:
+            start_carrot_index = prompt_text.find('^')
+            if not (prompt_text[start_carrot_index] == '^' and prompt_text[start_carrot_index + 1] == '^' and prompt_text[start_carrot_index + 2] == '^' and prompt_text[start_carrot_index+ 3]!= '^'):
+                Error.append("There must be '^^^' to indicate an answer")
+            else:
+                #slicing that part of the prompt off and moving on
+                cut_text = prompt_text[start_carrot_index + 3:]
+                prompt_text = cut_text
+        
+        if len(Error) != 0:
+            raise ValidationError(''.join(Error))
+
+
+class NewFillInTheBlankForm(FlaskForm):
+    prompt = TextAreaField("Enter prompt", [DataRequired()])
+    answers = HiddenField()
+    submit = SubmitField("Continue...")
+    def validate_prompt(form, field):
+        """
+        Checks that there weren't any common mistakes with using the triple caret
+        delimiters.
+        """
+        # find all spots with three consecutive carets, and that don't have a
+        # caret right before or right after them
+        input_string = field.data
+        matches = re.findall(r'(?<!\^)\^{3}(?!\^)', input_string)
+
+        if (len(matches) % 2) != 0:
+            raise ValidationError("Error: Inbalanced!")
+
+        # check that there aren't any spots with 4 or more carets in a row
+        if re.search(r'\^{4,}', input_string) is not None:
+            raise ValidationError("Error: Too many carets in a row!")
+
+        # check that there aren't any spots with only 2 carets in a row.
+        # Note that one caret is OK, we they might be using it for some math...
+        if re.search(r'(?<!\^)\^{2}(?!\^)', input_string) is not None:
+            raise ValidationError("Warning: Too few carets")
+       
+
 class NewAutoCheckQuestionForm(FlaskForm):
     prompt = TextAreaField("Question Prompt", [DataRequired()])
     answer = StringField("Question Answer", [DataRequired()])
@@ -1026,6 +1127,6 @@ class RosterUploadForm(FlaskForm):
 from app.db_models import (
     AnswerOption, CodeJumbleQuestion, JumbleBlock, Course,
     ShortAnswerQuestion, AutoCheckQuestion, MultipleChoiceQuestion, SingleLineCodeQuestion,
-    MultipleSelectionQuestion, Question,
+    MultipleSelectionQuestion, Question, FillInTheBlankQuestion,
     QuestionType, User, Objective, Textbook, Assessment, Topic
 )
