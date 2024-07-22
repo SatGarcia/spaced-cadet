@@ -249,7 +249,7 @@ def review_answer(course_name, mission_id):
 
     #specific answer format for fill in the blank questions
     if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-        answer_html = display_correct_fitb_answer(question.original_prompt_before_reformat)
+        answer_html = display_correct_fitb_answer(question.prompt)
     else:
         answer_html = question.get_answer()
 
@@ -286,7 +286,7 @@ def review_answer(course_name, mission_id):
             cleaned_word = word.strip()
             users_list.append(cleaned_word)
             #displaying the prompt with the user inputted answers
-        response_html = display_user_fitb_answer(question.original_prompt_before_reformat, users_list)
+        response_html = display_user_fitb_answer(question.prompt, users_list)
 
     else: #question.type = auto-check or single-line-code
         selected_answer = attempt.response.strip()
@@ -455,7 +455,7 @@ def render_question(question, is_fresh, form, mission):
     
     #Specific format for fill in the blank questions
     if question.type == QuestionType.FILL_IN_THE_BLANK_QUESTION:
-        modified_prompt = text_to_FITB_format(question.original_prompt_before_reformat)
+        modified_prompt = text_to_FITB_format(question.prompt)
         prompt_html = markdown_to_html(modified_prompt[0])
     else:
         prompt_html = markdown_to_html(question.prompt)
