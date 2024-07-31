@@ -21,7 +21,7 @@
         <h5>{{ header_text }}</h5>
 
 		<div class="row">
-			<form method="POST" action="">
+			<form method="POST" action="" enctype="multipart/form-data">
 				{{ form.csrf_token }}
 
                 <div class="row">
@@ -29,7 +29,6 @@
                     {{ forms.input(form.description, "Enter a description of the assessment") }}
                     {{ forms.input(form.time) }}
                     {{ form.upload_files() }} 
-                    {{ form.submit_upload() }}
                 <div class="row pt-2">
                     <div class="col w-auto">
                         {{ form.submit(class_="btn btn-primary") }}

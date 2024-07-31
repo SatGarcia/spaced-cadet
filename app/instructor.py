@@ -385,25 +385,23 @@ def create_assessment(course_name):
                                 time=form.time.data)
 
         course.assessments.append(assessment)
-        
-        has_files = False
 
-        if form.upload_files.data:
-            uploaded_files = request.files.getlist(AssessmentForm.upload_files.name)
-            if uploaded_files:
-                has_files = True
-                for uploaded_file in uploaded_files:
-                    db_file = File(filename=uploaded_file.filename, content=uploaded_file.read(), course=course, assessment=assessment)
-                    db.session.add(db_file)
-                    current_app.logger.debug("Successfully added file to database")
+        uploaded_files = request.files.getlist(form.upload_files.name)
+        for uploaded_file in uploaded_files:
+            db_file = File(filename=uploaded_file.filename, content=uploaded_file.read(), course=course, assessment=assessment)
+            db.session.add(db_file)
+            current_app.logger.debug("Successfully added file to database")
 
         db.session.commit()
+
+        has_files = len(uploaded_files) != 0
 
         flash(f"Successfully created assessment {assessment.title}", "success")
 
         return redirect(url_for(f'.setup_assessment',
                                 course_name=course_name,
-                                assessment_id=assessment.id,has_files = has_files))
+                                assessment_id=assessment.id,
+                                has_files=has_files))
 
     return render_template("create_assessment.html",
                            page_title="Cadet: Create Assessment",
@@ -491,7 +489,7 @@ def setup_topics(course_name):
 
 
 @instructor.route('/c/<course_name>/assessment/<int:assessment_id>/<has_files>/setup')
-def setup_assessment(course_name, assessment_id,has_files):
+def setup_assessment(course_name, assessment_id, has_files):
     course = Course.query.filter_by(name=course_name).first()
     assessment = Assessment.query.filter_by(id=assessment_id).first()
 
@@ -509,7 +507,8 @@ def setup_assessment(course_name, assessment_id,has_files):
     return render_template("setup_assessment.html",
                            page_title="Cadet: Assessment Setup",
                            course=course,
-                           assessment=a,has_files=True)
+                           assessment=a,
+                           has_files=True)
 
 
 @instructor.route('/q/<int:question_id>/edit', methods=['GET', 'POST'])
@@ -997,7 +996,6 @@ class AssessmentForm(FlaskForm):
     description = TextAreaField("Description", [DataRequired()])
     time = DateTimeLocalField('Date/Time', format="%Y-%m-%dT%H:%M", widget=DateTimeLocalInput(), validators=[DataRequired()])
     upload_files = MultipleFileField("Uploadd files here", validators=[FileAllowed(['jpg', 'png', 'pdf', 'doc', 'docx'], 'Only Images, PDFs and Word documents allowed')])
-    submit_upload = SubmitField("Upload")
     submit = SubmitField("Create Assessment")
 
 
