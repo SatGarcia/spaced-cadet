@@ -28,8 +28,8 @@
                     {{ forms.input(form.title, "Enter a title for the assessment") }}
                     {{ forms.input(form.description, "Enter a description of the assessment") }}
                     {{ forms.input(form.time) }}
-                </div>
-
+                    {{ form.upload_files() }} 
+                    {{ form.submit_upload() }}
                 <div class="row pt-2">
                     <div class="col w-auto">
                         {{ form.submit(class_="btn btn-primary") }}

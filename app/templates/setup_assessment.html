@@ -240,6 +240,14 @@
                                 <i class="bi-list-task"></i>
                                 Available Questions:
                             </h5>
+                                    {% if has_files == True %}
+                                    <a href="{{ url_for('instructor.generate_ai_question', course_name=course.name, assessment_name=assessment.id) }}" class="btn btn-primary ms-2">
+                                        <i class="bi-robot"></i>
+                                        Generate AI Question
+                                    </a>
+                                    {% else %}
+                                    <button type="button" class="btn btn-primary ms-2" disabled>Generate AI Question</button> <small>Upload files to enable AI question generation</small>
+                                    {% endif %}
                             <div v-if="selected_objectives.length !== 0">
                                 <div>
                                     Select the questions objectives that will

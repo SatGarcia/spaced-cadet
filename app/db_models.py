@@ -914,6 +914,8 @@ class Course(SearchableMixin, db.Model):
                                     foreign_keys='Assessment.course_id',
                                     backref='course', lazy='dynamic',
                                     order_by='Assessment.time')
+    
+    files = db.relationship('File', backref='course', lazy=True)
 
     def __repr__(self):
         return f"<Course {self.id}: {self.name} ({self.title})>"
@@ -1435,6 +1437,8 @@ class Assessment(db.Model):
                                 secondaryjoin=('assessment_questions.c.question_id == Question.id'),
                                 backref=db.backref('assessments', lazy='dynamic'),
                                 lazy='dynamic')
+    
+    files = db.relationship('File', backref='assessment', lazy=True)
 
     def __repr__(self):
         return f"<Assessment {self.id}: {self.description} at {str(self.time)}>"
@@ -1590,6 +1594,14 @@ class AssessmentSchema(Schema):
     questions = fields.List(fields.Nested("QuestionSchema",
                                            only=('id', 'type', 'prompt')),
                              dump_only=True)
+    
+class File(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False)
+    content = db.Column(db.LargeBinary, nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    assessment_id = db.Column(db.Integer, db.ForeignKey('assessment.id'), nullable=True)
+
 
 
 from app.user_views import markdown_to_html

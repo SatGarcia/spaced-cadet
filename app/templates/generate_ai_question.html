@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% import 'forms.html' as forms %}
+
+{% block body %}
+<div class="container pt-3">
+    <h4>Generate an AI Question</h4>
+
+<form method="POST" action="">
+    {{ form.csrf_token }}
+    <div>
+        {{ forms.input(form.question_select) }}
+    </div>
+    <div>
+        {{ forms.input(form.learning_objective_select) }}
+    </div>
+    <div>
+        {{ form.submit(class_="btn btn-primary btn-sm")}}
+    </div>
+</form>
+{% endblock %}

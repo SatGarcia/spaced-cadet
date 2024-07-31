@@ -54,7 +54,7 @@
 									Settings
 								</a>
 								<br />
-								<a href="{{ url_for('instructor.setup_assessment', course_name=course.name, assessment_id=assessment.id) }}"
+								<a href="{{ url_for('instructor.setup_assessment', course_name=course.name, assessment_id=assessment.id,has_files=has_files) }}"
 								   class="text-decoration-none link-secondary">
 									<i class="bi-list-stars"></i>
 									Update Topics/Questions
