@@ -915,8 +915,6 @@ class Course(SearchableMixin, db.Model):
                                     backref='course', lazy='dynamic',
                                     order_by='Assessment.time')
     
-    files = db.relationship('File', backref='course', lazy=True)
-
     def __repr__(self):
         return f"<Course {self.id}: {self.name} ({self.title})>"
 
@@ -1599,7 +1597,6 @@ class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(255), nullable=False)
     content = db.Column(db.LargeBinary, nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
     assessment_id = db.Column(db.Integer, db.ForeignKey('assessment.id'), nullable=True)
 
 

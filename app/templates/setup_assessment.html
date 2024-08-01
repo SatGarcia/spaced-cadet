@@ -240,8 +240,8 @@
                                 <i class="bi-list-task"></i>
                                 Available Questions:
                             </h5>
-                                    {% if has_files == True %}
-                                    <a href="{{ url_for('instructor.generate_ai_question', course_name=course.name, assessment_name=assessment.id) }}" class="btn btn-primary ms-2">
+                                    {% if 3 > 2 %}
+                                    <a href="{{ url_for('instructor.generate_ai_question', course_name=course.name, assessment_id=assessment.id) }}" class="btn btn-primary ms-2">
                                         <i class="bi-robot"></i>
                                         Generate AI Question
                                     </a>

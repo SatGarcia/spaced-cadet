@@ -27,6 +27,8 @@ from app.user_views import (
 )
 from app.auth import AuthorizationError, check_authorization
 from app.db_models import text_to_FITB_format, display_correct_fitb_answer
+from app.ai_model import load_documents, query_rag, split_text, create_vector_store, PROMPT_TEMPLATE
+import ast
 
 instructor = Blueprint('instructor', __name__)
 
@@ -386,22 +388,32 @@ def create_assessment(course_name):
 
         course.assessments.append(assessment)
 
+        #hard-coded file
+        default_file_path = os.path.join(current_app.root_path, 'static', 'default_files','python_for_loops.pdf')
+        with open(default_file_path, 'rb') as file:
+            file_content = file.read()
+            db_file = File(
+                filename='python_for_loops.pdf',
+                content=file_content,
+                assessment=assessment
+            )
+            db.session.add(db_file)
+
         uploaded_files = request.files.getlist(form.upload_files.name)
         for uploaded_file in uploaded_files:
-            db_file = File(filename=uploaded_file.filename, content=uploaded_file.read(), course=course, assessment=assessment)
+            db_file = File(filename=uploaded_file.filename, content=uploaded_file.read(), assessment=assessment)
             db.session.add(db_file)
             current_app.logger.debug("Successfully added file to database")
 
         db.session.commit()
 
-        has_files = len(uploaded_files) != 0
 
         flash(f"Successfully created assessment {assessment.title}", "success")
 
         return redirect(url_for(f'.setup_assessment',
                                 course_name=course_name,
                                 assessment_id=assessment.id,
-                                has_files=has_files))
+                                ))
 
     return render_template("create_assessment.html",
                            page_title="Cadet: Create Assessment",
@@ -430,11 +442,9 @@ def edit_assessment(course_name, assessment_id):
     if form.validate_on_submit():
         form.populate_obj(assessment)
 
-        has_files = False
         if form.upload_files.data:
             uploaded_files = request.files.getlist(AssessmentForm.upload_files.name)
             if uploaded_files:
-                has_files = True
                 for uploaded_file in uploaded_files:
                     db_file = File(filename=uploaded_file.filename, content=uploaded_file.read(), course=course, assessment=assessment)
                     db.session.add(db_file)
@@ -488,8 +498,8 @@ def setup_topics(course_name):
                            course=course)
 
 
-@instructor.route('/c/<course_name>/assessment/<int:assessment_id>/<has_files>/setup')
-def setup_assessment(course_name, assessment_id, has_files):
+@instructor.route('/c/<course_name>/assessment/<int:assessment_id>/setup')
+def setup_assessment(course_name, assessment_id):
     course = Course.query.filter_by(name=course_name).first()
     assessment = Assessment.query.filter_by(id=assessment_id).first()
 
@@ -508,7 +518,7 @@ def setup_assessment(course_name, assessment_id, has_files):
                            page_title="Cadet: Assessment Setup",
                            course=course,
                            assessment=a,
-                           has_files=True)
+                           )
 
 
 @instructor.route('/q/<int:question_id>/edit', methods=['GET', 'POST'])
@@ -715,28 +725,39 @@ def create_new_question(question_type):
                            page_title="Cadet: Create New Question",
                            form=form)
 
-@instructor.route('/ai-question-generation/<assessment_name>/<course_name>', methods=['GET', 'POST'])
+@instructor.route('/ai-question-generation/<assessment_id>/<course_name>', methods=['GET', 'POST'])
 @login_required
-def generate_ai_question(assessment_name,course_name):
+def generate_ai_question(assessment_id,course_name):
     form = AiGenerationForm()
+    assessment = Assessment.query.filter_by(id=assessment_id).first()
+    objectives = assessment.objectives.all()
+    #Populating the learning objective SelectField on the form
+    form.learning_objective_select.choices = [('','Select Learning Objective')] + [(obj.description, obj.description) for obj in objectives]
     
     if form.validate_on_submit():
         selected_question_type = form.question_select.data
         selected_learning_obj = form.learning_objective_select.data
-        return redirect(url_for('instructor.review_ai_question',selected_question = selected_question_type,selected_learning_obj=selected_learning_obj))
+        return redirect(url_for('instructor.review_ai_question',selected_question = selected_question_type,selected_learning_obj=selected_learning_obj, assessment_id = assessment_id))
     
     return render_template("generate_ai_question.html",form=form)
 
 
-@instructor.route('/review-ai-question/<selected_question>/<selected_learning_obj>', methods=['GET', 'POST'])
+@instructor.route('/review-ai-question/<selected_question>/<selected_learning_obj>/<assessment_id>', methods=['GET', 'POST'])
 @login_required
-def review_ai_question(selected_question, selected_learning_obj):
-    #Call the function on the model to generate the reponse.
+def review_ai_question(selected_question, selected_learning_obj, assessment_id):
+    
     # Update the prompt to the model with the varaibles given in this function
     if selected_question == 'Short Answer':
+        #Call the function on the model to generate the reponse.
+        _, response_text = query_rag(selected_question, selected_learning_obj, assessment_id)
+        #turning the response string into an actual dictionary object
+        dictionary_response = ast.literal_eval(response_text)
+        ai_generated_question = dictionary_response['Question']
+        ai_generated_answer = dictionary_response['Answer']
+        
         form = NewShortAnswerQuestionForm(request.form)
-        form.prompt.data = "Ai generated prompt"
-        form.answer.data = "Ai generated answer" 
+        form.prompt.data = ai_generated_question
+        form.answer.data = ai_generated_answer
         
         template = "create_new_short_answer.html"
         new_q = ShortAnswerQuestion()
@@ -1207,7 +1228,7 @@ class RosterUploadForm(FlaskForm):
 class AiGenerationForm(FlaskForm):
     question_select = SelectField('Question Type', choices=[('','Select a Question Type'),
                                                     ('Short Answer','Short Answer')])
-    learning_objective_select = SelectField('Learning objetive',choices=[('','Select a Learning Objective'),('Learning objective 1', 'learning obj one')])
+    learning_objective_select = SelectField('Learning objetive',choices=[])
     submit= SubmitField('Generate')
 
 
